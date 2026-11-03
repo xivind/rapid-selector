@@ -4,9 +4,11 @@ name: rapidselector-test
 
 services:
   fake-upstream:
-    build: tests/fakes
-    image: rapidselector-test-fakes
+    image: python:3.15.2-alpine3.24
+    working_dir: /app
     command: ["python", "upstream.py"]
+    volumes:
+      - ./tests/fakes:/app:ro
     ports:
       - "127.0.0.1:18000:8000"
     healthcheck:
@@ -15,12 +17,13 @@ services:
       retries: 15
 
   fake-secrets:
-    build: tests/fakes
-    image: rapidselector-test-fakes
+    image: python:3.15.2-alpine3.24
+    working_dir: /app
     command: ["python", "secrets_service.py"]
     environment:
       FAKE_SECRETS_FILE: /data/secrets.json
     volumes:
+      - ./tests/fakes:/app:ro
       - ./tests/.artifacts:/data:ro
     ports:
       - "127.0.0.1:18002:8002"

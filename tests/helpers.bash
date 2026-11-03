@@ -12,9 +12,9 @@ export REPO ARTIFACTS TEST_ENV_FILE FAKE_UPSTREAM_URL FAKE_SECRETS_URL GATEWAY_P
 
 mkdir -p "$ARTIFACTS"
 
-# Secret names the test env file gets random values for.
-TEST_SECRET_NAMES=(POSTGRES_PASSWORD LITELLM_MASTER_KEY LITELLM_SALT_KEY LITELLM_UI_PASSWORD
-  RAPIDSELECTOR_OPENROUTER_KEY WEBUI_SECRET_KEY KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST)
+# RAPIDSELECTOR_SECRETS: the secret names the test env file gets random values for.
+# shellcheck source=SCRIPTDIR/../scripts/lib.sh
+. "$REPO/scripts/lib.sh"
 
 # Write tests/.artifacts/test.env with test settings and random secrets, unless it exists.
 ensure_test_env() {
@@ -25,7 +25,7 @@ ensure_test_env() {
     echo "CHAT_PORT=4010"
     echo "SECRETS_SOURCE=env"
     local name
-    for name in "${TEST_SECRET_NAMES[@]}"; do
+    for name in "${RAPIDSELECTOR_SECRETS[@]}"; do
       case "$name" in
         KEY_*) echo "$name=sk-test-$(openssl rand -hex 16)" ;;
         *) echo "$name=$(openssl rand -hex 24)" ;;
@@ -46,7 +46,7 @@ compose_fakes() {
 
 fakes_up() {
   [ -f "$ARTIFACTS/secrets.json" ] || echo '{}' > "$ARTIFACTS/secrets.json"
-  compose_fakes up -d --build --wait fake-upstream fake-secrets >/dev/null
+  compose_fakes up -d --wait fake-upstream fake-secrets >/dev/null
 }
 
 fakes_down() {
