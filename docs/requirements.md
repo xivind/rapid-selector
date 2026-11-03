@@ -38,7 +38,7 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 ### Cost summary
 - Always in tower, with or without Grafana: spent today, this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
 - Displays amounts in NOK using an exchange rate from `.env`. Limits themselves are in USD.
-- Shows that OpenRouter's key limit reset and LiteLLM's budget window are not necessarily in sync.
+- Shows when OpenRouter's key limit and LiteLLM's budgets next reset. Both are set to reset on the 1st of the month at 00:00 UTC, and a mismatch must be visible.
 - History over time and alerts are in Grafana, when that integration is on.
 
 ### Reconciliation

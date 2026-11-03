@@ -70,7 +70,7 @@ Implemented with LiteLLM teams (a group of keys with a shared budget):
 - **Team `experiments`:** the key for `chat`, and tower's key for the arena and benchmarks.
 - LiteLLM's global budget is at most the OpenRouter key's monthly limit. The team budgets add up to at most the global budget.
 
-LiteLLM's budget windows are durations (e.g. `30d`), so they will not line up with OpenRouter's monthly reset on the 1st at 00:00 UTC. LiteLLM is the soft layer; the OpenRouter key limit is the actual monthly cap.
+LiteLLM resets a `30d` budget on the 1st of each month at 00:00 in its configured timezone (UTC by default), the same moment as OpenRouter's monthly reset. (Corrected 2026-11-03: this spec first said the two would not line up.) LiteLLM is still the soft layer; the OpenRouter key limit is the actual monthly cap.
 
 ### Background calls
 Open WebUI's own model calls (titles, tags, suggestions) are turned off or sent to the cheapest role. Chosen in phase 0.
@@ -108,7 +108,7 @@ Created once through LiteLLM's admin UI or API, following the README. They live 
 Every service logs to stdout. Shipping container logs to Loki is an optional integration.
 
 ### Secrets
-The environment variables in `.env.example`, e.g. `OPENROUTER_API_KEY`, `OPENROUTER_MANAGEMENT_KEY`, `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, Postgres credentials, Open WebUI's key and secret, and tower's password and keys. Two sources:
+The environment variables in `.env.example`, e.g. `RAPIDSELECTOR_OPENROUTER_KEY` (deliberately not `OPENROUTER_API_KEY`, which LiteLLM's `/openrouter` pass-through would pick up; see the phase 0 spec), `OPENROUTER_MANAGEMENT_KEY`, `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, Postgres credentials, Open WebUI's key and secret, and tower's password and keys. Two sources:
 - **`.env`** (the default).
 - **secrets-service:** `rapidselector.sh` fetches each secret before running Compose and passes it on as an environment variable, following the shell pattern in the `production` repository's `secrets-service/CLAUDE.md`. Only the secrets-service client token is stored on the host.
 

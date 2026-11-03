@@ -42,6 +42,19 @@ Agreed section by section and written in `superpowers/specs/2026-11-03-rapid-sel
 - **Tower's level of visual ambition is decided first in phase 1,** together with its stack.
 - **Programmatic use is an open category.** Every new use gets its own key, calls a role, has its input checked for personal data, and is recorded here.
 
+### 2026-11-03: Phase 0 design
+Agreed section by section and written in `superpowers/specs/2026-11-03-phase-0-foundation-design.md`. The decisions in it:
+
+- **Limits, in USD:** OpenRouter inference key $34 a month; LiteLLM global $32; team `permanent` $8 (key `node-red` $4); team `experiments` $24 (key `smoke-test` $1). All reset on the 1st at 00:00 UTC.
+- **Starting set:** four roles (`classify`, `summarise`, `code`, `chat`) and seven experiment names, each pinned to one zero data retention endpoint. No free models.
+- **Ports:** gateway 4000, `chat` 4010, tower 4020.
+- **Open WebUI:** titles on with `llama-3.1-8b-instruct@deepinfra`; other background calls, web search and image generation off; settings fixed by environment variables.
+- **The OpenRouter key variable is `RAPIDSELECTOR_OPENROUTER_KEY`,** so LiteLLM's `/openrouter` pass-through, which records $0 spend, finds no key.
+- **Virtual keys are generated in advance** and stored as secrets; `setup-keys.sh` registers them.
+- **`/metrics` without authentication.**
+- **Alert rules** are created through the Grafana MCP from a local Claude Code session.
+- **Web search** parked (`roadmap.md`).
+
 ## Open
 
 ### Settle during design or phase 0
@@ -50,18 +63,18 @@ Agreed section by section and written in `superpowers/specs/2026-11-03-rapid-sel
 2. **How do key limits behave in practice?** The docs now confirm a monthly reset option and a 402 error when the key's limit is reached (`provider-facts.md`). Still to test: that the limit actually stops calls, and how a request that crosses the limit is charged.
 3. **How does LiteLLM record OpenRouter spend?** Either explicit prices in the gateway config, or the actual cost from OpenRouter's response if LiteLLM reads it. Also confirm that LiteLLM passes on the host pin and zero data retention settings.
 4. **Is the Standard plan free of any subscription fee?** The owner wants pay as you go with no flat rates, and only the 5.5% credit fee has been seen so far.
-5. **Do the wanted models have zero data retention hosts?** For example, `lfm-2.5-2.6b` had none listed.
+5. **Do the wanted models have zero data retention hosts?** For example, `lfm-2.5-2.6b` had none listed. Every entry in the phase 0 starting set is on OpenRouter's list of zero data retention endpoints (2026-11-03); level 3 confirms they are honoured.
 6. **Management key expiry.** OpenRouter recommends an expiry date on every management key, and it cannot be changed after creation. Decide whether to use one, and how `tower` gets a new key before the old one expires.
 7. **Does the stack fit on the Pi?** Check that LiteLLM's images (including the Postgres variant) exist for arm64, and how much RAM LiteLLM and Open WebUI need. Open WebUI's local embedding and RAG features may need to be turned off.
-8. **Is LiteLLM's spend log retention free or an Enterprise feature?**
-9. **Which Open WebUI features call outside services** (web search, image generation, default OpenAI and Ollama connections), and how are they turned off?
+8. ~~Is LiteLLM's spend log retention free or an Enterprise feature?~~ **Settled 2026-11-03:** free ("Retention and cleanup are open source"); set to `90d` in phase 0.
+9. ~~Which Open WebUI features call outside services, and how are they turned off?~~ **Settled 2026-11-03:** web search, image generation, the Ollama connection and direct connections are turned off with environment variables, and `ENABLE_PERSISTENT_CONFIG=False` keeps them off (phase 0 spec, section 4).
 10. **`tower` stack.** The owner chooses, after options and a recommendation are presented. Phase 1, first, together with the level of visual ambition (A clean and functional, B distinctive, C experimental; see the overall design, section 11).
 11. **Are LiteLLM teams available in the open-source version?** The fixed budget shares depend on them. Phase 0.
 12. **Which error does LiteLLM return for an exhausted budget?** Clients must not retry it. Phase 0.
-13. **Does LiteLLM's `/metrics` require auth by default?** Phase 0.
+13. ~~Does LiteLLM's `/metrics` require auth by default?~~ **Settled 2026-11-03:** yes, from v1.85.0. Turned off (`require_auth_for_metrics_endpoint: false`), like `node_exporter` on the owner's hosts.
 14. **What does LiteLLM do if the database disappears while running?** Phase 0.
-15. **How do container logs reach Loki?** Phase 0.
-16. **How is the empty-balance case tested?** With a tiny balance before the first real top-up, or by relying on the key limit and the documentation. Phase 0.
+15. ~~How do container logs reach Loki?~~ **Settled 2026-11-03:** they don't in phase 0. None of the owner's containers ship logs to Loki today; a fleet-wide Promtail change later would cover rapid-selector too. Logs are rotated locally.
+16. ~~How is the empty-balance case tested?~~ **Settled 2026-11-03:** both ways, at the first top-up: test B (key limit) first, then the spend and host checks, then test A (use up the smallest top-up). Ceiling $1 plus the top-up. Claude walks the owner through it.
 17. **Can tower use an admin key other than LiteLLM's master key?** Phase 1.
 18. **Which OpenRouter endpoint gives the inference key's limit and usage to the management key?** Phase 1.
 19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for `llm`.

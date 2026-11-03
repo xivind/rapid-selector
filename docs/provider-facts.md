@@ -29,12 +29,38 @@ Sources: https://openrouter.ai/docs/api-reference/limits and https://openrouter.
 
 ### Checked in the docs, 2026-11-03
 Sources: https://docs.litellm.ai/docs/proxy/users, https://docs.litellm.ai/docs/providers/openrouter, https://docs.litellm.ai/docs/proxy/prometheus, https://docs.litellm.ai/docs/proxy/configs, https://docs.litellm.ai/docs/proxy/custom_pricing
-- **Budget windows are durations,** not calendar months: `budget_duration` takes seconds, minutes, hours or days (e.g. `30d`). They do not line up with OpenRouter's monthly reset.
+- **Budget windows:** `budget_duration` takes seconds, minutes, hours or days (e.g. `30d`). Corrected the same day: https://docs.litellm.ai/docs/proxy/budget_reset_and_tz says `30d` "Resets on the 1st of each month at midnight", `7d` on Monday and `1d` daily, in the configured `timezone` (UTC by default). So a `30d` budget lines up with OpenRouter's monthly reset.
 - **Budgets need the database.** Without one, `litellm_settings.max_budget` "fails open": the global budget check is skipped and requests keep being served. Key, team and user budgets are unavailable.
 - **OpenRouter's reported cost:** "OpenRouter provides cost information in the response, which LiteLLM automatically tracks." The detailed text found (from v1.104.3, spend is the `usage.cost` OpenRouter returns) is about OpenRouter's Decisions endpoint; whether it holds for chat calls is unconfirmed. The same page says calls through the `/openrouter` pass-through to other paths "record $0 spend, so budgets do not count them".
 - **Prometheus metrics** at `/metrics`, including `litellm_spend_metric`, `litellm_remaining_api_key_budget_metric`, `litellm_remaining_team_budget_metric` and `litellm_deployment_failure_responses`. The page marks only managed batch metrics as "Enterprise only".
 - **Public model names:** in `config.yaml`, `model_name` is the name clients use, and `litellm_params.model` is the underlying model. This is how roles are made.
 - **Custom pricing:** `input_cost_per_token` and `output_cost_per_token` can be set per model.
+- **`/openrouter` pass-through:** sends requests to OpenRouter as they are, using the key of the first OpenRouter entry with `use_in_pass_through: true`, "or from `OPENROUTER_API_KEY` when no deployment does". Calls to paths other than the Decisions API "are forwarded but record $0 spend, so budgets do not count them".
+- **`/metrics` authentication:** "From v1.85.0, /metrics requires LiteLLM API key authentication by default." Turned off with `litellm_settings.require_auth_for_metrics_endpoint: false`.
+- **More metrics:** `litellm_zero_cost_requests_total` ("Requests that carried usage but were logged at $0 on a model whose pricing entry has a non-zero rate"), `litellm_postgres_failed_requests_total`, `litellm_proxy_failed_requests_metric`.
+- **Spend log retention is free:** "Retention and cleanup are open source." Set with `general_settings.maximum_spend_logs_retention_period` (e.g. `"7d"`). Source: https://docs.litellm.ai/docs/proxy/spend_logs_deletion
+- **Budget error** (example in the docs): `"type": "budget_exceeded"`, `"code": "400"`. Another example returns `"detail": "Authentication Error, ExceededTokenBudget: …"`.
+- **OpenRouter provider parameters:** LiteLLM's OpenRouter page documents only `transforms`, `models` and `route`. Whether `extra_body.provider` is forwarded unchanged is tested at level 1.
+- **Images:** `ghcr.io/berriai/litellm-database:v1.106.6` is the newest plain release tag found, and is published for `linux/amd64` and `linux/arm64`. The `main-v…-stable` tags stop at `v1.83.14`.
+
+## Open WebUI
+
+### Checked in the docs, 2026-11-03
+Source: https://docs.openwebui.com/reference/env-configuration
+- Settings can be given as environment variables, among them `ENABLE_SIGNUP`, `ENABLE_OLLAMA_API`, `ENABLE_DIRECT_CONNECTIONS`, `ENABLE_TITLE_GENERATION`, `ENABLE_TAGS_GENERATION`, `ENABLE_FOLLOW_UP_GENERATION`, `ENABLE_AUTOCOMPLETE_GENERATION`, `ENABLE_SEARCH_QUERY_GENERATION`, `ENABLE_RETRIEVAL_QUERY_GENERATION`, `TASK_MODEL_EXTERNAL`, `ENABLE_WEB_SEARCH`, `ENABLE_IMAGE_GENERATION`, `ENABLE_EVALUATION_ARENA_MODELS`, `BYPASS_EMBEDDING_AND_RETRIEVAL`.
+- With `ENABLE_PERSISTENT_CONFIG` set to `False`, settings can still be edited in the admin UI, but "these changes are NOT saved".
+- `ghcr.io/open-webui/open-webui:v0.13.0` is published for `linux/amd64` and `linux/arm64`.
+
+## OpenRouter catalogue
+
+### From OpenRouter's API, 2026-11-03
+Sources: `GET https://openrouter.ai/api/v1/models` (453 models) and `GET https://openrouter.ai/api/v1/endpoints/zdr` (1,090 zero data retention endpoints).
+- 141 open-weight models (with a Hugging Face id) have at least one paid zero data retention endpoint.
+- 14 models end in `:free`. Only one free text model has a zero data retention endpoint (`xingchen-agi/xing4.0-29b-a4b:free` at Phala).
+- `meta-llama/llama-3.2-1b-instruct` has a zero data retention endpoint at Cloudflare ($0.027 / $0.201 per million tokens).
+- Endpoints are addressed by slugs that include the variant, e.g. `deepinfra/fp8` or `deepinfra/turbo` (https://openrouter.ai/docs/guides/routing/provider-selection). Routing fields include `order`, `only`, `allow_fallbacks`, `zdr`, `data_collection` and `quantizations`.
+- Reasoning defaults: `gpt-oss-120b` and `gpt-oss-20b` reason always (default effort `medium`); `deepseek-v4.1-flash` by default (effort `high`); `qwen3.8-2.4t-a95b` always (default effort `xhigh`); `gemma-4-26b-a4b-it` optionally, off by default.
+- Prices for the phase 0 starting set are in `superpowers/specs/2026-11-03-phase-0-foundation-design.md`.
 
 ## Docker in the cloud sandbox
 
