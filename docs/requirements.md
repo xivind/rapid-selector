@@ -1,50 +1,70 @@
 # Requirements
 
-What each service must do. The principles in `CLAUDE.md` apply to all of them. Open questions and decisions are in `decisions.md`.
+What each service must do. The principles in `CLAUDE.md` apply to all of them. How the services fit together is in `superpowers/specs/2026-11-03-rapid-selector-overall-design.md`. Open questions and decisions are in `decisions.md`.
+
+## General
+
+- The core (`gateway`, `db`, `chat`, `tower`) works with only Docker and secrets. Prometheus and Grafana, secrets-service, backup-orchestrator and Loki are optional integrations, off by default, switched on in configuration and documented.
+- Secrets are environment variables with fixed names, listed in `.env.example`. They come from `.env` or from secrets-service, through `rapidselector.sh`. The Compose file refuses to run without them.
+- The Compose project, containers, volumes and the images we build are prefixed `rapidselector`.
+- Everything host-specific is in `.env`, so the system can move between hosts.
+- Backed up: Postgres, Open WebUI's data and tower's SQLite, through backup-orchestrator or by the README's fallback.
 
 ## `gateway` (LiteLLM)
 
-- Only allowlisted models, each pinned to one upstream host with fallbacks off and zero data retention on (`CLAUDE.md`, principles 1 and 4).
-- Each model has an explicit price, the pinned host's price, so recorded spend is correct and non-zero. A test confirms the recorded spend for each model.
-- A default `max_tokens` for every call that does not set one.
-- A global budget plus a budget per virtual key. The sum of key budgets never exceeds the global budget.
-- Virtual keys at least for `chat`, Node-RED and `tower`. Automated clients get low caps.
+- The allowlist is `gateway/config.yaml`. Models cannot be added through the admin UI.
+- Every model is pinned to one upstream host, with fallbacks off and zero data retention on (`CLAUDE.md`, principles 1 and 4).
+- Every model has an explicit price, the pinned host's price, so recorded spend is correct and non-zero. A test confirms the recorded spend for each model.
+- Every model has a default `max_tokens` for calls that do not set one, large enough for reasoning models.
+- Two kinds of public names: **roles** for permanent use (e.g. `summarise`, `classify`, `code`, `chat`), each pointing to one model on one host, and **experiment names** in the form `model@host`.
+- Teams `permanent` and `experiments`, each with its own budget share. The team budgets add up to no more than LiteLLM's global budget, which is no more than the OpenRouter key's monthly limit.
+- Team `permanent`: one key per client (Node-RED, each app), allowed roles only, with a low cap and a rate limit. Team `experiments`: keys for `chat` and for tower's arena.
+- `/metrics` for Prometheus.
+- Does not start without its secrets, and waits for `db` to be healthy.
 - Spend log with a retention period.
 
 ## `chat` (Open WebUI)
 
-- Connected to the gateway with its own virtual key, and to nothing else.
+- Connected to the gateway with its own virtual key in team `experiments`, and to nothing else.
 - The owner creates the admin account on first start. New sign-ups are then disabled.
-- Background model calls (titles, tags, suggestions, autocomplete) are disabled or pointed at the cheapest allowlisted model. Check the current settings in the documentation.
+- Background model calls (titles, tags, suggestions, autocomplete) are disabled or pointed at the cheapest role. Check the current settings in the documentation.
 
 ## `tower` (control tower)
 
 ### Access
-- Login with a single password set in `.env`. Plain HTTP on the LAN is accepted.
+- Login with a single password from the environment. Plain HTTP on the LAN is accepted.
 - Holds OpenRouter's management key, and is the only service that does.
 
-### Cost picture
-- Always readable at a glance: spent today, this month, remaining balance, forecast.
+### Cost summary
+- Always in tower, with or without Grafana: spent today, this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
 - Displays amounts in NOK using an exchange rate from `.env`. Limits themselves are in USD.
 - Shows that OpenRouter's key limit reset and LiteLLM's budget window are not necessarily in sync.
+- History over time and alerts are in Grafana, when that integration is on.
 
 ### Reconciliation
 - Compares LiteLLM's recorded spend with OpenRouter's actual usage. Discrepancies must be clearly visible.
-- Sources: `GET /api/v1/key` (the key's limit, remaining limit and usage) and `GET /api/v1/credits` (total credits and total usage, requires the management key). See `provider-facts.md`.
+- Sources: LiteLLM's API, and OpenRouter's `GET /api/v1/credits` and key-management API with the management key. See `provider-facts.md`.
 
 ### Kill switch
 - Easy to find.
-- Two levels: (a) block all virtual keys in LiteLLM, (b) disable the OpenRouter inference key via the management API (`PATCH /api/v1/keys/{hash}` with `disabled: true`). Level (b) is what actually stops everything.
+- Two levels: (1) block all virtual keys in LiteLLM, (2) disable the OpenRouter inference key via the management API (`PATCH /api/v1/keys/{hash}` with `disabled: true`). Level 2 is what actually stops everything.
+- Shows which level is active. Releasing it is a deliberate action, and every change is logged.
+- Tower is not the only way to stop spending: the README describes the manual ways.
+
+### Metrics
+- `/metrics` for Prometheus, prefixed `rapidselector_`: OpenRouter balance, key limit and usage, reconciliation difference, kill switch state.
 
 ### Own data
 - SQLite: benchmark runs, arena ratings, balance snapshots.
 
 ### Visual quality
 - **Visual quality is a core requirement, not a finishing touch.** The whole interface, including the arena and benchmark results as well as the charts, must be visually appealing and distinctive, with creative visualisation. The visual direction is agreed with the owner during design, before the interface is built.
-- Clarity comes first where the two conflict. The cost picture and the kill switch must never be hard to read or find.
+- Tower holds the views for making decisions and comparing; Grafana holds operations over time.
+- The level of ambition is decided at the start of phase 1, together with the stack.
+- Clarity comes first where the two conflict. The cost summary and the kill switch must never be hard to read or find.
 
 ### Stack
-- Not decided. The starting proposal is Python/FastAPI with SQLite. The frontend approach and libraries are open. The owner chooses (`CLAUDE.md`, way of working).
+- Not decided. The owner's production stack (FastAPI, Uvicorn, Jinja2, Bootstrap, Chart.js) is a strong candidate. The owner chooses (`CLAUDE.md`, way of working).
 
 ## Arena and benchmarking
 
@@ -57,8 +77,13 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. O
 
 ## Programmatic access
 
-- The gateway's OpenAI-compatible HTTP API is the default. A Docker app uses any OpenAI-compatible client with the gateway's address and its own virtual key. Node-RED uses its HTTP request node. No extra service is needed.
-- Every automated client has an upper limit on calls per run and on input size.
-- Input from automated sources, such as logs, is checked for personal data before it is sent (`CLAUDE.md`, principle 4).
+- The gateway's OpenAI-compatible HTTP API is the default. A Docker app uses any OpenAI-compatible client with the gateway's address (`llm`) and its own virtual key. Node-RED uses its HTTP request node. No extra service is needed.
+- Clients call roles, never specific models.
+- Every client handles a failed call by skipping that step and logging it: a fixed timeout, at most one retry on a timeout or 5xx, and no retry on budget or limit errors.
+- Every new use case, whatever it is:
+  - gets its own virtual key in team `permanent`, with its own cap, a call limit per run and a maximum input size;
+  - calls an existing role, or a new role added in `gateway/config.yaml`;
+  - has its input checked for personal data, according to what it sends (`CLAUDE.md`, principle 4);
+  - is recorded in `decisions.md`: what it does, its key and its budget.
 - **MQTT is not decided.** An asynchronous layer is only added if a real use case needs it, for example a job that outlasts HTTP timeouts or a device that can only use MQTT. Try a Node-RED flow first (MQTT in, HTTP request to the gateway, MQTT out), since that needs no code of our own.
 - A custom `bridge` service is the last resort. If one is built, its contract (topics, payload format, correlation IDs, error handling, max size) is designed before any code is written, and it uses its own virtual key like any other client.
