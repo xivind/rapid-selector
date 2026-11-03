@@ -43,6 +43,21 @@ Sources: https://docs.litellm.ai/docs/proxy/users, https://docs.litellm.ai/docs/
 - **OpenRouter provider parameters:** LiteLLM's OpenRouter page documents only `transforms`, `models` and `route`. Whether `extra_body.provider` is forwarded unchanged is tested at level 1.
 - **Images:** `ghcr.io/berriai/litellm-database:v1.106.6` is the newest plain release tag found, and is published for `linux/amd64` and `linux/arm64`. The `main-v…-stable` tags stop at `v1.83.14`.
 
+### Seen in the v1.106.6 image, 2026-11-03
+Inspected in `ghcr.io/berriai/litellm-database:v1.106.6` (package version 1.106.6).
+- `GenerateKeyRequest` has the fields `key`, `key_alias`, `team_id`, `rpm_limit`, `budget_duration` and `allowed_routes`, so key values can be chosen by us.
+- Health routes `/health/liveliness`, `/health/liveness` and `/health/readiness` exist.
+- `UI_USERNAME` is read in `proxy/auth/login_utils.py`.
+- `require_auth_for_metrics_endpoint` is honoured in `proxy/middleware/prometheus_auth_middleware.py`.
+- Chat calls to OpenRouter use `OPENROUTER_API_BASE` when set (`main.py`), which the level 1 fake upstream relies on.
+- `extra_body` is popped from the parameters and merged into the request body (`llms/openrouter/chat/transformation.py`).
+- The `/openrouter/{endpoint}` route takes its key from `passthrough_endpoint_router.get_credentials(custom_llm_provider="openrouter")` and sends `Authorization: Bearer {key}` even when none is found (`proxy/pass_through_endpoints/llm_passthrough_endpoints.py`).
+- Key-level `allowed_routes` is checked in `proxy/auth/route_checks.py` without a licence check; the licence check there applies to `general_settings.admin_only_routes`.
+- In `team_endpoints.py`, the premium checks seen apply to team admins and per-model team budgets, not to creating teams.
+- At start it fetches `model_prices_and_context_window.json` from GitHub unless `LITELLM_LOCAL_MODEL_COST_MAP=True`.
+- Spend is written to the database in batches: `PROXY_BATCH_WRITE_AT`, default 10 seconds.
+- `postgres:17-alpine` was 17.11 on this date; `postgres:17.11-alpine` is published for `linux/arm64`.
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03

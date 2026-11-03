@@ -14,12 +14,17 @@
 
 - Branch `claude/ecstatic-hypatia-t1sj0o` in rapid-selector. Commit after each task; every commit message ends with the two attribution lines from the session's system reminder. No model identifiers in commits or files.
 - Everything in English. Names prefixed `rapidselector`: Compose project `rapidselector`; containers `rapidselector-db`, `rapidselector-gateway`, `rapidselector-chat`; volumes `rapidselector_pgdata`, `rapidselector_chatdata`.
-- Images pinned, never `latest`. LiteLLM `ghcr.io/berriai/litellm-database:v1.106.6`; Open WebUI `ghcr.io/open-webui/open-webui:v0.13.0`; Postgres: the newest `17.x-alpine` patch tag at implementation time, confirmed by `tests/check-arm64.sh`.
+- Images pinned, never `latest`. LiteLLM `ghcr.io/berriai/litellm-database:v1.106.6`; Open WebUI `ghcr.io/open-webui/open-webui:v0.13.0`; Postgres `postgres:17.11-alpine` (all three confirmed for `linux/arm64` on 2026-11-03).
 - Published ports bound to `${RAPIDSELECTOR_LAN_ADDRESS}`, never `0.0.0.0`: gateway `4000`, chat `4010`. `db` publishes nothing. No custom networks, no `network_mode: host`.
 - Limits in USD: LiteLLM global `max_budget: 32`, `budget_duration: 30d`; team `permanent` $8 (`30d`), key `node-red` $4 (`30d`, about 30 requests a minute); team `experiments` $24 (`30d`); key `smoke-test` $1 (`30d`); key `chat` no budget of its own.
 - The OpenRouter key variable is `RAPIDSELECTOR_OPENROUTER_KEY`. The string `OPENROUTER_API_KEY` must not appear in `docker-compose.yml`, `gateway/config.yaml` or `.env.example`, and no entry sets `use_in_pass_through`.
 - Every model entry: `extra_body.provider` = `{order: [<slug>], only: [<slug>], allow_fallbacks: false, zdr: true, data_collection: deny}`, explicit `input_cost_per_token` and `output_cost_per_token`, and a default `max_tokens`. Values from spec section 3, re-checked against `GET https://openrouter.ai/api/v1/endpoints/zdr` when written; a changed price or a missing endpoint stops the task and goes to the owner.
 - Secrets never written to disk by our scripts and never printed. Compose requires each secret with `${NAME:?…}`.
+- `gateway` sets `LITELLM_LOCAL_MODEL_COST_MAP=True`: v1.106.6 otherwise fetches its price map from GitHub at every start (seen in the image's logs), an outbound call whose result can change.
+- Every virtual key gets `allowed_routes` limited to chat completions and the model list (`/v1/chat/completions`, `/chat/completions`, `/v1/models`, `/models`). Reason: v1.106.6 forwards `/openrouter/…` to OpenRouter even with no key configured (it sends `Bearer None`; seen in `llm_passthrough_endpoints.py`), so a request would still leave the house. Key-level `allowed_routes` is not licence-gated in that version (`proxy/auth/route_checks.py`).
+- The list of names and their kind lives only in `gateway/config.yaml`: every entry has `model_info: {rapidselector_kind: role|experiment, reasoning: true|false}`. Scripts read names, kinds and the reasoning flag from the gateway's `/model/info` (master key); no script hard-codes model names.
+- LiteLLM writes spend to the database in batches, every 10 seconds by default (`PROXY_BATCH_WRITE_AT`). Budget tests allow a small overshoot and record it; tests that restart the gateway wait at least 15 seconds first.
+- Level 1 runs only on a machine without a running rapid-selector stack (fixed container names and ports): the cloud sandbox or a development machine, not the Pi in use.
 - Nothing in this plan spends real money or touches the owner's network. Levels 2 and 3 are run later with the owner, walked through step by step.
 - If a level 1 finding breaks an assumption in the spec (for example LiteLLM drops `extra_body.provider`, or rejects custom key values), stop and report to the owner before continuing.
 - Observations (not assertions) are written to `docs/provider-facts.md` with the LiteLLM or Open WebUI version and the date.
@@ -69,12 +74,14 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 - Produces, fake upstream (port 8000 in its container, service name `fake-upstream`):
   - `POST /v1/chat/completions` → 200, `{"id":"gen-fake-N","model":<request model>,"choices":[{"index":0,"message":{"role":"assistant","content":"fake reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":100,"completion_tokens":50,"total_tokens":150[,"cost":C]}}`; `cost` included only when mode `cost` is set (C from the mode, default `0.01`).
   - `GET /_requests` → JSON array of every received request: `{"path","headers","body"}`. `DELETE /_requests` clears it.
-  - `POST /_mode` with `{"status": 200|402|500, "cost": null|float, "delay_ms": int}` sets behaviour; `402` answers `{"error":{"code":402,"message":"Insufficient credits"}}`.
+  - `POST /_mode` with `{"status": 200|402|500, "cost": null|float, "delay_ms": int, "prompt_tokens": int, "completion_tokens": int, "fail_after": int|null}` sets behaviour (defaults 200, null, 0, 100, 50, null); `fail_after: N` answers 402 from call N+1; `402` answers `{"error":{"code":402,"message":"Insufficient credits"}}`.
+  - `"stream": true` in a request → `text/event-stream` chunks of the same reply, then a final chunk with `usage` (and `cost` when set), then `data: [DONE]`. Open WebUI streams by default.
 - Produces, fake secrets-service (port 8002, service `fake-secrets`): `GET /secrets/rapidselector` with `Authorization: Bearer test-token` → `{"name":"rapidselector","blob":{...}}` from the JSON file at `$FAKE_SECRETS_FILE`; wrong token → 401; `POST /_status {"status":423}` forces that status.
 - Produces, `tests/helpers.bash`: `upstream_requests` (prints `/_requests` JSON), `upstream_reset`, `upstream_mode <status> [cost] [delay_ms]`, `gw_call <key> <model> [extra_json]` (POST to `http://localhost:${GATEWAY_PORT}/v1/chat/completions`, writes body to `$output`, status to `$GW_STATUS`, response cost header to `$GW_COST`), `metric <name> [label_regex]` (sums matching lines from `/metrics`).
-- Produces, `tests/run.sh [bats files…]`: starts the stack with `docker compose -f docker-compose.yml -f tests/compose.test.yml up -d --build --wait`, runs `npx --yes bats@1.11.0` on the given files (default all `tests/*.bats`), always tears down with `down -v`. Uses a generated test `.env` in `tests/.artifacts/` (random secrets, `RAPIDSELECTOR_LAN_ADDRESS=127.0.0.1`), never the real `.env`.
+- Produces, `tests/helpers.bash` also: `stack_up [overlay files…]` (generates the test env file if missing, then `RAPIDSELECTOR_ENV_FILE=tests/.artifacts/test.env ./rapidselector.sh -f docker-compose.yml -f tests/compose.test.yml [-f overlay…] up -d --build --wait`; before Task 2 exists it calls `docker compose` with the same files) and `stack_down` (`down -v`). Each bats file calls them in `setup_file`/`teardown_file`, so files that need overlays get their own stack.
+- Produces, `tests/run.sh [bats files…]`: runs the given files (default all `tests/*.bats`) one at a time with `npx --yes bats@1.11.0`, stops any leftover test stack at the end, and exits non-zero if any file failed. The test env file (random secrets, `RAPIDSELECTOR_LAN_ADDRESS=127.0.0.1`) lives in `tests/.artifacts/`, never the real `.env`. One command, `tests/run.sh`, is the regression suite to run after any change.
 
-- [ ] **Step 1: Write `tests/fakes.bats`** with tests `fake upstream answers chat completions with usage`, `fake upstream records requests`, `fake upstream switches to 402`, `fake secrets-service returns blob with valid token and 401 otherwise`. They run the two fakes directly (`docker compose -f tests/compose.test.yml up -d fake-upstream fake-secrets`), not the full stack.
+- [ ] **Step 1: Write `tests/fakes.bats`** with tests `fake upstream answers chat completions with usage`, `fake upstream streams with a final usage chunk`, `fake upstream records requests`, `fake upstream switches to 402`, `fake upstream fails after N calls`, `fake upstream uses the configured token counts`, `fake secrets-service returns blob with valid token and 401 otherwise`. They run the two fakes directly (`docker compose -f tests/compose.test.yml up -d fake-upstream fake-secrets`), not the full stack.
 - [ ] **Step 2: Run** `npx --yes bats@1.11.0 tests/fakes.bats` — expected FAIL (files missing).
 - [ ] **Step 3: Implement** the two fakes with `http.server` and `json` only, the Dockerfile (`python:3-alpine`, pinned to the current 3.x alpine tag), helpers and `run.sh`. Start the Docker daemon first in the cloud sandbox (`dockerd &`) if `docker info` fails; `run.sh` prints that hint.
 - [ ] **Step 4: Run** the bats file — expected PASS. Run `uvx --from shellcheck-py shellcheck tests/run.sh tests/helpers.bash` — expected no findings.
@@ -117,7 +124,7 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 
 **Interfaces:**
 - Consumes: Task 1 harness, Task 2 secret names.
-- Produces: services `db` and `gateway` as in spec section 4: `name: rapidselector`; `container_name` per Global Constraints; restart `unless-stopped`; logging `json-file`, `max-size: 10m`, `max-file: "5"`; memory limits 512m (`db`), 1536m (`gateway`); gateway command `--config /app/config.yaml --port 4000 --num_workers 1`; `DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@db:5432/litellm`; `UI_USERNAME=admin`, `UI_PASSWORD=${LITELLM_UI_PASSWORD:?…}`; healthchecks `pg_isready -U litellm` and `GET /health/liveliness`; `depends_on: db: condition: service_healthy`.
+- Produces: services `db` and `gateway` as in spec section 4; `db` sets `POSTGRES_USER=litellm`, `POSTGRES_DB=litellm`, `POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?…}`; `name: rapidselector`; `container_name` per Global Constraints; restart `unless-stopped`; logging `json-file`, `max-size: 10m`, `max-file: "5"`; memory limits 512m (`db`), 1536m (`gateway`); gateway command `--config /app/config.yaml --port 4000 --num_workers 1`; `DATABASE_URL=postgresql://litellm:${POSTGRES_PASSWORD}@db:5432/litellm`; `UI_USERNAME=admin`, `UI_PASSWORD=${LITELLM_UI_PASSWORD:?…}`; healthchecks `pg_isready -U litellm` and `GET /health/liveliness`; `depends_on: db: condition: service_healthy`.
 - Produces, `tests/compose.test.yml`: adds `fake-upstream`, `fake-secrets`; sets `OPENROUTER_API_BASE=http://fake-upstream:8000/v1` on `gateway`.
 
 - [ ] **Step 1: Write `tests/stack.bats`:**
@@ -143,7 +150,7 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 
 **Interfaces:**
 - Consumes: Task 3 stack; uses the master key for calls in this task (keys come in Task 5).
-- Produces: model names exactly as in spec section 3: `classify`, `summarise`, `code`, `chat`, `llama-3.2-1b-instruct@cloudflare`, `llama-3.1-8b-instruct@deepinfra`, `gpt-oss-20b@deepinfra`, `gpt-oss-120b@deepinfra`, `gpt-oss-120b@primeintellect`, `deepseek-v4.1-flash@deepinfra`, `qwen3.8-2.4t-a95b@siliconflow`. `qwen3.8-2.4t-a95b@siliconflow` also sets `reasoning_effort: medium`.
+- Produces: every entry has `model_info: {rapidselector_kind: role|experiment, reasoning: true|false}` (Global Constraints). Model names exactly as in spec section 3: `classify`, `summarise`, `code`, `chat`, `llama-3.2-1b-instruct@cloudflare`, `llama-3.1-8b-instruct@deepinfra`, `gpt-oss-20b@deepinfra`, `gpt-oss-120b@deepinfra`, `gpt-oss-120b@primeintellect`, `deepseek-v4.1-flash@deepinfra`, `qwen3.8-2.4t-a95b@siliconflow`. `qwen3.8-2.4t-a95b@siliconflow` also sets `reasoning_effort: medium`.
 
 - [ ] **Step 1: Write `tests/gateway.bats`:**
   - `every name answers` (loop over the 11 names)
@@ -152,7 +159,10 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
   - `default max_tokens is applied` (no `max_tokens` from client → recorded body has 1024 for `classify`, 2048 for `summarise`, 8192 for `chat`)
   - `client max_tokens behaviour is recorded` (client sends 50000 to `classify`; the test asserts the call succeeds and writes the forwarded value to `tests/.artifacts/findings.txt`) (Review Focus 4)
   - `a model outside the allowlist is refused` (`openai/gpt-4o` and `openrouter/openai/gpt-oss-120b` → 4xx, nothing reaches the upstream)
-  - `openrouter pass-through is refused` (`POST /openrouter/v1/chat/completions` → 4xx, nothing reaches the upstream)
+  - `openrouter pass-through with the master key forwards no usable key` (`POST /openrouter/v1/chat/completions`: record what reaches the fake upstream and its `Authorization` header to findings; the test fails if the header carries `RAPIDSELECTOR_OPENROUTER_KEY`'s value). The refusal for virtual keys is tested in Task 5.
+  - `model info lists every name with its kind and reasoning flag` (`GET /model/info` with the master key returns the 11 names, 4 of kind `role`)
+  - `reasoning effort reaches the upstream for qwen3.8` (the recorded body for `qwen3.8-2.4t-a95b@siliconflow` carries effort `medium`, as `reasoning_effort` or `reasoning.effort`; the form goes to findings)
+  - `a streamed call records spend` (`stream: true` with `stream_options.include_usage`; cost > 0 in `/key/info` or the spend log after the batch interval)
   - `spend is above zero without upstream cost` (mode cost null → `x-litellm-response-cost` > 0 and equals 100 × input price + 50 × output price)
   - `spend source with upstream cost is recorded` (mode cost 0.01 → which value LiteLLM recorded goes to findings)
   - `metrics answer without a key and contain the alert metrics` (`GET /metrics` 200 without auth and without redirect; contains `litellm_spend_metric`, `litellm_proxy_failed_requests_metric`, `litellm_deployment_failure_responses`, `litellm_postgres_failed_requests_total` or its documented equivalent)
@@ -173,8 +183,9 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 **Interfaces:**
 - Consumes: `scripts/lib.sh` (`api`, `require_env`, `die`), Task 4 names.
 - Produces, `scripts/setup-keys.sh` (no arguments; needs the gateway up; run as `./rapidselector.sh run-script scripts/setup-keys.sh`, defined below):
-  - Teams by `team_alias`: `permanent` (`max_budget` from `BUDGET_TEAM_PERMANENT`, default 8; `budget_duration: 30d`; `models`: the four roles) and `experiments` (`BUDGET_TEAM_EXPERIMENTS`, default 24; `30d`; all 11 names).
-  - Keys by `key_alias`, value from the secret: `node-red` (team `permanent`, `BUDGET_KEY_NODE_RED` default 4, `30d`, `rpm_limit: 30`, roles only), `chat` (team `experiments`, no budget, all names), `smoke-test` (team `experiments`, `BUDGET_KEY_SMOKE_TEST` default 1, `30d`, all names).
+  - Reads names, kinds and reasoning flags from `GET /model/info`; fails if it finds no entry of kind `role`.
+  - Teams by `team_alias`: `permanent` (`max_budget` from `BUDGET_TEAM_PERMANENT`, default 8; `budget_duration: 30d`; `models`: every name of kind `role`) and `experiments` (`BUDGET_TEAM_EXPERIMENTS`, default 24; `30d`; every name).
+  - Keys by `key_alias`, value from the secret, each with `allowed_routes` from Global Constraints: `node-red` (team `permanent`, `BUDGET_KEY_NODE_RED` default 4, `30d`, `rpm_limit: 30`, roles only), `chat` (team `experiments`, no budget, all names), `smoke-test` (team `experiments`, `BUDGET_KEY_SMOKE_TEST` default 1, `30d`, all names).
   - Missing → create (`/team/new`, `/key/generate` with `key` set to the secret value). Existing → update (`/team/update`, `/key/update`) to these values.
   - Prints a table: alias, team, budget, duration, allowed names count, rate limit. Never prints key values.
   - The `BUDGET_*` overrides exist for tests only and are documented as such.
@@ -185,10 +196,11 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
   - `second run changes nothing unexpected` (team and key info identical apart from timestamps)
   - `setup-keys restores values edited outside the script` (change `node-red`'s budget and models via `/key/update`, rerun, values restored) (Review Focus 5)
   - `node-red key may use roles only` (`chat` role ok; `gpt-oss-20b@deepinfra` refused)
-  - `key budget blocks` (`BUDGET_KEY_SMOKE_TEST=0.03`, mode cost-free pricing: calls until refused; refused within 4 calls; status and body written to findings)
-  - `team budget blocks` (`BUDGET_TEAM_PERMANENT=0.03`, calls with `node-red` until refused)
+  - `virtual keys are refused on pass-through and admin routes` (each `KEY_*` on `/openrouter/v1/chat/completions`, `/anthropic/v1/messages` and `/key/generate` → 401 or 403, and nothing reaches the upstream)
+  - `key budget blocks` (`BUDGET_KEY_SMOKE_TEST=0.03`; fake `completion_tokens: 100000` so one `classify` call costs 100 × $0.075/M + 100000 × $0.20/M ≈ $0.02; call, wait 12 s, call again until refused; refused within 6 calls; status, body and overshoot written to findings)
+  - `team budget blocks` (`BUDGET_TEAM_PERMANENT=0.03`, same token counts, calls with `node-red` until refused)
   - `global budget blocks` (overlay `tests/compose.lowbudget.yml` mounts `tests/config.lowbudget.yaml` with `max_budget: 0.05`; calls with `chat` until refused)
-  - `spend survives a gateway restart` (exhaust a key, `docker compose restart gateway`, still refused) (Review Focus 3)
+  - `spend survives a gateway restart` (exhaust a key, wait 15 s, `./rapidselector.sh restart gateway`, still refused) (Review Focus 3)
   - `run-script passes secrets to the script and not to docker`
 - [ ] **Step 2: Run** `tests/run.sh tests/keys.bats` — expected FAIL.
 - [ ] **Step 3: Implement** the script and `run-script`. If `/key/generate` rejects a custom `key`, or teams are refused as an Enterprise feature, stop and report (Global Constraints).
@@ -215,6 +227,8 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
   - `title generation uses llama-3.1-8b-instruct@deepinfra` (after a chat, a recorded upstream request with `model` = `meta-llama/llama-3.1-8b-instruct`, or a finding if Open WebUI only generates titles from its frontend flow)
   - `no tags, follow-up or autocomplete calls reach the upstream` (after a chat, only the chat call and at most one title call were recorded)
   - `admin panel changes are not persisted` (change a setting through the API, restart `chat`, setting back to its environment value)
+  - `chat starts without downloading models` (after start, the container log shows no download from Hugging Face and memory stays under 1 GB; if it downloads an embedding model, stop and report: adding `OFFLINE_MODE=True` is a change to the spec)
+  - `streamed chat records spend on the chat key`
 - [ ] **Step 2: Run** `tests/run.sh tests/chat.bats` — expected FAIL.
 - [ ] **Step 3: Implement** the service. Check each variable name against `https://docs.openwebui.com/reference/env-configuration` for v0.13.0.
 - [ ] **Step 4: Run** — expected PASS. Record API paths that differed from the above in `docs/provider-facts.md`.
@@ -228,7 +242,7 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 - Create: `scripts/smoke-test.sh`, `tests/smoke.bats`
 
 **Interfaces:**
-- Consumes: `KEY_SMOKE_TEST`, the 11 names, `scripts/lib.sh`.
+- Consumes: `KEY_SMOKE_TEST`, `scripts/lib.sh`, names and reasoning flags from `GET /model/info` (master key).
 - Produces, `scripts/smoke-test.sh [--all]`, run through `./rapidselector.sh run-script`: one call per role (or per name with `--all`), prompt `Reply with the word ok.`, `max_tokens` 256, `reasoning_effort: low` for reasoning entries. Per call prints `name status cost_usd`. Then checks `openai/gpt-4o` and `/openrouter/v1/chat/completions` are refused. Prints `total_usd`. Exit 0 only if every call answered with cost > 0 and both refusals happened; otherwise exit 1 listing failures.
 
 - [ ] **Step 1: Write `tests/smoke.bats`:** `passes against a healthy stack and reports both refusals`, `--all covers 11 names`, `fails when a call returns 500` (upstream mode 500), `fails when recorded cost is zero` (with the no-price overlay from Task 4).
@@ -253,7 +267,7 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
   4. If stopped by a refusal: sends 5 parallel calls and records each status.
   5. Prints calls made, recorded spend, the last 3 statuses and bodies, the burst statuses, and the reason it stopped. Deletes `drain-test` on every exit path (trap).
 
-- [ ] **Step 1: Write `tests/drain.bats`:** `refuses to start without typed confirmation`, `stops at the first 402 and sends a burst of 5` (upstream switches to 402 after N calls — add `fail_after` to the fake's `/_mode` in this task), `stops at max-calls`, `stops at max-usd`, `deletes the temporary key on every exit path` (including Ctrl-C simulated with `kill -INT`).
+- [ ] **Step 1: Write `tests/drain.bats`:** `refuses to start without typed confirmation`, `stops at the first 402 and sends a burst of 5` (fake `fail_after`), `stops at max-calls`, `stops at max-usd`, `deletes the temporary key on every exit path` (including Ctrl-C simulated with `kill -INT`).
 - [ ] **Step 2: Run** — expected FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** — expected PASS; shellcheck clean.
@@ -264,16 +278,17 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 ### Task 9: Database failure, arm64 and resource checks
 
 **Files:**
-- Create: `tests/resilience.bats`, `tests/check-arm64.sh`
+- Create: `tests/resilience.bats`, `tests/check-arm64.sh`, `tests/check-prices.sh`
 - Modify: `docs/provider-facts.md`
 
 **Interfaces:**
 - Produces, `tests/check-arm64.sh`: reads every `image:` from `docker-compose.yml` (and the fakes' base image), runs `docker buildx imagetools inspect`, exits 1 naming any image without `linux/arm64`.
+- Produces, `tests/check-prices.sh`: for every entry in `gateway/config.yaml`, looks up its pinned slug in `GET https://openrouter.ai/api/v1/endpoints/zdr` (public, free) and exits 1 naming any entry whose endpoint is missing, whose price differs from the configured one, or that is in the `flex` tier. Run before every change to the allowlist and during health checks; it costs nothing.
 
 - [ ] **Step 1: Write `tests/resilience.bats`:** `behaviour with db stopped is recorded` (stop `db`; a call with `smoke-test`: status and body to findings; the test fails only if the call succeeds with spend not recorded and budgets ignored, which would be fail-open), `gateway recovers when db returns`, `every container has a memory limit and log rotation` (`docker inspect`).
-- [ ] **Step 2: Run** `tests/run.sh tests/resilience.bats` and `tests/check-arm64.sh` — expected FAIL (missing script).
+- [ ] **Step 2: Run** `tests/run.sh tests/resilience.bats`, `tests/check-arm64.sh` and `tests/check-prices.sh` — expected FAIL (missing scripts).
 - [ ] **Step 3: Implement** `check-arm64.sh`; fix anything the tests reveal. If the gateway serves calls with the database down and budgets ignored, stop and report: the spec assumed the opposite.
-- [ ] **Step 4: Run** both — expected PASS. Record the db-failure behaviour in `docs/provider-facts.md`.
+- [ ] **Step 4: Run** all three — expected PASS. Record the db-failure behaviour in `docs/provider-facts.md`.
 - [ ] **Step 5: Commit** `test: add resilience and arm64 checks`.
 
 ---
@@ -284,7 +299,7 @@ docs/test-procedures/phase-0.md  levels 2 and 3, walked through
 - Create: `README.md` (replace the one-line file), `docs/test-procedures/phase-0.md`
 - Modify: `docs/decisions.md` (open questions answered by level 1: 3 in part, 11, 12, 14)
 
-- [ ] **Step 1: Write `README.md`** for someone who has never used Compose: what it is; requirements; first setup (generate secrets, `.env` or secrets-service with the secret `rapidselector` and its fields, `./rapidselector.sh up -d`, `./rapidselector.sh run-script scripts/setup-keys.sh`, Open WebUI admin account); the commands `up -d`, `down`, `logs -f`, `ps`, `update`; addresses and ports table (gateway 4000 with admin UI at `/ui`, login `admin` with `LITELLM_UI_PASSWORD`; chat 4010; 4020 reserved for tower); keys and teams; how a client calls a role (curl example to `http://llm:4000/v1/chat/completions`); client behaviour (fixed timeout, at most one retry on timeout or 5xx, no retry on budget or 402 errors, keep `max_tokens` small); changing Open WebUI settings only through `docker-compose.yml`; backup fallback (`pg_dump` and volume tar commands) and that the salt key must be kept with it; the manual kill switch (OpenRouter dashboard, `./rapidselector.sh stop gateway`); a fixed LAN address (DHCP reservation); developer section (`dockerd`, `tests/run.sh`, `tests/check-arm64.sh`).
+- [ ] **Step 1: Write `README.md`** for someone who has never used Compose: what it is; requirements; first setup (generate secrets, `.env` or secrets-service with the secret `rapidselector` and its fields, `./rapidselector.sh up -d`, `./rapidselector.sh run-script scripts/setup-keys.sh`, Open WebUI admin account); the commands `up -d`, `down`, `logs -f`, `ps`, `update`; addresses and ports table (gateway 4000 with admin UI at `/ui`, login `admin` with `LITELLM_UI_PASSWORD`; chat 4010; 4020 reserved for tower); keys and teams; how a client calls a role (curl example to `http://llm:4000/v1/chat/completions`); client behaviour (fixed timeout, at most one retry on timeout or 5xx, no retry on budget or 402 errors, keep `max_tokens` small); changing Open WebUI settings only through `docker-compose.yml`; backup fallback (`pg_dump` and volume tar commands) and that the salt key must be kept with it; the manual kill switch (OpenRouter dashboard, `./rapidselector.sh stop gateway`); a fixed LAN address (DHCP reservation); developer section (`dockerd`, `tests/run.sh` as the regression suite after any change, `tests/check-arm64.sh`, `tests/check-prices.sh` before any change to the allowlist).
 - [ ] **Step 2: Write `docs/test-procedures/phase-0.md`** from spec section 8 (A–E), one numbered step per action with: what to run or click, what you should see, what to report back, and the cost of the step. Include the cost ceiling ($1 plus the smallest top-up) and the stop rule.
 - [ ] **Step 3: Verify** every command in both files exists in the repository and every port, name and budget matches the spec (`grep` each against `docker-compose.yml`, `gateway/config.yaml`, `scripts/setup-keys.sh`).
 - [ ] **Step 4: Update** `docs/decisions.md` with the level 1 answers, citing `docs/provider-facts.md`.

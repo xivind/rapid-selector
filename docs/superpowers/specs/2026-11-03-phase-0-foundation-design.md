@@ -70,6 +70,8 @@ Each entry pins one OpenRouter endpoint, including its quantisation, and leaves 
 ```
 
 - The OpenRouter key is read from `RAPIDSELECTOR_OPENROUTER_KEY`, never `OPENROUTER_API_KEY`, and no entry sets `use_in_pass_through`. LiteLLM's `/openrouter/…` pass-through takes its key from one of those two, and its calls "record $0 spend, so budgets do not count them".
+- Added 2026-11-03 after inspecting the v1.106.6 image: with no key found, the pass-through still forwards the request (with `Bearer None`). So every virtual key also gets `allowed_routes` limited to chat completions and the model list, and the route is refused before anything leaves the house.
+- Every entry carries `model_info: {rapidselector_kind: role|experiment, reasoning: true|false}`. This file is the only list of names: the scripts read names, kinds and reasoning flags from the gateway's `/model/info`.
 - A role and an experiment name for the same model are two entries with the same pin and price.
 - Prices are the pinned endpoint's, from OpenRouter's API on 2026-11-03, and are checked again when the file is written.
 
@@ -134,16 +136,17 @@ Common: Compose project `rapidselector`; restart policy `unless-stopped`; loggin
 | | `db` | `gateway` | `chat` |
 |---|---|---|---|
 | Container | `rapidselector-db` | `rapidselector-gateway` | `rapidselector-chat` |
-| Image | `postgres`, pinned major version, alpine variant (exact tag fixed in the plan) | `ghcr.io/berriai/litellm-database:v1.106.6` | `ghcr.io/open-webui/open-webui:v0.13.0` |
+| Image | `postgres:17.11-alpine` | `ghcr.io/berriai/litellm-database:v1.106.6` | `ghcr.io/open-webui/open-webui:v0.13.0` |
 | Port | None | `LAN:4000 → 4000` | `LAN:4010 → 8080` |
 | Storage | Volume `rapidselector_pgdata` | `./gateway/config.yaml`, read-only | Volume `rapidselector_chatdata` |
 | Memory limit (initial) | 512 MB | 1.5 GB | 1.5 GB |
 | Healthcheck | `pg_isready` | LiteLLM's health endpoint | `/health` |
 | Starts after | – | `db` healthy | `gateway` healthy |
 
-- The gateway runs one worker (`--num_workers 1`).
+- The gateway runs one worker (`--num_workers 1`) and sets `LITELLM_LOCAL_MODEL_COST_MAP=True`, so it does not fetch LiteLLM's price map from GitHub at every start.
+- LiteLLM's admin UI logs in with `UI_USERNAME=admin` and `UI_PASSWORD` from the secret `LITELLM_UI_PASSWORD`.
 - The memory limits are measured and adjusted at level 2.
-- Both pinned upstream images were confirmed for `linux/arm64` on 2026-11-03. The Postgres tag is confirmed in the plan.
+- All three pinned images were confirmed for `linux/arm64` on 2026-11-03.
 
 ### Open WebUI settings
 Set as environment variables, with `ENABLE_PERSISTENT_CONFIG=False` so the admin panel cannot save changes:
@@ -161,9 +164,7 @@ Set as environment variables, with `ENABLE_PERSISTENT_CONFIG=False` so the admin
 
 ### Variables (`.env.example`)
 - **Settings:** `RAPIDSELECTOR_LAN_ADDRESS`, `GATEWAY_PORT=4000`, `CHAT_PORT=4010`, `SECRETS_SOURCE=env` (or `secrets-service`), `SECRETS_SERVICE_URL`, and the path to the secrets-service token file.
-- **Secrets:** `POSTGRES_PASSWORD`, `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `RAPIDSELECTOR_OPENROUTER_KEY`, `WEBUI_SECRET_KEY`, `KEY_CHAT`, `KEY_NODE_RED`, `KEY_SMOKE_TEST`. The README gives a command to generate each.
-
-To settle in the plan: how LiteLLM's admin UI logs in (the master key, or its own username and password variables).
+- **Secrets:** `POSTGRES_PASSWORD`, `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, `LITELLM_UI_PASSWORD`, `RAPIDSELECTOR_OPENROUTER_KEY`, `WEBUI_SECRET_KEY`, `KEY_CHAT`, `KEY_NODE_RED`, `KEY_SMOKE_TEST`. The README gives a command to generate each.
 
 ## 5. Scripts
 
@@ -172,7 +173,7 @@ All bash with `curl` and `jq`, tested with bats and checked with shellcheck.
 ### `rapidselector.sh <command>`
 - Reads the non-secret settings from `.env`.
 - With `SECRETS_SOURCE=secrets-service`: reads the client token from its file, fetches the one secret `rapidselector` (a blob holding every secret field), and fails loudly on a missing field (the `// empty` check in the `production` repository's `secrets-service/CLAUDE.md`).
-- Exports the values and runs `docker compose "$@"`. `update` runs `pull` then `up -d`.
+- Exports the values and runs `docker compose "$@"`. `update` runs `pull` then `up -d`. `run-script <path>` runs one of our scripts with the same settings and secrets instead of Compose.
 - Writes nothing secret to disk.
 
 ### `scripts/setup-keys.sh`
@@ -200,7 +201,8 @@ The owner reads the balance in OpenRouter's dashboard.
 - `tests/compose.test.yml` adds a fake upstream and sets `OPENROUTER_API_BASE` to it. Everything else is the real `docker-compose.yml` and `gateway/config.yaml`.
 - **Fake upstream:** a Python program using only the standard library, in its own container. It answers `/v1/chat/completions` with fixed text and known `usage`, with or without OpenRouter's `cost` field; records every request; and can be switched to answer 402 or 5xx.
 - **Fake secrets-service:** the same kind of program, serving `GET /secrets/rapidselector`.
-- **Tests:** bats with `curl` and `jq`. `tests/run.sh` starts the stack, runs the tests and tears it down. In the cloud sandbox the Docker daemon is started first (`dockerd`).
+- **Tests:** bats with `curl` and `jq`. Each test file starts the stack it needs and tears it down; `tests/run.sh` runs them all and is the regression suite after any change. In the cloud sandbox the Docker daemon is started first (`dockerd`). Level 1 does not run on a host where rapid-selector is running, because container names and ports are fixed.
+- LiteLLM writes spend in batches (every 10 seconds by default), so budget tests allow and record a small overshoot.
 
 ### What is checked
 
@@ -217,6 +219,7 @@ The owner reads the balance in OpenRouter's dashboard.
 | Open WebUI | The first account can be created with `ENABLE_SIGNUP=False` and a second is refused; chat goes through the gateway; titles use `llama-3.1-8b-instruct@deepinfra`; no calls for tags, follow-ups or autocomplete reach the upstream |
 | Scripts | `rapidselector.sh` with both sources, including a missing field; `smoke-test.sh`; `drain-balance.sh` stops at the first 402, sends its burst and keeps to its hard limits |
 | arm64 | `tests/check-arm64.sh` confirms `linux/arm64` for every pinned image |
+| Prices | `tests/check-prices.sh` compares every entry's price, endpoint and tier with OpenRouter's public API. Free; run before every change to the allowlist |
 
 What is observed rather than asserted is recorded in `docs/provider-facts.md` with the version and date. If a finding breaks an assumption in this spec, work stops and the owner is consulted.
 
