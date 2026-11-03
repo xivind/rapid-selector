@@ -122,3 +122,12 @@ rapid-selector/
 - Anything that can cost money (new models, benchmark runs, changed budgets) must be flagged explicitly to the owner.
 - Decisions are recorded in `docs/decisions.md`, with date and reason.
 - **Development** happens in a cloud sandbox (amd64) with no access to the Pi. Make no assumptions about the home network. Everything specific to the home network (IPs, Node-RED address) goes in `.env`. Anything that needs the Pi or real money is verified by the owner on the Pi, following a written test procedure.
+
+## Coding principles
+
+Adapted from Forrest Chang's four principles, based on Andrej Karpathy's observations on LLM coding. They sharpen the superpowers skills; where they overlap, the skills set the process.
+
+- **Think before coding.** Do not assume. State assumptions explicitly. When a request can be read in more than one way, present the readings instead of picking one. Push back when a simpler approach exists. When confused, stop and ask.
+- **Simplicity first.** The minimum code that solves the problem. No features beyond what was asked, and no abstractions for single-use code. If code written in this piece of work takes 200 lines and could take 50, rewrite it.
+- **Surgical changes.** Touch only what the task needs, in code, config and docs alike. Do not improve adjacent code or refactor what is not broken. Match the existing style. Every changed line traces directly to the request.
+- **Goal-driven execution.** Define success criteria before starting, and loop until they are verified: "fix the bug" becomes "write a test that reproduces it, then make it pass". A criterion that needs the Pi or real money cannot be verified in the sandbox: it becomes a step in the owner's test procedure, and the work is reported as not yet verified until the owner has run it.
