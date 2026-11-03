@@ -1,6 +1,6 @@
 # rapid-selector: overall design
 
-Date: 2026-11-03. Status: agreed with the owner section by section; awaiting review of this written spec.
+Date: 2026-11-03. Status: approved by the owner on 2026-11-03.
 
 ## 1. What this spec is
 
