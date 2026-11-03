@@ -1,6 +1,6 @@
 # Phase 0: Foundation
 
-Date: 2026-11-03. Status: agreed with the owner section by section; awaiting review of this written spec.
+Date: 2026-11-03. Status: approved by the owner on 2026-11-03.
 
 Follows the overall design (`2026-11-03-rapid-selector-overall-design.md`) and the rules in `CLAUDE.md`. Facts about LiteLLM, Open WebUI and OpenRouter used here were checked in their documentation and OpenRouter's public API on 2026-11-03 and are recorded in `docs/provider-facts.md`.
 
