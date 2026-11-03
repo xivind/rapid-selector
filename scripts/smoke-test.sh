@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Smoke test: one tiny call per role (or per name with --all) with the smoke-test key.
+# Each call must be answered and recorded with a cost above zero; a model outside the
+# allowlist and the /openrouter pass-through must be refused. Costs a little real money
+# against OpenRouter (well under $0.01 for the roles).
+# Run with the secrets loaded:   ./rapidselector.sh run-script scripts/smoke-test.sh [--all]
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=SCRIPTDIR/lib.sh
+. "$ROOT/scripts/lib.sh"
+
+require_env LITELLM_MASTER_KEY KEY_SMOKE_TEST RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
+GATEWAY="http://${RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT}"
+
+model_info="$(api GET /model/info)" || die 1 "cannot read /model/info from the gateway"
+if [ "${1:-}" = "--all" ]; then
+  filter='.data[]'
+else
+  filter='.data[] | select(.model_info.rapidselector_kind == "role")'
+fi
+mapfile -t entries < <(jq -r "[$filter | {n: .model_name, r: (.model_info.reasoning == true)}] | unique_by(.n) | .[] | \"\(.n) \(.r)\"" <<<"$model_info")
+
+failures=()
+total=0
+
+# status_of <path> <json>: HTTP status of a POST with the smoke-test key.
+status_of() {
+  curl -sS -o /dev/null -w '%{http_code}' -X POST "$GATEWAY$1" \
+    -H "Authorization: Bearer $KEY_SMOKE_TEST" -H 'Content-Type: application/json' -d "$2"
+}
+
+for entry in "${entries[@]}"; do
+  name="${entry% *}"
+  reasoning="${entry#* }"
+  body="$(jq -nc --arg m "$name" '{model:$m, max_tokens:256, messages:[{role:"user",content:"Reply with the word ok."}]}')"
+  [ "$reasoning" = "true" ] && body="$(jq -c '. + {reasoning_effort:"low"}' <<<"$body")"
+  headers="$(mktemp)"
+  http_status="$(curl -sS -D "$headers" -o /dev/null -w '%{http_code}' -X POST "$GATEWAY/v1/chat/completions" \
+    -H "Authorization: Bearer $KEY_SMOKE_TEST" -H 'Content-Type: application/json' -d "$body" || echo 000)"
+  # No cost header (spend not recorded) counts as cost 0.
+  cost="$( (grep -i '^x-litellm-response-cost:' "$headers" || true) | tail -1 | cut -d: -f2- | tr -d ' \r')"
+  rm -f "$headers"
+  cost="$(awk -v c="${cost:-0}" 'BEGIN { printf "%.8f", c + 0 }')"
+  printf '%-32s %s %s\n' "$name" "$http_status" "$cost"
+  if [ "$http_status" != "200" ]; then
+    failures+=("$name: HTTP $http_status")
+  elif awk -v c="$cost" 'BEGIN { exit !(c <= 0) }'; then
+    failures+=("$name: recorded cost is zero")
+  fi
+  total="$(awk -v t="$total" -v c="$cost" 'BEGIN { printf "%.8f", t + c }')"
+done
+
+probe='{"model":"openai/gpt-4o","messages":[{"role":"user","content":"hi"}]}'
+code="$(status_of /v1/chat/completions "$probe")"
+if [ "$code" -ge 400 ] && [ "$code" -lt 500 ]; then echo "refused: openai/gpt-4o ($code)"; else failures+=("openai/gpt-4o was not refused: HTTP $code"); fi
+probe='{"model":"classify","messages":[{"role":"user","content":"hi"}]}'
+code="$(status_of /openrouter/v1/chat/completions "$probe")"
+if [ "$code" = "401" ] || [ "$code" = "403" ]; then echo "refused: /openrouter/v1/chat/completions ($code)"; else failures+=("/openrouter/v1/chat/completions was not refused: HTTP $code"); fi
+
+echo "total_usd $total"
+if [ "${#failures[@]}" -gt 0 ]; then
+  echo "FAILED:"
+  printf '  %s\n' "${failures[@]}"
+  exit 1
+fi
+echo "OK"

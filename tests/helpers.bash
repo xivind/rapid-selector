@@ -135,3 +135,8 @@ fake_tokens() {
   curl -sS -X POST "$FAKE_UPSTREAM_URL/_mode" \
     -d "{\"status\":200,\"prompt_tokens\":$1,\"completion_tokens\":$2}" >/dev/null
 }
+
+# run_smoke_test [args...]: run scripts/smoke-test.sh through rapidselector.sh with the test settings.
+run_smoke_test() {
+  (cd "$REPO" && RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" ./rapidselector.sh run-script scripts/smoke-test.sh "$@")
+}
