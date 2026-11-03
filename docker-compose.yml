@@ -56,5 +56,51 @@ services:
       start_period: 120s
       retries: 6
 
+  chat:
+    image: ghcr.io/open-webui/open-webui:v0.13.0
+    container_name: rapidselector-chat
+    restart: unless-stopped
+    environment:
+      # The gateway is the only connection, with chat's own virtual key.
+      OPENAI_API_BASE_URL: http://gateway:4000/v1
+      OPENAI_API_KEY: ${KEY_CHAT:?set KEY_CHAT}
+      ENABLE_OLLAMA_API: "False"
+      ENABLE_DIRECT_CONNECTIONS: "False"
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY}
+      # Settings live here, not in the admin panel: changes made there are not saved.
+      ENABLE_PERSISTENT_CONFIG: "False"
+      # Only the first account (the admin) can be created.
+      ENABLE_SIGNUP: "False"
+      # Background calls: titles only, with the cheapest model; everything else off.
+      ENABLE_TITLE_GENERATION: "True"
+      TASK_MODEL_EXTERNAL: llama-3.1-8b-instruct@deepinfra
+      ENABLE_TAGS_GENERATION: "False"
+      ENABLE_FOLLOW_UP_GENERATION: "False"
+      ENABLE_AUTOCOMPLETE_GENERATION: "False"
+      ENABLE_SEARCH_QUERY_GENERATION: "False"
+      ENABLE_RETRIEVAL_QUERY_GENERATION: "False"
+      # No outside services.
+      ENABLE_WEB_SEARCH: "False"
+      ENABLE_IMAGE_GENERATION: "False"
+      ENABLE_EVALUATION_ARENA_MODELS: "False"
+      # No local embedding model (memory, downloads).
+      BYPASS_EMBEDDING_AND_RETRIEVAL: "True"
+    volumes:
+      - chatdata:/app/backend/data
+    ports:
+      - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${CHAT_PORT:-4010}:8080"
+    mem_limit: 1536m
+    logging: *logging
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 180s
+      retries: 6
+
 volumes:
   pgdata:
+  chatdata:

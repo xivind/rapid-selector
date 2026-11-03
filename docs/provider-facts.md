@@ -83,6 +83,15 @@ Source: https://docs.openwebui.com/reference/env-configuration
 - With `ENABLE_PERSISTENT_CONFIG` set to `False`, settings can still be edited in the admin UI, but "these changes are NOT saved".
 - `ghcr.io/open-webui/open-webui:v0.13.0` is published for `linux/amd64` and `linux/arm64`.
 
+### Level 1 findings, v0.13.0, 2026-11-03
+From `tests/chat.bats` against the gateway and the fake upstream.
+- With `ENABLE_SIGNUP=False`, the first account can still be created on an empty volume and becomes admin; a second signup is refused.
+- The model list shown is exactly the gateway's 11 names.
+- Title, tags, follow-up, autocomplete and query generation are separate API calls (`/api/v1/tasks/<name>/completions`) made by the browser. With our settings, only the title call reaches the gateway, and it uses `TASK_MODEL_EXTERNAL` (`llama-3.1-8b-instruct@deepinfra`) whatever model the chat uses. With `ENABLE_FOLLOW_UP_GENERATION=True`, a follow-up call reaches the gateway (checked).
+- With `ENABLE_PERSISTENT_CONFIG=False`, a setting changed through the admin API (`ENABLE_SIGNUP`) takes effect until restart, then returns to the environment's value.
+- With `BYPASS_EMBEDDING_AND_RETRIEVAL=True`, it downloads no embedding model at start, and uses about 634 MiB of memory after start (amd64, cloud sandbox).
+- The image has `curl`, used for its healthcheck (`/health`).
+
 ## OpenRouter catalogue
 
 ### From OpenRouter's API, 2026-11-03
