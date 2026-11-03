@@ -69,6 +69,12 @@ From `tests/gateway.bats` against the fake upstream.
 - **Postgres and spend-writer metrics** (`litellm_postgres_*`) appear only with `litellm_settings.service_callback: ["prometheus_system"]`.
 - **`litellm_zero_cost_requests_total`** counts only calls whose price entry declares a positive rate but whose cost came out as 0 (`litellm_core_utils/llm_cost_calc/zero_cost_diagnostic.py`). A model with no price at all is treated as free and not counted, and one with only an input price records the input cost. So it does not catch a missing price; `tests/gateway.bats` checks that every entry records cost above zero instead.
 
+- **Budgets block with HTTP 422** (not the 400 in the docs' example): `{"error":{"message":"Budget has been exceeded! Key=smoke-test (sk-...) Current cost: 0.040015, Max budget: 0.03","type":"budget_exceeded","code":"422"}}`; for a team the message names `Team=permanent`. Clients must treat 422 `budget_exceeded` like 402: no retry.
+- **Overshoot:** key and team budgets let through at most one call past the limit (the check runs before the call, against spend written in batches every 10 seconds). The global budget overshot more: 5 calls of about $0.02 against $0.05, with 12 seconds between calls. It is checked against a separate proxy-wide total in the database (`fetch_global_spend_with_event_coordination` in `user_api_key_auth.py`). Since the team budgets add up to the global budget, they are what stops spend promptly.
+- **Teams work in the open-source version** (`/team/new`, `/team/update`, team budgets), and **custom key values are accepted** by `/key/generate`.
+- **`allowed_routes` is necessary:** without it, a virtual key that names a model it may use (e.g. `classify`) gets HTTP 200 from `/openrouter/v1/chat/completions`, and the request goes out with `Bearer None`. With it, the route is refused (401/403).
+- Budgets come back as floats (`1.0`).
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03

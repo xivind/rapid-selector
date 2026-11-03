@@ -111,3 +111,27 @@ metric() {
     | grep -E "${2:-.}" \
     | awk '{ s += $NF } END { printf "%.10g\n", s + 0 }'
 }
+
+# run_setup_keys [VAR=value...]: run scripts/setup-keys.sh through rapidselector.sh with the
+# test settings; extra assignments (e.g. BUDGET_KEY_SMOKE_TEST=0.03) go into its environment.
+run_setup_keys() {
+  (cd "$REPO" && env "$@" RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" ./rapidselector.sh run-script scripts/setup-keys.sh)
+}
+
+# key_info <key value>: LiteLLM's /key/info for that key, as JSON (master key).
+key_info() {
+  curl -sS -G -H "Authorization: Bearer $(test_env LITELLM_MASTER_KEY)" \
+    --data-urlencode "key=$1" "$GATEWAY_URL/key/info"
+}
+
+# team_info <team id>: LiteLLM's /team/info, as JSON (master key).
+team_info() {
+  curl -sS -G -H "Authorization: Bearer $(test_env LITELLM_MASTER_KEY)" \
+    --data-urlencode "team_id=$1" "$GATEWAY_URL/team/info"
+}
+
+# fake_tokens <prompt> <completion>: make every upstream answer report these token counts.
+fake_tokens() {
+  curl -sS -X POST "$FAKE_UPSTREAM_URL/_mode" \
+    -d "{\"status\":200,\"prompt_tokens\":$1,\"completion_tokens\":$2}" >/dev/null
+}

@@ -2,6 +2,7 @@
 # Load settings and secrets, then run docker compose.
 #   ./rapidselector.sh up -d | down | logs -f | ps | <any docker compose command>
 #   ./rapidselector.sh update   (pull new images, then recreate what changed)
+#   ./rapidselector.sh run-script scripts/setup-keys.sh   (run one of our scripts with the secrets)
 # Settings come from .env (or $RAPIDSELECTOR_ENV_FILE). Secrets come from .env or,
 # with SECRETS_SOURCE=secrets-service, from the secret "rapidselector" in secrets-service.
 set -euo pipefail
@@ -12,6 +13,12 @@ export RAPIDSELECTOR_ROOT
 . "$RAPIDSELECTOR_ROOT/scripts/lib.sh"
 
 load_settings_and_secrets
+
+if [ "${1:-}" = "run-script" ]; then
+  shift
+  [ "$#" -ge 1 ] || die 2 "usage: rapidselector.sh run-script <script> [args...]"
+  exec "$@"
+fi
 
 if [ "${1:-}" = "update" ]; then
   shift
