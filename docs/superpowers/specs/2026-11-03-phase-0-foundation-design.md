@@ -96,7 +96,7 @@ Prices per million tokens, input / output.
 | `llama-3.1-8b-instruct@deepinfra` | `deepinfra/fp8` | $0.02 / $0.04 | No | 2048 |
 | `gpt-oss-20b@deepinfra` | `deepinfra/bf16` | $0.03 / $0.14 | Yes | 8192 |
 | `gpt-oss-120b@deepinfra` | `deepinfra/bf16` | $0.037 / $0.17 | Yes | 8192 |
-| `gpt-oss-120b@primeintellect` | `primeintellect/fp4` | $0.03 / $0.11 | Yes | 8192 |
+| `gpt-oss-120b@primeintellect` | `primeintellect/fp4` | $0.035 / $0.13 (was $0.03 / $0.11 earlier on 2026-11-03) | Yes | 8192 |
 | `deepseek-v4.1-flash@deepinfra` | `deepinfra/fp8` | $0.14 / $0.42 | Yes | 8192 |
 | `qwen3.8-2.4t-a95b@siliconflow` | `siliconflow/fp8` | $2.00 / $6.00 | Yes, default effort `xhigh`; set to `medium` | 8192 |
 

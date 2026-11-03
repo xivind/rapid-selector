@@ -106,7 +106,7 @@ gw_call() {
 
 # metric <name> [label_regex]: sum of the matching samples on the gateway's /metrics.
 metric() {
-  curl -sS "$GATEWAY_URL/metrics" \
+  curl -sS "$GATEWAY_URL/metrics/" \
     | grep -E "^$1(\{[^}]*\})? " \
     | grep -E "${2:-.}" \
     | awk '{ s += $NF } END { printf "%.10g\n", s + 0 }'

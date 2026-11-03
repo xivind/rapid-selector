@@ -1,0 +1,20 @@
+# Test-only gateway config: classify without prices, so recorded spend is 0 when the
+# upstream reports no cost (used by tests/smoke.bats).
+model_list:
+  - model_name: classify
+    litellm_params:
+      model: openrouter/mistralai/mistral-small-3.2-24b-instruct
+      api_key: os.environ/RAPIDSELECTOR_OPENROUTER_KEY
+      max_tokens: 1024
+    model_info:
+      rapidselector_kind: role
+      reasoning: false
+
+litellm_settings:
+  callbacks: ["prometheus"]
+  require_auth_for_metrics_endpoint: false
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+  store_model_in_db: false

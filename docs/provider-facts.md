@@ -58,6 +58,17 @@ Inspected in `ghcr.io/berriai/litellm-database:v1.106.6` (package version 1.106.
 - Spend is written to the database in batches: `PROXY_BATCH_WRITE_AT`, default 10 seconds.
 - `postgres:17-alpine` was 17.11 on this date; `postgres:17.11-alpine` is published for `linux/arm64`.
 
+### Level 1 findings, v1.106.6, 2026-11-03
+From `tests/gateway.bats` against the fake upstream.
+- **Spend source:** when OpenRouter's response carries `usage.cost`, LiteLLM records that cost (`x-litellm-response-cost` = 0.01 for a fake cost of 0.01, where the configured price would give 0.0000175). Without it, LiteLLM uses the configured price (100 × input + 50 × output price, exactly). Streamed calls are recorded too.
+- **`extra_body.provider` is forwarded unchanged** for all 11 entries, and `reasoning_effort: medium` reaches OpenRouter as `reasoning_effort`.
+- **Default `max_tokens` is only a default:** a client that sends 50000 gets 50000 forwarded.
+- **Names outside the allowlist** (`openai/gpt-4o`, `openrouter/openai/gpt-4o`, `openrouter/anthropic/claude-3.5-sonnet`, `deepinfra/…`) are refused with 400 and nothing reaches OpenRouter. An underlying model string that matches an entry (`openrouter/openai/gpt-oss-120b`) is routed to that entry, with its pin and price.
+- **`/openrouter/…` pass-through with the master key** forwards the request with `Authorization: Bearer None` (confirmed). Virtual keys are limited by `allowed_routes` (Task 5).
+- **`/metrics` redirects (307) to `/metrics/`.** Prometheus should scrape `/metrics/`.
+- **Postgres and spend-writer metrics** (`litellm_postgres_*`) appear only with `litellm_settings.service_callback: ["prometheus_system"]`.
+- **`litellm_zero_cost_requests_total`** counts only calls whose price entry declares a positive rate but whose cost came out as 0 (`litellm_core_utils/llm_cost_calc/zero_cost_diagnostic.py`). A model with no price at all is treated as free and not counted, and one with only an input price records the input cost. So it does not catch a missing price; `tests/gateway.bats` checks that every entry records cost above zero instead.
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03
