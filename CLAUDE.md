@@ -1,6 +1,6 @@
 # rapid-selector
 
-A small, self-hosted lab for testing and comparing open-weight language models through cloud providers, with hard cost control. Runs on a single Raspberry Pi 5 (8 GB RAM, 256 GB SSD) on the home network. One user, LAN access only.
+A small, self-hosted gateway and lab for open-weight language models through cloud providers, with hard cost control. It is used both to test and compare models and as a permanent part of the home infrastructure. Runs on a Raspberry Pi 5 on the home network; the host is set in `.env`. One owner, LAN access only.
 
 The name comes from Vannevar Bush's *Rapid Selector*, the machine meant to find the right document in large volumes of microfilm. Here, the job is to find the right model.
 
@@ -8,7 +8,7 @@ The name comes from Vannevar Bush's *Rapid Selector*, the machine meant to find 
 
 1. Test and compare open-weight models (speed, cost, quality) without buying expensive hardware, across the full range from very small to very large.
 2. Find out which model class is actually good enough for the owner's tasks, as input to a possible later investment in local hardware.
-3. Make the models available in a controlled way, both interactively through chat and programmatically from Node-RED and apps in Docker containers.
+3. Make the models available in a controlled way, as a permanent part of the home infrastructure, both interactively through chat and programmatically from Node-RED and apps in Docker containers.
 
 Claude/Anthropic is and remains the primary tool. This project is not a replacement.
 
@@ -78,6 +78,8 @@ We assemble existing components where they exist and build only what is unique t
 | `chat` | Open WebUI, connected to the gateway with its own key | No, configured |
 | `tower` | Control tower: usage, balance, kill switch, arena, visualisation | **Yes** |
 
+- The core (`gateway`, `db`, `chat`, `tower`) works with only Docker and secrets. Integrations with existing infrastructure (metrics and alerting, secret stores, backup, log shipping) are optional, off by default and switched on in configuration. Changes that only make sense in one home go in that home's own repository.
+- Clients call roles, stable names defined in the gateway, never specific models.
 - The gateway is the only place providers are configured. Adding a provider, such as local inference, changes the gateway and nothing else.
 - The gateway's OpenAI-compatible HTTP API is the default for all programmatic use.
 - `tower` reads LiteLLM data through LiteLLM's API, never directly from Postgres. The Prisma schema is LiteLLM's internal business.
@@ -85,7 +87,7 @@ We assemble existing components where they exist and build only what is unique t
 
 ## Platform and operations
 
-- **Target:** Raspberry Pi 5, 8 GB RAM, arm64, Docker with the Compose v2 plugin (`docker compose`, not the deprecated `docker-compose`). All images must be available for `linux/arm64`. Our own images must be buildable for arm64.
+- **Target:** Raspberry Pi 5, arm64, with memory limits that fit in 8 GB, Docker with the Compose v2 plugin (`docker compose`, not the deprecated `docker-compose`). All images must be available for `linux/arm64`. Our own images must be buildable for arm64.
 - The owner has not used Compose before. The README must explain the few commands needed (up, down, logs, update) and assume no prior knowledge.
 - Published ports must be bound explicitly to the Pi's LAN address from `.env`, never to `0.0.0.0`. Docker writes its own iptables rules and bypasses common firewall rules such as ufw, so the firewall alone is not enough.
 - Services that the owner or the home network must reach are published on fixed ports defined in `.env`. The README must include a table of addresses and ports.
@@ -94,10 +96,11 @@ We assemble existing components where they exist and build only what is unique t
 - Set memory limits per container. Postgres and volumes live on the SSD.
 - Pin image versions. No `latest`.
 - Set a retention period for LiteLLM's spend log so the database does not grow without bound.
-- Secrets in `.env` (never committed, listed in `.gitignore`). `.env.example` is kept up to date.
+- Secrets are environment variables with fixed names, listed in `.env.example`, which is kept up to date. They come from `.env` (never committed, listed in `.gitignore`) or from a secret store through `rapidselector.sh`. Compose refuses to run without them.
+- The Compose project, containers, volumes and the images we build are prefixed `rapidselector`.
 - LiteLLM's master key and salt key are generated at setup. The salt key must never be changed after provider keys have been stored, or they become unreadable. The README must state this clearly.
 - Use healthchecks so that services wait for the services they depend on.
-- Backup: the README must describe how Postgres data (keys, budgets, spend history) and `tower`'s SQLite file are backed up to the NAS on the home network. The backup target is set in `.env`.
+- Backup: Postgres data (keys, budgets, spend history), Open WebUI's data and `tower`'s SQLite file are backed up, through a backup integration or the fallback described in the README. A backup is useless without the salt key, so the secrets must be kept safe as well.
 
 ## Repo structure
 
@@ -107,6 +110,8 @@ rapid-selector/
 ├── README.md
 ├── docker-compose.yml
 ├── .env.example
+├── rapidselector.sh  # loads secrets, then runs docker compose
+├── scripts/        # smoke test and other operator scripts
 ├── gateway/        # LiteLLM config
 ├── chat/           # Open WebUI config (if needed)
 ├── tower/          # control tower (our code)
