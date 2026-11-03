@@ -26,10 +26,10 @@ for file in "${files[@]}"; do
 done
 
 # Stop any test stack a failing file left behind.
-docker compose --project-directory "$repo" -f tests/compose.test.yml down -v >/dev/null 2>&1 || true
+docker compose --project-directory "$repo" -f tests/compose.fakes.yml down -v >/dev/null 2>&1 || true
 if [ -f docker-compose.yml ] && [ -f tests/.artifacts/test.env ]; then
   docker compose --project-directory "$repo" --env-file tests/.artifacts/test.env \
-    -f docker-compose.yml -f tests/compose.test.yml down -v >/dev/null 2>&1 || true
+    -f docker-compose.yml -f tests/compose.fakes.yml -f tests/compose.test.yml down -v >/dev/null 2>&1 || true
 fi
 
 if [ "${#failed[@]}" -gt 0 ]; then

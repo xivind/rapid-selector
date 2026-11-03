@@ -1,37 +1,8 @@
-# Level 1 test overlay. Always used with --project-directory set to the repository root,
-# alone (fakes only) or together with docker-compose.yml.
+# Level 1 overlay for the full stack: docker-compose.yml + tests/compose.fakes.yml + this file.
+# Points the gateway at the fake upstream.
 name: rapidselector-test
 
 services:
-  fake-upstream:
-    image: python:3.15.2-alpine3.24
-    working_dir: /app
-    command: ["python", "upstream.py"]
-    volumes:
-      - ./tests/fakes:/app:ro
-    ports:
-      - "127.0.0.1:18000:8000"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 2s
-      retries: 15
-
-  fake-secrets:
-    image: python:3.15.2-alpine3.24
-    working_dir: /app
-    command: ["python", "secrets_service.py"]
-    environment:
-      FAKE_SECRETS_FILE: /data/secrets.json
-    volumes:
-      - ./tests/fakes:/app:ro
-      - ./tests/.artifacts:/data:ro
-    ports:
-      - "127.0.0.1:18002:8002"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
-      interval: 2s
-      retries: 15
-
   gateway:
     environment:
       OPENROUTER_API_BASE: http://fake-upstream:8000/v1

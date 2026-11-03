@@ -41,7 +41,7 @@ test_env() {
 
 # docker compose with the fakes overlay only (no gateway stack).
 compose_fakes() {
-  docker compose --project-directory "$REPO" -f "$REPO/tests/compose.test.yml" "$@"
+  docker compose --project-directory "$REPO" -f "$REPO/tests/compose.fakes.yml" "$@"
 }
 
 fakes_up() {
@@ -57,7 +57,7 @@ fakes_down() {
 stack_up() {
   ensure_test_env
   [ -f "$ARTIFACTS/secrets.json" ] || echo '{}' > "$ARTIFACTS/secrets.json"
-  local files=(-f "$REPO/docker-compose.yml" -f "$REPO/tests/compose.test.yml")
+  local files=(-f "$REPO/docker-compose.yml" -f "$REPO/tests/compose.fakes.yml" -f "$REPO/tests/compose.test.yml")
   local overlay
   for overlay in "$@"; do files+=(-f "$REPO/$overlay"); done
   if [ -x "$REPO/rapidselector.sh" ]; then
@@ -69,7 +69,7 @@ stack_up() {
 
 stack_down() {
   docker compose --project-directory "$REPO" --env-file "$TEST_ENV_FILE" \
-    -f "$REPO/docker-compose.yml" -f "$REPO/tests/compose.test.yml" down -v >/dev/null 2>&1 || true
+    -f "$REPO/docker-compose.yml" -f "$REPO/tests/compose.fakes.yml" -f "$REPO/tests/compose.test.yml" down -v >/dev/null 2>&1 || true
 }
 
 upstream_requests() {
