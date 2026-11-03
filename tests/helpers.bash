@@ -140,3 +140,21 @@ fake_tokens() {
 run_smoke_test() {
   (cd "$REPO" && RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" ./rapidselector.sh run-script scripts/smoke-test.sh "$@")
 }
+
+# key_spend <key value>: the key's recorded spend in USD (0 when none).
+key_spend() {
+  key_info "$1" | jq '.info.spend // 0'
+}
+
+# wait_for_key_spend_above <key value> <amount> [seconds]: wait until LiteLLM's recorded spend
+# for the key exceeds the amount. Spend is written in batches (every 10 s by default).
+wait_for_key_spend_above() {
+  local deadline=$((SECONDS + ${3:-40})) spend
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    spend="$(key_spend "$1")"
+    [ "$(jq -n --argjson a "$spend" --argjson b "$2" '$a > $b')" = "true" ] && return 0
+    sleep 2
+  done
+  echo "spend for the key stayed at $spend (needed more than $2)" >&2
+  return 1
+}

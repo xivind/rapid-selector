@@ -64,22 +64,18 @@ upstream_models() {
 }
 
 @test "a chat completion goes through the gateway" {
-  spend_before="$(key_info "$(test_env KEY_CHAT)" | jq '.info.spend // 0')"
+  spend_before="$(key_spend "$(test_env KEY_CHAT)")"
   body="$(chat_api POST /api/chat/completions '{"model":"classify","stream":false,"messages":[{"role":"user","content":"hi"}]}')"
   [ "$(jq -r '.choices[0].message.content' <<<"$body")" = "fake reply" ] || { echo "$body"; false; }
   [ "$(upstream_models)" = '["mistralai/mistral-small-3.2-24b-instruct"]' ]
-  sleep 12
-  spend_after="$(key_info "$(test_env KEY_CHAT)" | jq '.info.spend // 0')"
-  [ "$(jq -n --argjson a "$spend_after" --argjson b "$spend_before" '$a > $b')" = "true" ]
+  wait_for_key_spend_above "$(test_env KEY_CHAT)" "$spend_before"
 }
 
 @test "streamed chat records spend on the chat key" {
-  spend_before="$(key_info "$(test_env KEY_CHAT)" | jq '.info.spend // 0')"
+  spend_before="$(key_spend "$(test_env KEY_CHAT)")"
   run chat_api POST /api/chat/completions '{"model":"summarise","stream":true,"messages":[{"role":"user","content":"hi"}]}'
   [[ "$output" == *"fake reply"* ]]
-  sleep 12
-  spend_after="$(key_info "$(test_env KEY_CHAT)" | jq '.info.spend // 0')"
-  [ "$(jq -n --argjson a "$spend_after" --argjson b "$spend_before" '$a > $b')" = "true" ]
+  wait_for_key_spend_above "$(test_env KEY_CHAT)" "$spend_before"
 }
 
 @test "title generation uses llama-3.1-8b-instruct@deepinfra" {

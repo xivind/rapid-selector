@@ -156,9 +156,13 @@ finding() {
     -H 'Content-Type: application/json' \
     -d '{"model":"summarise","stream":true,"stream_options":{"include_usage":true},"messages":[{"role":"user","content":"hi"}]}'
   [[ "$output" == *"data: [DONE]"* ]]
-  sleep 12
-  logs="$(curl -sS -H "Authorization: Bearer $MASTER" "$GATEWAY_URL/spend/logs?summarize=false" )"
-  spend="$(jq '[.[] | select(.model_group == "summarise") | .spend] | add // 0' <<<"$logs")"
+  spend=0
+  for _ in $(seq 1 20); do
+    logs="$(curl -sS -H "Authorization: Bearer $MASTER" "$GATEWAY_URL/spend/logs?summarize=false" )"
+    spend="$(jq '[.[] | select(.model_group == "summarise") | .spend] | add // 0' <<<"$logs")"
+    [ "$(awk -v s="$spend" 'BEGIN { print (s > 0) ? "yes" : "no" }')" = "yes" ] && break
+    sleep 2
+  done
   finding "streamed summarise call: spend log total for summarise = $spend"
   [ "$(awk -v s="$spend" 'BEGIN { print (s > 0) ? "yes" : "no" }')" = "yes" ]
 }
