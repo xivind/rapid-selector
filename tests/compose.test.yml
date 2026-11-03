@@ -31,3 +31,10 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
       interval: 2s
       retries: 15
+
+  gateway:
+    environment:
+      OPENROUTER_API_BASE: http://fake-upstream:8000/v1
+    depends_on:
+      fake-upstream:
+        condition: service_healthy
