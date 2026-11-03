@@ -1,0 +1,30 @@
+# Level 1 test overlay. Always used with --project-directory set to the repository root,
+# alone (fakes only) or together with docker-compose.yml.
+name: rapidselector-test
+
+services:
+  fake-upstream:
+    build: tests/fakes
+    image: rapidselector-test-fakes
+    command: ["python", "upstream.py"]
+    ports:
+      - "127.0.0.1:18000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 2s
+      retries: 15
+
+  fake-secrets:
+    build: tests/fakes
+    image: rapidselector-test-fakes
+    command: ["python", "secrets_service.py"]
+    environment:
+      FAKE_SECRETS_FILE: /data/secrets.json
+    volumes:
+      - ./tests/.artifacts:/data:ro
+    ports:
+      - "127.0.0.1:18002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 2s
+      retries: 15
