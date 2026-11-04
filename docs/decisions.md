@@ -76,6 +76,9 @@ Done by the owner in OpenRouter's dashboard. Auto top-up: off by default, and it
 ### 2026-11-04: Step A2, the gateway's inference key
 Created by the owner as a workspace API key: `rapidselector-gateway`, credit limit $0.05, monthly reset. The limit rises to $34 at step D2.
 
+### 2026-11-04: Step A3, the first top-up
+The owner bought $5 of credit and paid $7.25 with Google Pay through Stripe, so OpenRouter holds no card. The balance shows $5.00, auto top-up is still off, and there is no sign of a subscription or recurring fee. The cost ceiling for the procedure is therefore $6 of credit, not counting the regular top-up at D7. The $2.25 on top was higher than the 5.5% fee alone: see open question 20 below.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -83,7 +86,7 @@ Created by the owner as a workspace API key: `rapidselector-gateway`, credit lim
 1. **Is the loss really capped?** Test with a very small balance, since this costs a little real money. The docs mention negative balances without saying how far one can go (`provider-facts.md`). The test needs a cost ceiling agreed in advance.
 2. **How do key limits behave in practice?** The docs now confirm a monthly reset option and a 402 error when the key's limit is reached (`provider-facts.md`). Still to test: that the limit actually stops calls, and how a request that crosses the limit is charged.
 3. **How does LiteLLM record OpenRouter spend?** Either explicit prices in the gateway config, or the actual cost from OpenRouter's response if LiteLLM reads it. Also confirm that LiteLLM passes on the host pin and zero data retention settings. **Answered in part at level 1, 2026-11-04** (`provider-facts.md`): LiteLLM v1.106.6 records OpenRouter's `usage.cost` when the response has one, and the configured price otherwise; it forwards the `provider` object unchanged, and `gateway/request_guard.py` stops a request body from replacing it (`extra_body`) or adding OpenRouter routing (`models`, `route`, `transforms`). Still to see at level 3: that OpenRouter's real responses carry the cost, and that the pins are honoured.
-4. **Is the Standard plan free of any subscription fee?** The owner wants pay as you go with no flat rates, and only the 5.5% credit fee has been seen so far.
+4. ~~Is the Standard plan free of any subscription fee?~~ **Settled 2026-11-04:** no sign of a subscription or recurring fee after the first top-up, and OpenRouter's pricing page says "no minimums and no lock-in".
 5. **Do the wanted models have zero data retention hosts?** For example, `lfm-2.5-2.6b` had none listed. Every entry in the phase 0 starting set is on OpenRouter's list of zero data retention endpoints (2026-11-03); level 3 confirms they are honoured.
 6. **Management key expiry.** OpenRouter recommends an expiry date on every management key, and it cannot be changed after creation. Decide whether to use one, and how `tower` gets a new key before the old one expires.
 7. **Does the stack fit on the Pi?** Check that LiteLLM's images (including the Postgres variant) exist for arm64, and how much RAM LiteLLM and Open WebUI need. Open WebUI's local embedding and RAG features may need to be turned off.
@@ -99,6 +102,8 @@ Created by the owner as a workspace API key: `rapidselector-gateway`, credit lim
 17. **Can tower use an admin key other than LiteLLM's master key?** Phase 1.
 18. **Which OpenRouter endpoint gives the inference key's limit and usage to the management key?** Phase 1.
 19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for `llm`.
+
+20. **Is the $34 limit too high for the 400 NOK budget, now that VAT is known?** The budget allowed for the 5.5% fee, not VAT. $5 of credit cost $7.25, which fits ($5 + a $0.80 fee) × 1.25 VAT exactly; the $0.80 minimum is an inference, since OpenRouter's pricing page gives only "5.5%" and "VAT/GST may be added on invoices". At 5.5% plus 25% VAT, $34 of credit costs about $44.84, and 400 NOK (roughly $35–40) buys about $26.50–30.30 of credit. To be decided by the owner before step D2, which sets the limit, with the receipt's breakdown and the current exchange rate.
 
 ### Deferred findings from the phase 0 review (2026-11-04)
 Minor, not fixed yet; each to be decided by the owner.

@@ -31,6 +31,11 @@ Sources: https://openrouter.ai/docs/api-reference/limits and https://openrouter.
 - **The docs give both 402 and 403 for a spent key limit.** "Handling 402 errors" lists `openrouter_key_limit`, while the budget section says "the key's own limit" gets a 403 before reaching a provider, with `"scope": "key_limit"`. Level 3 shows which one is real. This qualifies the 2026-11-03 entry above.
 - Whether in-flight holds count against a key's `limit_remaining` is not stated. Holds are described only against the account's balance.
 
+### Credit purchase, 2026-11-04
+Sources: the owner's first top-up, and https://openrouter.ai/pricing.
+- **$5.00 of credit cost $7.25** from Norway, and the balance showed exactly $5.00. The breakdown was not read from the receipt. ($5 + $0.80) × 1.25 gives exactly $7.25, while 5.5% and 25% VAT alone would give $6.59, so a minimum fee of about $0.80 is likely. The pricing page does not state one.
+- The pricing page: "OpenRouter's fee is charged when you buy credits, 5.5% on Standard and 8% on Business, never on individual requests". "Prices are exclusive of applicable taxes. Where required, VAT/GST may be added on invoices." "Standard and Business have no minimums and no lock-in."
+
 ### Safety Retention, checked 2026-11-04
 Sources: https://openrouter.ai/docs/guides/features/zdr, `GET /api/v1/endpoints/zdr` and the account's settings page.
 - **Safety Retention is not zero data retention:** "OpenRouter or a provider may retain prompts and responses from any request, whether flagged or not, only to detect, investigate, and prevent abuse." Not used for training.
