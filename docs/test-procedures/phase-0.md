@@ -10,7 +10,7 @@ We go through this together: Claude walks you through each step, you say what yo
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| A1 | Settings: turn auto top-up **off**. Privacy: prompt logging and every opt-in to data collection **off**. Zero data retention **required** for the account. If the account has an allowed-providers list, limit it to the hosts in `gateway/config.yaml` (DeepInfra, CoreWeave, SiliconFlow, Cloudflare, PrimeIntellect). These are the backstop if a request ever gets past the gateway's pin | The settings saved | Which of these you found, and their exact wording. If zero data retention cannot be required for the account, stop and tell Claude | 0 |
+| A1 | Settings: turn auto top-up **off**. Privacy: prompt logging and every opt-in to data collection **off**. Zero data retention **required** for the account. If the account has an allowed-providers list, limit it to the hosts in `gateway/config.yaml` (DeepInfra, CoreWeave, SiliconFlow, Cloudflare). These are the backstop if a request ever gets past the gateway's pin | The settings saved | Which of these you found, and their exact wording. If zero data retention cannot be required for the account, stop and tell Claude | 0 |
 | A2 | Keys: create the gateway's inference key, named e.g. `rapidselector-gateway`, with a credit limit of **$0.05**, reset **monthly** | The key, shown once | That it exists, its limit and reset. Put the key in the secrets as `RAPIDSELECTOR_OPENROUTER_KEY` | 0 |
 | A3 | Credits: buy the **smallest top-up** offered | The balance | The amount paid, the 5.5% fee, and the balance | the top-up |
 

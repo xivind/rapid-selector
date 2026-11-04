@@ -144,18 +144,17 @@ model_list:
     model_info:
       rapidselector_kind: experiment
       reasoning: true
-  - model_name: gpt-oss-120b@primeintellect
+  - model_name: gpt-oss-120b@coreweave
     litellm_params:
       model: openrouter/openai/gpt-oss-120b
       api_key: os.environ/RAPIDSELECTOR_OPENROUTER_KEY
       max_tokens: 8192
-      # This endpoint's price changed three times on 2026-11-03/04; check-prices.sh catches it.
-      input_cost_per_token: 0.000000026
-      output_cost_per_token: 0.000000095
+      input_cost_per_token: 0.00000003
+      output_cost_per_token: 0.00000017
       extra_body:
         provider:
-          order: ["primeintellect/fp4"]
-          only: ["primeintellect/fp4"]
+          order: ["coreweave/fp4"]
+          only: ["coreweave/fp4"]
           allow_fallbacks: false
           zdr: true
           data_collection: deny

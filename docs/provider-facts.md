@@ -101,7 +101,7 @@ From `tests/chat.bats` against the gateway and the fake upstream.
 ## OpenRouter catalogue
 
 ### Price changes seen, 2026-11-03 and 2026-11-04
-- `openai/gpt-oss-120b` at `primeintellect/fp4` had three prices within a day: $0.03 / $0.11, then $0.035 / $0.13, then $0.026 / $0.095 per million tokens. `tests/check-prices.sh` caught the last change. The other ten pinned endpoints kept their prices.
+- `openai/gpt-oss-120b` at `primeintellect/fp4` had three prices within a day: $0.03 / $0.11, then $0.035 / $0.13, then $0.026 / $0.095 per million tokens. `tests/check-prices.sh` caught the last change, and it moved again within hours ($0.035 / $0.129). The other ten pinned endpoints kept their prices. The entry was replaced by `gpt-oss-120b@coreweave` (`coreweave/fp4`, $0.03 / $0.17) on 2026-11-04.
 
 ### From OpenRouter's API, 2026-11-03
 Sources: `GET https://openrouter.ai/api/v1/models` (453 models) and `GET https://openrouter.ai/api/v1/endpoints/zdr` (1,090 zero data retention endpoints).

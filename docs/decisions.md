@@ -55,6 +55,12 @@ Agreed section by section and written in `superpowers/specs/2026-11-03-phase-0-f
 - **Alert rules** are created through the Grafana MCP from a local Claude Code session.
 - **Web search** parked (`roadmap.md`).
 
+### 2026-11-04: Phase 0 built and tested at level 1
+Implemented following `superpowers/plans/2026-11-03-phase-0-foundation.md`; 79 level 1 tests pass (`tests/run.sh`). Not yet verified on the Pi: levels 2 and 3 follow `test-procedures/phase-0.md`, walked through with Claude. The `production` repository's changes are on its branch `claude/ecstatic-hypatia-t1sj0o`, for the owner to merge. Decided by the owner after the final review:
+- **`gateway/request_guard.py` is accepted:** a small LiteLLM pre-call callback of our own that removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request. Reason: a request body could otherwise replace the pin, including zero data retention, or add OpenRouter's fallback model list.
+- **`gpt-oss-120b@primeintellect` is replaced by `gpt-oss-120b@coreweave`** (`coreweave/fp4`, $0.03 / $0.17). Reason: PrimeIntellect's price changed four times in a day. The same-model comparison stays: DeepInfra bf16 against CoreWeave fp4.
+- **`node-red` gets a limit of 100,000 tokens a minute**, besides 30 calls a minute and $4 a month. Reason: `CLAUDE.md` requires an input-size limit for automated clients.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -78,6 +84,21 @@ Agreed section by section and written in `superpowers/specs/2026-11-03-phase-0-f
 17. **Can tower use an admin key other than LiteLLM's master key?** Phase 1.
 18. **Which OpenRouter endpoint gives the inference key's limit and usage to the management key?** Phase 1.
 19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for `llm`.
+
+### Deferred findings from the phase 0 review (2026-11-04)
+Minor, not fixed yet; each to be decided by the owner.
+20. Secrets are visible in `ps` on the host while the scripts run (curl headers and `-d` payloads). Could pass them on stdin (`curl -K -`, `--data @-`).
+21. `POSTGRES_PASSWORD` goes into `DATABASE_URL`, so characters such as `@ / : # % ?` break the gateway. `.env.example` should say hex only.
+22. Special characters in secrets are not tested through real `docker compose` and the secrets-service blob.
+23. secrets-service errors give only the HTTP status, not its meaning (401 token rejected, 423 secret deactivated, 404 unknown name).
+24. The restart test accepts any non-200; it should assert 422 `budget_exceeded`.
+25. The database-down test lacks a cached key with budget left.
+26. Test B (D1) on `qwen3.8-2.4t-a95b` with `max_tokens` 8192 may be refused outright by OpenRouter's in-flight hold, so the overshoot at the key limit would not show. `drain-balance.sh` could take `--model` and `--max-tokens`, or the procedure a cheaper path.
+27. `drain-balance.sh`'s burst of 5 is outside `--max-usd`, and any non-200 counts as "refused". The script and the procedure should say so, and print a hint when the refusal is not 402.
+28. The status the gateway returns for a 402 from OpenRouter is not asserted.
+29. The procedure lacks a live `tests/check-prices.sh` run before D3 and D4, and a reboot check (ports bound to the LAN address at boot).
+30. README gaps: `chmod 600` on `.env` and the token file; `setup-keys.sh` must be rerun after adding a model; rotating a `KEY_*` leaves the old key active; admin-UI edits to fields `setup-keys.sh` does not send stay.
+31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; check at level 2.
 
 ### Settle later
 
