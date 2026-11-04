@@ -103,6 +103,10 @@ Minor, not fixed yet; each to be decided by the owner.
 30. README gaps: `chmod 600` on `.env` and the token file; `setup-keys.sh` must be rerun after adding a model; rotating a `KEY_*` leaves the old key active; admin-UI edits to fields `setup-keys.sh` does not send stay.
 31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; checked by the reboot at step C5.
 32. `tests/run.sh` has no guard against a host running the real stack. The test stack has its own project name (`rapidselector-test`, in `tests/compose.test.yml` and `tests/compose.fakes.yml`), so by reading the files its `down -v` should leave the real volumes alone, but both stacks use the same fixed container names, so starting it there fails. The README and step B1a say not to do it; a guard could refuse with a clear message. Not tried on a host with the real stack.
+33. Two timing checks in `tests/drain.bats` ("--parallel sends the calls of a round at once" and "the default is 5 calls at once") expect calls to arrive within 1.5 seconds of each other, which may fail spuriously on slower arm64 hardware. A longer `delay_ms` and a wider margin would keep the check.
+34. `drain-balance.sh --parallel` with no value exits 1 with no message, from `shift 2` under `set -e`. The other value flags are parsed the same way. Harmless, since no key exists yet.
+35. `api` in `scripts/lib.sh` has no `--max-time`, so a hung gateway can block `drain-balance.sh`'s summary and the deletion of the temporary key `drain-test`.
+36. Gaps in `tests/drain.bats`: no test has a fault and a limit refusal in the same round, or a limit and an in-flight refusal in the same round, and SIGINT is not tested, only TERM (the final review tried INT by hand, and it works).
 
 ### Settle later
 
