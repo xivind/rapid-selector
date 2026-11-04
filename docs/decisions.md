@@ -73,6 +73,9 @@ The first full run on the Pi 5, arm64, on branch `drain-test-fixes`: 101 of 103 
 ### 2026-11-04: Step A1, OpenRouter's account settings
 Done by the owner in OpenRouter's dashboard. Auto top-up: off by default, and it needs a saved payment method, which the owner has not added; to be rechecked after buying credits at A3. Under Data Policies, Zero Data Retention: "All other models", "Anthropic", "OpenAI", "Google" and "SpaceXAI" on, with `ZDR only` under "All other models" and "Google". Data Training: "Allow paid endpoints that train on request data", "Allow free endpoints that train on request data", "Allow free endpoints that publish prompts" and "Allow 1% data discount in workspaces" all off. Allowed Providers: Cloudflare, CoreWeave, DeepInfra and SiliconFlow, chosen by the owner as a limit enforced at OpenRouter; a new host needs a change there too. Eligibility Preview shows 121 available, and whether the 9 models are among them was not checked by name: B6 and D3 will show it. Reason for `ZDR only`: the default, `Allow Safety Retention`, lets a host keep prompts for abuse prevention, also with `provider.zdr: true` (`provider-facts.md`).
 
+### 2026-11-04: Step A2, the gateway's inference key
+Created by the owner as a workspace API key: `rapidselector-gateway`, credit limit $0.05, monthly reset. The limit rises to $34 at step D2.
+
 ## Open
 
 ### Settle during design or phase 0
