@@ -2,7 +2,7 @@
 
 We go through this together: Claude walks you through each step, you say what you saw, and Claude records the results in `docs/decisions.md`. Do not run ahead: some steps spend real money, and a step whose result looks wrong is where we stop and look.
 
-**Cost ceiling:** at most **$1 plus the smallest top-up**. The smallest top-up is spent on purpose in step D5. **Stop rule:** if OpenRouter's activity log shows more spent than the step's stated cost, stop and tell Claude before the next step.
+**Cost ceiling:** at most **$1 plus the smallest top-up**. The smallest top-up is spent on purpose in step D6. **Stop rule:** if OpenRouter's activity log shows more spent than the step's stated cost, stop and tell Claude before the next step.
 
 **Where:** on `sandbox`, in the repository clone. Commands are run in that folder.
 
@@ -18,7 +18,8 @@ We go through this together: Claude walks you through each step, you say what yo
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| B1 | Clone the repository, `cp .env.example .env`, fill in the settings (`RAPIDSELECTOR_LAN_ADDRESS` = sandbox's address, `SECRETS_SOURCE=secrets-service`, the token file). Generate the secrets and store them as the secret `rapidselector` in secrets-service | | That the secret exists with all 9 fields (names only, never values) | 0 |
+| B1 | Clone the repository, `cp .env.example .env`, fill in the settings (`RAPIDSELECTOR_LAN_ADDRESS` = sandbox's address, `SECRETS_SOURCE=secrets-service`, the token file). `chmod 600 .env` and the token file. Generate the secrets with the commands in `.env.example` (hex only: other characters break `DATABASE_URL`) and store them as the secret `rapidselector` in secrets-service | | That the secret exists with all 9 fields (names only, never values) | 0 |
+| B1a | `tests/run.sh` (needs Docker, `jq`, `openssl` and Node's `npx`). **Only here, before B2:** the tests share the real stack's project name and delete its volumes, so never run them once the real stack has been started | `All N test files passed.` Takes a while | The last lines, and any test that failed | 0 |
 | B2 | `./rapidselector.sh up -d`, then `./rapidselector.sh ps` after a few minutes | `rapidselector-db`, `rapidselector-gateway` and `rapidselector-chat`, all `healthy` | The `ps` output | 0 |
 | B3 | `./rapidselector.sh run-script scripts/setup-keys.sh` | A table with 2 teams and 3 keys: `permanent` 8, `experiments` 24, `node-red` 4, `chat` team, `smoke-test` 1 | The table | 0 |
 | B4 | Open `http://sandbox:4010`, create the admin account | Open WebUI, with the 11 names in the model list | That it worked and the names are there | 0 |
@@ -29,24 +30,26 @@ We go through this together: Claude walks you through each step, you say what yo
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| C1 | Merge the `production` branch with the rapid-selector changes; restart Prometheus | Target `rapidselector-gateway` is `up` in Prometheus | Target status | 0 |
+| C1 | The `production` changes are already merged (#181). Pull them where Prometheus runs, and restart Prometheus | Target `rapidselector-gateway` is `up` in Prometheus | Target status | 0 |
 | C2 | In a local Claude Code session in the `production` repository (with `GRAFANA_MCP_TOKEN` set), create the alert rules from `grafana/rapidselector-alerts.md` through the Grafana MCP | The rules in folder **Alerts**, group **rapid-selector** | That they exist | 0 |
 | C3 | Install the forced-command SSH key for the backup jobs on `sandbox`, as described in `backup-orchestrator/README.md` | | That it is installed | 0 |
 | C4 | Add `--add-host="llm:<sandbox's address>"` to Node-RED (already in the branch), restart Node-RED. Create the alias `llm` → `sandbox` on the router | `ping llm` from a computer answers from sandbox's address | The ping result | 0 |
+| C5 | **Reboot check.** `sudo reboot`. When sandbox is back: `ss -tln \| grep -E ':(4000\|4010) '`, then `./rapidselector.sh ps`. Wait 10 minutes and look at the alert rules | Both ports listen on sandbox's LAN address only, never `0.0.0.0`. All three services `healthy`. "rapid-selector: database failing" has not fired | The `ss` and `ps` output, and the state of that rule | 0 |
 
-The budget alerts are expected to fire during D5. That is part of the test.
+D6 will not fire the alerts by itself. The budget rules need under 20% of a team's budget left (over $19.20 spent of `experiments`' $24), and the failure rule watches only the roles, while the drain test calls an experiment name. D8 tests the budget alerts on purpose. The failure-rate rule stays unproven until it fires for real.
 
 ## D. Level 3 (real money)
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| D1 | **Test B, the key limit.** With the inference key's limit still at $0.05: `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd 0.10` and type `drain` | A few calls with 200, then refusals from OpenRouter (402) passed on by the gateway, a burst of 5 refused calls, `stopped: refused` | The script's summary, and the key's usage in OpenRouter's dashboard: how far past $0.05 did it go? | up to about $0.10 |
+| D1 | **Test B, the key limit.** With the inference key's limit still at $0.05: `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd 0.10 --max-tokens 1024 --parallel 5` and type `drain` | Rounds of 5 calls with 200, then refusals from OpenRouter (402 or 403) with smaller and smaller calls, ending in `stopped: refused`. `stopped: error` or `stopped: in-flight` means the test did not finish: stop and tell Claude | The script's whole output, and the key's usage in OpenRouter's dashboard: how far past $0.05 did it go? | up to about $0.10 |
 | D2 | Set the inference key's limit to **$34**, monthly | | The new limit | 0 |
-| D3 | **Spend per model:** `./rapidselector.sh run-script scripts/smoke-test.sh --all` | 11 names with 200 and a cost above zero | The output | under $0.05 |
+| D3 | **Spend per model:** first `tests/check-prices.sh`: on any `FAIL` line, stop and tell Claude. Then `./rapidselector.sh run-script scripts/smoke-test.sh --all` | 11 `ok` lines, then 11 names with 200 and a cost above zero | The output | under $0.05 |
 | D4 | **Hosts and cost:** in OpenRouter's activity log, open each call from D3 | For each call: the provider and quantisation of its pin (e.g. DeepInfra, bf16), and a cost equal to the one in D3's output | Any call with another host, or a cost that differs | 0 |
 | D5 | **Zero data retention, negative.** Claude gives you a temporary entry pinned to an endpoint without zero data retention, to add to `gateway/config.yaml` without committing. `./rapidselector.sh up -d`, then call it once with the **master key** (the other keys may only use the 11 names, so the gateway would refuse them before anything is sent). Then `git checkout gateway/config.yaml` and `./rapidselector.sh up -d` again | The call is refused by **OpenRouter**, with a message about no endpoint matching the data policy or the provider list. A refusal from the gateway itself (401, "not allowed to access model") does not count | The status and the full message | 0 |
-| D6 | **Test A, empty balance.** `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd <balance + 1>` and type `drain` | Calls with 200 until the balance runs out, then refusals, a burst of 5, `stopped: refused` | The summary, and the balance in OpenRouter's dashboard afterwards: zero, or below zero, and by how much | the rest of the top-up |
+| D6 | **Test A, empty balance.** First `tests/check-prices.sh`: on any `FAIL` line, stop and tell Claude. Then `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd <balance + 1>` and type `drain`. It may take a long time, and you can stop it with Ctrl-C | Rounds of 5 calls with 200 until the balance runs low, then refusals with smaller and smaller calls, ending in `stopped: refused`. `stopped: error` or `stopped: in-flight` means the test did not finish: tell Claude, and it can be run again | The script's whole output, and the balance in OpenRouter's dashboard afterwards: zero, or below zero, and by how much | the rest of the top-up, and up to about $0.25 below zero if OpenRouter's holds do not protect the balance |
 | D7 | The regular top-up | The balance | Amount and balance | the top-up |
+| D8 | **Budget alerts.** Read `experiments`' spend in the admin UI. `BUDGET_TEAM_EXPERIMENTS=<spend × 1.05> ./rapidselector.sh run-script scripts/setup-keys.sh`, then `./rapidselector.sh run-script scripts/smoke-test.sh` so the gateway updates its metric. Wait 16 minutes. Then `./rapidselector.sh run-script scripts/setup-keys.sh` to restore the budget | Emails from "rapid-selector: team budget below 20%" and "below 10%". The table from the last command shows `experiments` at 24 again | That both emails came, and the restored budget | under $0.01 |
 
 ## E. Backups and first real use
 

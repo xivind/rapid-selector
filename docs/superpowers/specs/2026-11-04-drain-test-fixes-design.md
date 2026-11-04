@@ -1,6 +1,6 @@
 # Fixes to the drain test and the phase 0 procedure
 
-Small change, made before any money is spent at level 3. Status: awaiting the owner's approval.
+Small change, made before any money is spent at level 3. Status: approved by the owner, 2026-11-04.
 
 ## Why
 
@@ -58,7 +58,7 @@ The gateway drops `Retry-After`, so the wait is fixed. The summary keeps its lin
 - **D3 and D6:** run `tests/check-prices.sh` first (29).
 - **D6:** `--max-usd <balance + 1>`, with defaults for the rest. It may take a long time. It can end up to about $0.25 below zero if reservations do not protect the balance, within the $1 ceiling.
 - **Alerts:** correct the text. D6 will not fire them: the budget rules need over $19.20 of `experiments`' $24 spent, and the failure rule watches only roles. The wrong reference to D5 is corrected too.
-- **New D6a (Claude's proposal, free):** lower the budget with `BUDGET_TEAM_EXPERIMENTS=<just above spend> ./rapidselector.sh run-script scripts/setup-keys.sh`, wait 16 minutes for the budget alert emails, and restore it by running `setup-keys.sh` again. The failure-rate rule stays unproven until it fires for real.
+- **New D8 (Claude's proposal, accepted):** lower the budget with `BUDGET_TEAM_EXPERIMENTS=<just above spend> ./rapidselector.sh run-script scripts/setup-keys.sh`, run the smoke test so the gateway updates its metric (under $0.01), wait 16 minutes for the budget alert emails, and restore it by running `setup-keys.sh` again. It comes after the regular top-up (D7), since the smoke test needs a balance. The failure-rate rule stays unproven until it fires for real.
 
 ## Known limit of the result
 

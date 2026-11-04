@@ -61,6 +61,9 @@ Implemented following `superpowers/plans/2026-11-03-phase-0-foundation.md`; 79 l
 - **`gpt-oss-120b@primeintellect` is replaced by `gpt-oss-120b@coreweave`** (`coreweave/fp4`, $0.03 / $0.17). Reason: PrimeIntellect's price changed four times in a day. The same-model comparison stays: DeepInfra bf16 against CoreWeave fp4.
 - **`node-red` gets a limit of 100,000 tokens a minute**, besides 30 calls a minute and $4 a month. Reason: `CLAUDE.md` requires an input-size limit for automated clients.
 
+### 2026-11-04: Drain test and procedure changed before any money was spent
+Option 3 of 3 in `superpowers/specs/2026-11-04-drain-test-fixes-design.md`, chosen by the owner. `scripts/drain-balance.sh` now sends rounds of parallel calls (default 5) instead of a burst after the first refusal, does not start a round that could pass `--max-usd`, and tells limit refusals from faults, the gateway's budget and temporary in-flight refusals. It halves `max_tokens` on a limit refusal, down to 16. Reasons: a passing 429 or 503 would have been reported as a working limit; D6 could have stopped with money left; only simultaneous calls can show a call crossing a limit. Added to the procedure: a level 1 run on `sandbox` before B2 (B1a), a reboot check (C5) and a budget alert test (D8). Corrected: D6 does not fire the alerts by itself. Results about simultaneous calls hold for a small balance on a new account (`provider-facts.md`).
+
 ## Open
 
 ### Settle during design or phase 0
@@ -93,12 +96,13 @@ Minor, not fixed yet; each to be decided by the owner.
 23. secrets-service errors give only the HTTP status, not its meaning (401 token rejected, 423 secret deactivated, 404 unknown name).
 24. The restart test accepts any non-200; it should assert 422 `budget_exceeded`.
 25. The database-down test lacks a cached key with budget left.
-26. Test B (D1) on `qwen3.8-2.4t-a95b` with `max_tokens` 8192 may be refused outright by OpenRouter's in-flight hold, so the overshoot at the key limit would not show. `drain-balance.sh` could take `--model` and `--max-tokens`, or the procedure a cheaper path.
-27. `drain-balance.sh`'s burst of 5 is outside `--max-usd`, and any non-200 counts as "refused". The script and the procedure should say so, and print a hint when the refusal is not 402.
-28. The status the gateway returns for a 402 from OpenRouter is not asserted.
-29. The procedure lacks a live `tests/check-prices.sh` run before D3 and D4, and a reboot check (ports bound to the LAN address at boot).
+26. ~~Test B (D1) on `qwen3.8-2.4t-a95b` with `max_tokens` 8192 may be refused outright by OpenRouter's in-flight hold, so the overshoot at the key limit would not show.~~ **Settled 2026-11-04:** `--max-tokens`, and halving on a refusal.
+27. ~~`drain-balance.sh`'s burst of 5 is outside `--max-usd`, and any non-200 counts as "refused".~~ **Settled 2026-11-04:** the burst is gone, rounds are checked against `--max-usd`, and refusals are sorted.
+28. ~~The status the gateway returns for a 402 from OpenRouter is not asserted.~~ **Settled 2026-11-04 (level 1):** 402 and 403 are passed on, asserted through `tests/drain.bats`. Level 3 shows OpenRouter's real answers.
+29. ~~The procedure lacks a live `tests/check-prices.sh` run before D3 and D4, and a reboot check (ports bound to the LAN address at boot).~~ **Settled 2026-11-04:** added before D3 and D6, and as step C5. Live check today: all 11 entries match.
 30. README gaps: `chmod 600` on `.env` and the token file; `setup-keys.sh` must be rerun after adding a model; rotating a `KEY_*` leaves the old key active; admin-UI edits to fields `setup-keys.sh` does not send stay.
-31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; check at level 2.
+31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; checked by the reboot at step C5.
+32. `tests/run.sh` has no guard against a host running the real stack. It shares the project name and deletes its volumes, so running it there wipes keys, spend history and chats. The README and step B1a warn about it; a guard could refuse to start when the real containers exist.
 
 ### Settle later
 

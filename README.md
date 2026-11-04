@@ -99,7 +99,7 @@ curl http://llm:4000/v1/chat/completions \
 **Every client must:**
 - use a fixed timeout, and treat a failed call as "skip this step and log it": models are an enhancement, nothing at home may depend on them;
 - retry at most once, and only on a timeout or a 5xx answer;
-- never retry a budget or limit error: HTTP 422 with `"type": "budget_exceeded"` from the gateway, or 402 passed on from OpenRouter;
+- never retry a budget or limit error: HTTP 422 with `"type": "budget_exceeded"` from the gateway, or 402 or 403 with `limit_source` in the message, passed on from OpenRouter. One exception: 402 with `openrouter_in_flight_budget` is temporary and may be retried after a wait;
 - keep `max_tokens` small and the input short. The gateway's default `max_tokens` is only a default; a client that asks for more gets more;
 - never send work data, health data or other personal data, and check log input for it first.
 
