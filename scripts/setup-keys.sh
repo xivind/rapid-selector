@@ -4,7 +4,7 @@
 # Run with the secrets loaded:   ./rapidselector.sh run-script scripts/setup-keys.sh
 #
 # Budgets (USD, reset on the 1st of the month, 00:00 UTC). The BUDGET_* overrides exist only
-# for the level 1 tests; normal use never sets them.
+# for tests (level 1, and step D8 of the phase 0 procedure); normal use never sets them.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

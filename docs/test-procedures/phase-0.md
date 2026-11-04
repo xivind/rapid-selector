@@ -2,7 +2,7 @@
 
 We go through this together: Claude walks you through each step, you say what you saw, and Claude records the results in `docs/decisions.md`. Do not run ahead: some steps spend real money, and a step whose result looks wrong is where we stop and look.
 
-**Cost ceiling:** at most **$1 plus the smallest top-up**. The smallest top-up is spent on purpose in step D5. **Stop rule:** if OpenRouter's activity log shows more spent than the step's stated cost, stop and tell Claude before the next step.
+**Cost ceiling:** at most **$1 plus the smallest top-up**. The smallest top-up is spent on purpose in step D6. **Stop rule:** if OpenRouter's activity log shows more spent than the step's stated cost, stop and tell Claude before the next step.
 
 **Where:** on `sandbox`, in the repository clone. Commands are run in that folder.
 
@@ -18,35 +18,38 @@ We go through this together: Claude walks you through each step, you say what yo
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| B1 | Clone the repository, `cp .env.example .env`, fill in the settings (`RAPIDSELECTOR_LAN_ADDRESS` = sandbox's address, `SECRETS_SOURCE=secrets-service`, the token file). Generate the secrets and store them as the secret `rapidselector` in secrets-service | | That the secret exists with all 9 fields (names only, never values) | 0 |
-| B2 | `./rapidselector.sh up -d`, then `./rapidselector.sh ps` after a few minutes | `rapidselector-db`, `rapidselector-gateway` and `rapidselector-chat`, all `healthy` | The `ps` output | 0 |
+| B1 | Clone the repository, `cp .env.example .env`, fill in the settings (`RAPIDSELECTOR_LAN_ADDRESS` = sandbox's address, `SECRETS_SOURCE=secrets-service`, the token file). `chmod 600 .env` and the token file. Generate the secrets with the commands in `.env.example` (hex only: other characters break `DATABASE_URL`) and store them as the secret `rapidselector` in secrets-service | | That the secret exists with all 9 fields (names only, never values) | 0 |
+| B1a | Install `jq` if it is missing. Without Node on the host, fetch the test runner: `git clone --depth 1 --branch v1.11.0 https://github.com/bats-core/bats-core.git ~/bats-core`. Run `~/bats-core/bin/bats tests/*.bats 2>&1 \| tee ~/level1.log`, then `grep -c '^ok' ~/level1.log; grep '^not ok' ~/level1.log`. **Only here, before B2:** the tests use the same container names as the real stack, so they cannot run beside it | A count of passed tests and no `not ok` lines. Takes about 25 minutes, plus the first image download of about 1.9 GB | Both results | 0 |
+| B2 | `free -h`, to note the memory in use. Then `./rapidselector.sh up -d`, and `./rapidselector.sh ps` after a few minutes | `rapidselector-db`, `rapidselector-gateway` and `rapidselector-chat`, all `healthy` | The `free -h` and `ps` output | 0 |
 | B3 | `./rapidselector.sh run-script scripts/setup-keys.sh` | A table with 2 teams and 3 keys: `permanent` 8, `experiments` 24, `node-red` 4, `chat` team, `smoke-test` 1 | The table | 0 |
 | B4 | Open `http://sandbox:4010`, create the admin account | Open WebUI, with the 11 names in the model list | That it worked and the names are there | 0 |
-| B5 | `docker stats --no-stream` | Memory per container | The output. Claude sets the memory limits from it in a commit | 0 |
+| B5 | `free -h`, then `ps -eo rss,comm --sort=-rss \| head -15`. `docker stats` shows no memory where the kernel's memory control is off | Memory in use compared with B2, and the biggest processes | Both outputs. Claude compares them with the limits in `docker-compose.yml`, and records whether to change anything | 0 |
 | B6 | `./rapidselector.sh run-script scripts/smoke-test.sh` | Four roles with status 200 and a cost above zero, two `refused:` lines, `OK` | The output | under $0.01 |
 
 ## C. `production` repository (warnings and backups before money is spent)
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| C1 | Merge the `production` branch with the rapid-selector changes; restart Prometheus | Target `rapidselector-gateway` is `up` in Prometheus | Target status | 0 |
+| C1 | The `production` changes are already merged (#181). Pull them where Prometheus runs, and restart Prometheus | Target `rapidselector-gateway` is `up` in Prometheus | Target status | 0 |
 | C2 | In a local Claude Code session in the `production` repository (with `GRAFANA_MCP_TOKEN` set), create the alert rules from `grafana/rapidselector-alerts.md` through the Grafana MCP | The rules in folder **Alerts**, group **rapid-selector** | That they exist | 0 |
 | C3 | Install the forced-command SSH key for the backup jobs on `sandbox`, as described in `backup-orchestrator/README.md` | | That it is installed | 0 |
 | C4 | Add `--add-host="llm:<sandbox's address>"` to Node-RED (already in the branch), restart Node-RED. Create the alias `llm` → `sandbox` on the router | `ping llm` from a computer answers from sandbox's address | The ping result | 0 |
+| C5 | **Reboot check.** `sudo reboot`. When sandbox is back, wait 10 minutes (chat takes a few minutes to start). Then `ss -tln '( sport = :4000 or sport = :4010 )'` and `./rapidselector.sh ps`, and look at the alert rules | Both ports listen on sandbox's LAN address only, never `0.0.0.0`. All three services `healthy`. "rapid-selector: database failing" has not fired | The `ss` and `ps` output, and the state of that rule | 0 |
 
-The budget alerts are expected to fire during D5. That is part of the test.
+D6 will not fire the alerts by itself. The budget rules need under 20% of a team's budget left (over $19.20 spent of `experiments`' $24), and the failure rule watches only the roles, while the drain test calls an experiment name. D8 tests the budget alerts on purpose. The failure-rate rule stays unproven until it fires for real.
 
 ## D. Level 3 (real money)
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| D1 | **Test B, the key limit.** With the inference key's limit still at $0.05: `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd 0.10` and type `drain` | A few calls with 200, then refusals from OpenRouter (402) passed on by the gateway, a burst of 5 refused calls, `stopped: refused` | The script's summary, and the key's usage in OpenRouter's dashboard: how far past $0.05 did it go? | up to about $0.10 |
+| D1 | **Test B, the key limit.** With the inference key's limit still at $0.05: `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd 0.10 --max-tokens 1024 --parallel 5` and type `drain` | Rounds of 5 calls with 200, then refusals from OpenRouter (402 or 403) with smaller and smaller calls, ending in `stopped: refused`. `stopped: error` or `stopped: in-flight` means the test did not finish, and `stopped: max-usd` or `stopped: max-calls` means the limit did not stop the calls: stop and tell Claude | The script's whole output, and the key's usage in OpenRouter's dashboard: how far past $0.05 did it go? | up to about $0.10 |
 | D2 | Set the inference key's limit to **$34**, monthly | | The new limit | 0 |
-| D3 | **Spend per model:** `./rapidselector.sh run-script scripts/smoke-test.sh --all` | 11 names with 200 and a cost above zero | The output | under $0.05 |
+| D3 | **Spend per model:** first `tests/check-prices.sh`: on any `FAIL` line, stop and tell Claude. Then `./rapidselector.sh run-script scripts/smoke-test.sh --all` | 11 `ok` lines, then 11 names with 200 and a cost above zero | The output | under $0.05 |
 | D4 | **Hosts and cost:** in OpenRouter's activity log, open each call from D3 | For each call: the provider and quantisation of its pin (e.g. DeepInfra, bf16), and a cost equal to the one in D3's output | Any call with another host, or a cost that differs | 0 |
 | D5 | **Zero data retention, negative.** Claude gives you a temporary entry pinned to an endpoint without zero data retention, to add to `gateway/config.yaml` without committing. `./rapidselector.sh up -d`, then call it once with the **master key** (the other keys may only use the 11 names, so the gateway would refuse them before anything is sent). Then `git checkout gateway/config.yaml` and `./rapidselector.sh up -d` again | The call is refused by **OpenRouter**, with a message about no endpoint matching the data policy or the provider list. A refusal from the gateway itself (401, "not allowed to access model") does not count | The status and the full message | 0 |
-| D6 | **Test A, empty balance.** `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd <balance + 1>` and type `drain` | Calls with 200 until the balance runs out, then refusals, a burst of 5, `stopped: refused` | The summary, and the balance in OpenRouter's dashboard afterwards: zero, or below zero, and by how much | the rest of the top-up |
+| D6 | **Test A, empty balance.** First `tests/check-prices.sh`: on any `FAIL` line, stop and tell Claude. Then `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd <balance + 1> --max-calls 2000` and type `drain`. It may take a long time, and you can stop it with Ctrl-C | Rounds of 5 calls with 200 until the balance runs low, then refusals with smaller and smaller calls, ending in `stopped: refused`. Any other `stopped:` line means the test did not finish, usually with money left: tell Claude, and it can be run again | The script's whole output, and the balance in OpenRouter's dashboard afterwards: zero, or below zero, and by how much | the rest of the top-up, and up to about $0.25 below zero if OpenRouter's holds do not protect the balance |
 | D7 | The regular top-up | The balance | Amount and balance | the top-up |
+| D8 | **Budget alerts.** Read `experiments`' spend in the admin UI. `BUDGET_TEAM_EXPERIMENTS=<spend × 1.05> ./rapidselector.sh run-script scripts/setup-keys.sh`, then `./rapidselector.sh run-script scripts/smoke-test.sh` so the gateway updates its metric. Wait for the emails, up to 30 minutes. Then `./rapidselector.sh run-script scripts/setup-keys.sh` to restore the budget, and the smoke test once more so the metric follows | Emails from "rapid-selector: team budget below 20%" and "below 10%". The table from `setup-keys.sh` shows `experiments` at 24 again, and within about 20 minutes both rules have cleared | That both emails came, the restored budget, and that the rules cleared | under $0.01 |
 
 ## E. Backups and first real use
 

@@ -61,6 +61,15 @@ Implemented following `superpowers/plans/2026-11-03-phase-0-foundation.md`; 79 l
 - **`gpt-oss-120b@primeintellect` is replaced by `gpt-oss-120b@coreweave`** (`coreweave/fp4`, $0.03 / $0.17). Reason: PrimeIntellect's price changed four times in a day. The same-model comparison stays: DeepInfra bf16 against CoreWeave fp4.
 - **`node-red` gets a limit of 100,000 tokens a minute**, besides 30 calls a minute and $4 a month. Reason: `CLAUDE.md` requires an input-size limit for automated clients.
 
+### 2026-11-04: Drain test and procedure changed before any money was spent
+Option 3 of 3 in `superpowers/specs/2026-11-04-drain-test-fixes-design.md`, chosen by the owner. `scripts/drain-balance.sh` now sends rounds of parallel calls (default 5) instead of a burst after the first refusal, does not start a round that could pass `--max-usd`, and tells limit refusals from faults, the gateway's budget and temporary in-flight refusals. It halves `max_tokens` on a limit refusal, down to 16. Reasons: a passing 429 or 503 would have been reported as a working limit; D6 could have stopped with money left; only simultaneous calls can show a call crossing a limit. Added to the procedure: a level 1 run on `sandbox` before B2 (B1a), a reboot check (C5) and a budget alert test (D8). Corrected: D6 does not fire the alerts by itself. Results about simultaneous calls hold for a small balance on a new account (`provider-facts.md`).
+
+### 2026-11-04: Memory limits are not enforced on the owner's Pis
+The kernel's memory control stays off on `sandbox`, and the limits stay in `docker-compose.yml`, where they work on any host that has it. Decided by the owner. Reason: they protect the host, not the budget; none of the owner's other containers have limits; and turning it on changes the whole host, `webserver` included. The cost: a memory leak in a service could fill the host, and `node_exporter` shows the host, not which container. To revisit if step B5 looks high or a host memory alert fires: the README has the one-line boot setting. `CLAUDE.md` changed with the owner's permission.
+
+### 2026-11-04: Level 1 passes on `sandbox` (step B1a)
+The first full run on the Pi 5, arm64, on branch `drain-test-fixes`: 101 of 103 tests passed in about 25 minutes. The two failures (`chat starts without downloading models`, `every container has a memory limit and log rotation`) came from the kernel's memory control being off. After the decision above changed those tests, `tests/chat.bats` and `tests/resilience.bats` passed in full (12 of 12), so every test has now passed on the Pi, though not in one run. `jq` had to be installed on `sandbox`, and `bats` was fetched directly, since `sandbox` has no Node. The fake upstream was used: nothing was spent. This also shows the images run on arm64 (open question 7). Whether the stack fits in memory is still to see at step B5.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -93,12 +102,17 @@ Minor, not fixed yet; each to be decided by the owner.
 23. secrets-service errors give only the HTTP status, not its meaning (401 token rejected, 423 secret deactivated, 404 unknown name).
 24. The restart test accepts any non-200; it should assert 422 `budget_exceeded`.
 25. The database-down test lacks a cached key with budget left.
-26. Test B (D1) on `qwen3.8-2.4t-a95b` with `max_tokens` 8192 may be refused outright by OpenRouter's in-flight hold, so the overshoot at the key limit would not show. `drain-balance.sh` could take `--model` and `--max-tokens`, or the procedure a cheaper path.
-27. `drain-balance.sh`'s burst of 5 is outside `--max-usd`, and any non-200 counts as "refused". The script and the procedure should say so, and print a hint when the refusal is not 402.
-28. The status the gateway returns for a 402 from OpenRouter is not asserted.
-29. The procedure lacks a live `tests/check-prices.sh` run before D3 and D4, and a reboot check (ports bound to the LAN address at boot).
+26. ~~Test B (D1) on `qwen3.8-2.4t-a95b` with `max_tokens` 8192 may be refused outright by OpenRouter's in-flight hold, so the overshoot at the key limit would not show.~~ **Settled 2026-11-04:** `--max-tokens`, and halving on a refusal.
+27. ~~`drain-balance.sh`'s burst of 5 is outside `--max-usd`, and any non-200 counts as "refused".~~ **Settled 2026-11-04:** the burst is gone, rounds are checked against `--max-usd`, and refusals are sorted.
+28. ~~The status the gateway returns for a 402 from OpenRouter is not asserted.~~ **Settled 2026-11-04 (level 1):** 402 and 403 are passed on, asserted through `tests/drain.bats`. Level 3 shows OpenRouter's real answers.
+29. ~~The procedure lacks a live `tests/check-prices.sh` run before D3 and D4, and a reboot check (ports bound to the LAN address at boot).~~ **Settled 2026-11-04:** added before D3 and D6, and as step C5. Live check today: all 11 entries match.
 30. README gaps: `chmod 600` on `.env` and the token file; `setup-keys.sh` must be rerun after adding a model; rotating a `KEY_*` leaves the old key active; admin-UI edits to fields `setup-keys.sh` does not send stay.
-31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; check at level 2.
+31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; checked by the reboot at step C5.
+32. `tests/run.sh` has no guard against a host running the real stack. The test stack has its own project name (`rapidselector-test`, in `tests/compose.test.yml` and `tests/compose.fakes.yml`), so by reading the files its `down -v` should leave the real volumes alone, but both stacks use the same fixed container names, so starting it there fails. The README and step B1a say not to do it; a guard could refuse with a clear message. Not tried on a host with the real stack.
+33. Two timing checks in `tests/drain.bats` ("--parallel sends the calls of a round at once" and "the default is 5 calls at once") expect calls to arrive within 1.5 seconds of each other, which may fail spuriously on slower arm64 hardware. A longer `delay_ms` and a wider margin would keep the check.
+34. `drain-balance.sh --parallel` with no value exits 1 with no message, from `shift 2` under `set -e`. The other value flags are parsed the same way. Harmless, since no key exists yet.
+35. `api` in `scripts/lib.sh` has no `--max-time`, so a hung gateway can block `drain-balance.sh`'s summary and the deletion of the temporary key `drain-test`.
+36. Gaps in `tests/drain.bats`: no test has a fault and a limit refusal in the same round, or a limit and an in-flight refusal in the same round, and SIGINT is not tested, only TERM (the final review tried INT by hand, and it works).
 
 ### Settle later
 

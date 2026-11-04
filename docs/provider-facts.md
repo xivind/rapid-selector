@@ -22,6 +22,15 @@ Sources: https://openrouter.ai/docs/api-reference/limits and https://openrouter.
 - **In-flight spending budget:** OpenRouter estimates each paid request's cost up front (input tokens plus `max_tokens`, or a fixed cap when `max_tokens` is not set) and holds it against the balance while the request runs. A request that does not fit is rejected before it reaches a host, with `limit_source` in the error's metadata.
 - **Management keys:** "cannot be used to make API calls to OpenRouter's completion endpoints". A leaked one "could create, edit and delete the API keys in your account". OpenRouter recommends an expiry date on every management key; the expiry cannot be changed after creation, and an expired key gets `401 API key expired`.
 
+### Checked in the docs, 2026-11-04
+Sources: https://openrouter.ai/docs/api-reference/limits and https://openrouter.ai/docs/api-reference/errors. The fetched text has blanks where some status codes belong; the codes below come from the pages' JSON examples and lists.
+- **In-flight spending budget:** "a fraction of your current credit balance, up to a fixed ceiling". The fraction, the ceiling and the fixed cap used when `max_tokens` is not set are not published.
+- **Who is subject to it:** prepaid accounts whose balance is below a threshold (not published) and, during the rollout, newer accounts without a spending history. A balance at or above the threshold is exempt. So what a small balance on a new account shows may not hold for a larger one.
+- **In-flight refusals, 402:** `"reason": "in_flight_budget_exhausted"` with `"limit_source": "openrouter_in_flight_budget"` is temporary, "can occur with no request still running", and has a `Retry-After` header. `"reason": "weight_exceeds_budget"` with `"limit_source": "openrouter_credits"` means one request's estimate is larger than the whole budget, and retrying will not help: lower `max_tokens` or add credits.
+- **`limit_source` on a 402:** `openrouter_in_flight_budget`, `openrouter_key_limit` ("the API key's credit limit is exhausted") or `openrouter_credits`.
+- **The docs give both 402 and 403 for a spent key limit.** "Handling 402 errors" lists `openrouter_key_limit`, while the budget section says "the key's own limit" gets a 403 before reaching a provider, with `"scope": "key_limit"`. Level 3 shows which one is real. This qualifies the 2026-11-03 entry above.
+- Whether in-flight holds count against a key's `limit_remaining` is not stated. Holds are described only against the account's balance.
+
 ## LiteLLM
 
 ### 2026-11-02 (owner) and 2026-11-03 (checked)
@@ -81,6 +90,14 @@ From `tests/gateway.bats` against the fake upstream.
 - **About 8 failed Postgres queries at every start:** `litellm_postgres_failed_requests_total{error_class="RawQueryError",function_name="query_raw"}` is 8 after start and stays there with traffic (142 → 167 total queries, still 8 failed). Nothing about them appears in the log.
 - **The admin UI** is at `/ui`, which redirects to `/ui/`.
 
+### How v1.106.6 passes on OpenRouter's refusals, 2026-11-04
+Against a fake upstream sending the documented bodies. `tests/drain.bats` covers 402 and 403 through the real config; the rest was seen once, without a database or `request_guard`.
+- **Status and message are passed on:** 402, 403, 404, 429 and 503 keep their status, and `limit_source` and `reason` stay readable inside `error.message`, as escaped JSON.
+- **`Retry-After` is dropped,** on 402 and on 429.
+- **Retries:** 403, 429 and 503 reach the upstream 3 times for each client call; 402 and 404 once.
+- **Default request timeout:** 6000 seconds (`DEFAULT_REQUEST_TIMEOUT_SECONDS`, `litellm/__init__.py`), not 600.
+- **`/model/info` with the master key** has the price at `.model_info.output_cost_per_token`.
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03
@@ -111,6 +128,13 @@ Sources: `GET https://openrouter.ai/api/v1/models` (453 models) and `GET https:/
 - Endpoints are addressed by slugs that include the variant, e.g. `deepinfra/fp8` or `deepinfra/turbo` (https://openrouter.ai/docs/guides/routing/provider-selection). Routing fields include `order`, `only`, `allow_fallbacks`, `zdr`, `data_collection` and `quantizations`.
 - Reasoning defaults: `gpt-oss-120b` and `gpt-oss-20b` reason always (default effort `medium`); `deepseek-v4.1-flash` by default (effort `high`); `qwen3.8-2.4t-a95b` always (default effort `xhigh`); `gemma-4-26b-a4b-it` optionally, off by default.
 - Prices for the phase 0 starting set are in `superpowers/specs/2026-11-03-phase-0-foundation-design.md`.
+
+## Docker on Raspberry Pi OS
+
+### On `sandbox`, 2026-11-04
+Pi 5, 8 GB, Docker with cgroup v2.
+- The kernel boots with `cgroup_disable=memory`, seen in `/proc/cmdline`, and `docker info` warns `No memory limit support` and `No swap limit support`.
+- With that, Docker silently drops `mem_limit`: `docker inspect` shows `HostConfig.Memory` as 0. `tests/chat.bats` also failed on `docker stats`' memory figure, which fits this; the figure itself was not seen.
 
 ## Docker in the cloud sandbox
 

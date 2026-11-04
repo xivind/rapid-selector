@@ -112,5 +112,7 @@ upstream_models() {
   mem="$(docker stats --no-stream --format '{{.MemUsage}}' rapidselector-chat | cut -d/ -f1 | tr -d ' ')"
   echo "$(date -u +%FT%TZ) chat.bats: chat memory after start $mem; log lines mentioning downloads: $(grep -ciE 'huggingface|downloading|download' <<<"$logs")" >> "$FINDINGS"
   ! grep -qiE 'huggingface\.co|Downloading' <<<"$logs"
+  # A host that does not report container memory (host_limits_memory) has nothing to check.
+  host_limits_memory || return 0
   [[ "$mem" == *MiB ]] && [ "${mem%%.*}" -lt 1024 ] || [[ "$mem" == *KiB ]]
 }

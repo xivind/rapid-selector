@@ -30,4 +30,11 @@ Researched on 2026-11-02 and left out for now:
 - **Ollama Cloud:** no longer needed for model coverage, since models like `mistral-large-4` and `muse-spark-open` are on OpenRouter. It would use Pay as you go, never a subscription, but it has no per-key limits below Enterprise, no documented API to revoke keys, and unnamed partner hosts that cannot be pinned.
 - **A custom `bridge` service** for an asynchronous layer such as MQTT: only if a use case shows a need (`requirements.md`, programmatic access).
 - **Web search in Open WebUI** (parked 2026-11-03): useful for current information, but questions go to an outside search service, an extra model call writes each query, and fetched pages make inputs much larger and more expensive. A self-hosted SearXNG would add a container. Switched on with a few environment variables when wanted.
+  - **To consider after phase 1 (owner's wish, 2026-11-04): live search with SearXNG.** After phase 1, because tower then shows what it costs. To settle first:
+    - **Who gets it:** Open WebUI's search helps chat only. Whether Node-RED and apps can get it too, through the gateway or by calling SearXNG themselves, needs checking against current docs.
+    - **Cost:** fetched pages raise input size, which `max_tokens` does not limit. Limit results per search and page size, point the query call at the cheapest allowlisted model, and measure the cost per search against the `experiments` budget.
+    - **Privacy:** SearXNG is on the LAN, but queries still reach outside search engines, and fetched pages go to the model's host. Check what SearXNG logs and sends.
+    - **Untrusted content:** a fetched page can carry instructions. Acceptable in chat, but not for flows that act on a model's answer without checking it.
+    - **Comparisons:** keep it off in arena and benchmark runs, so that they compare models and not search results.
+    - **Fit:** it needs its own memory limit, based on real use on the Pi, and stays optional and off by default, as an integration.
 - **Automatic fallback to another model or host** for important flows: possible within the allowlist, but every fallback needs its own price and testing. Left out while models are an enhancement.

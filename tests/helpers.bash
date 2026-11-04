@@ -104,6 +104,12 @@ gw_call() {
   export GW_STATUS GW_COST
 }
 
+# host_limits_memory: whether this host's kernel enforces and reports container memory.
+# Raspberry Pi OS ships without it (cgroup_disable=memory), and Docker then ignores mem_limit.
+host_limits_memory() {
+  [ "$(docker info --format '{{.MemoryLimit}}')" = "true" ]
+}
+
 # metric <name> [label_regex]: sum of the matching samples on the gateway's /metrics.
 metric() {
   curl -sS "$GATEWAY_URL/metrics/" \

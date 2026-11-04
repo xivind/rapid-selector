@@ -49,8 +49,15 @@ teardown_file() {
 }
 
 @test "every container has a memory limit and log rotation" {
+  config="$(docker compose --project-directory "$REPO" --env-file "$TEST_ENV_FILE" -f "$REPO/docker-compose.yml" config --format json)"
+  for s in db gateway chat; do
+    [ "$(jq -r --arg s "$s" '.services[$s].mem_limit // 0 | tonumber' <<<"$config")" -gt 0 ] || { echo "$s has no memory limit in Compose"; false; }
+  done
   for c in rapidselector-db rapidselector-gateway rapidselector-chat; do
-    [ "$(docker inspect -f '{{.HostConfig.Memory}}' "$c")" -gt 0 ] || { echo "$c has no memory limit"; false; }
+    # Docker drops the limit on a host that cannot enforce it, so only check it where it can.
+    if host_limits_memory; then
+      [ "$(docker inspect -f '{{.HostConfig.Memory}}' "$c")" -gt 0 ] || { echo "$c has no memory limit"; false; }
+    fi
     [ "$(docker inspect -f '{{index .HostConfig.LogConfig.Config "max-size"}}' "$c")" = "10m" ] || { echo "$c log size"; false; }
     [ "$(docker inspect -f '{{index .HostConfig.LogConfig.Config "max-file"}}' "$c")" = "5" ] || { echo "$c log files"; false; }
   done
