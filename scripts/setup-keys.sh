@@ -17,6 +17,8 @@ BUDGET_KEY_NODE_RED="${BUDGET_KEY_NODE_RED:-4}"
 BUDGET_KEY_SMOKE_TEST="${BUDGET_KEY_SMOKE_TEST:-1}"
 BUDGET_DURATION="30d"
 NODE_RED_RPM=30
+# Input and output tokens per minute for node-red: an upper limit on how much a flow can send.
+NODE_RED_TPM=100000
 # Virtual keys may only call chat completions and list models: no pass-through or admin routes.
 ALLOWED_ROUTES='["/v1/chat/completions","/chat/completions","/v1/models","/models"]'
 
@@ -39,13 +41,13 @@ ensure_team() {
   fi
 }
 
-# ensure_key <alias> <key value> <team_id> <max_budget or null> <models json> <rpm_limit or null>
+# ensure_key <alias> <key value> <team_id> <max_budget or null> <models json> <rpm_limit or null> <tpm_limit or null>
 ensure_key() {
   local duration=null payload
   [ "$4" != "null" ] && duration="\"$BUDGET_DURATION\""
   payload="$(jq -nc --arg a "$1" --arg k "$2" --arg t "$3" --argjson b "$4" --argjson m "$5" \
-    --argjson r "$6" --argjson d "$duration" --argjson routes "$ALLOWED_ROUTES" \
-    '{key:$k, key_alias:$a, team_id:$t, models:$m, max_budget:$b, budget_duration:$d, rpm_limit:$r, allowed_routes:$routes}')"
+    --argjson r "$6" --argjson tpm "$7" --argjson d "$duration" --argjson routes "$ALLOWED_ROUTES" \
+    '{key:$k, key_alias:$a, team_id:$t, models:$m, max_budget:$b, budget_duration:$d, rpm_limit:$r, tpm_limit:$tpm, allowed_routes:$routes}')"
   if api GET "/key/info?key=$2" >/dev/null 2>&1; then
     api POST /key/update "$payload" >/dev/null || die 1 "could not update key $1"
   else
@@ -55,9 +57,9 @@ ensure_key() {
 
 ensure_team permanent "$BUDGET_TEAM_PERMANENT" "$ROLES"
 ensure_team experiments "$BUDGET_TEAM_EXPERIMENTS" "$ALL_NAMES"
-ensure_key node-red "$KEY_NODE_RED" permanent "$BUDGET_KEY_NODE_RED" "$ROLES" "$NODE_RED_RPM"
-ensure_key chat "$KEY_CHAT" experiments null "$ALL_NAMES" null
-ensure_key smoke-test "$KEY_SMOKE_TEST" experiments "$BUDGET_KEY_SMOKE_TEST" "$ALL_NAMES" null
+ensure_key node-red "$KEY_NODE_RED" permanent "$BUDGET_KEY_NODE_RED" "$ROLES" "$NODE_RED_RPM" "$NODE_RED_TPM"
+ensure_key chat "$KEY_CHAT" experiments null "$ALL_NAMES" null null
+ensure_key smoke-test "$KEY_SMOKE_TEST" experiments "$BUDGET_KEY_SMOKE_TEST" "$ALL_NAMES" null null
 
 printf '%-12s %-12s %-10s %-8s %-6s %s\n' ALIAS TEAM BUDGET_USD RESETS NAMES RPM
 for team in permanent experiments; do

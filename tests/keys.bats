@@ -19,7 +19,7 @@ setup() {
 
 # The fields setup-keys controls, plus spend and reset time, for comparison across runs.
 key_state() {
-  key_info "$1" | jq -S '.info | {key_alias, team_id, models, max_budget, budget_duration, rpm_limit, allowed_routes, spend, budget_reset_at}'
+  key_info "$1" | jq -S '.info | {key_alias, team_id, models, max_budget, budget_duration, rpm_limit, tpm_limit, allowed_routes, spend, budget_reset_at}'
 }
 team_state() {
   team_info "$1" | jq -S '.team_info | {team_alias, models, max_budget, budget_duration, spend, budget_reset_at}'
@@ -35,7 +35,7 @@ all_state() {
     [ "$GW_STATUS" = "200" ] || { echo "$k -> $GW_STATUS $output"; false; }
   done
   [ "$(key_state "$(test_env KEY_NODE_RED)" | jq -r '.team_id')" = "permanent" ]
-  [ "$(key_state "$(test_env KEY_NODE_RED)" | jq '.rpm_limit == 30 and .max_budget == 4')" = "true" ]
+  [ "$(key_state "$(test_env KEY_NODE_RED)" | jq '.rpm_limit == 30 and .tpm_limit == 100000 and .max_budget == 4')" = "true" ]
   [ "$(key_state "$(test_env KEY_SMOKE_TEST)" | jq '.max_budget == 1 and .budget_duration == "30d"')" = "true" ]
   [ "$(key_state "$(test_env KEY_CHAT)" | jq '.max_budget == null')" = "true" ]
   [ "$(team_state permanent | jq '.max_budget == 8 and .budget_duration == "30d"')" = "true" ]
@@ -53,6 +53,8 @@ all_state() {
 }
 
 @test "second run changes nothing unexpected" {
+  # Let spend from earlier calls reach the database first (written every 10 s).
+  sleep 12
   before="$(all_state)"
   run_setup_keys >/dev/null
   after="$(all_state)"
@@ -89,6 +91,32 @@ all_state() {
       [ "$code" = "401" ] || [ "$code" = "403" ] || { echo "$k $path -> $code"; false; }
     done
   done
+  [ "$(upstream_requests | jq length)" = "0" ]
+}
+
+@test "a request body cannot change the pin, zero data retention or the model list" {
+  failures=()
+  pin='{"order":["deepinfra/fp8"],"only":["deepinfra/fp8"],"allow_fallbacks":false,"zdr":true,"data_collection":"deny"}'
+  for override in \
+    '{"provider":{"order":["elsewhere"],"allow_fallbacks":true,"zdr":false}}' \
+    '{"extra_body":{"provider":{"order":["elsewhere"],"zdr":false}}}' \
+    '{"models":["openai/gpt-4o","anthropic/claude-3.5-sonnet"]}' \
+    '{"route":"fallback","transforms":["middle-out"]}'; do
+    upstream_reset
+    gw_call "$(test_env KEY_CHAT)" classify "$override"
+    body="$(upstream_requests | jq -c '.[-1].body')"
+    [ "$(jq -cS '.provider' <<<"$body")" = "$(jq -cS . <<<"$pin")" ] || failures+=("$override -> provider $(jq -c .provider <<<"$body")")
+    [ "$(jq -c '[has("models"), has("route"), has("transforms"), has("extra_body")]' <<<"$body")" = "[false,false,false,false]" ] \
+      || failures+=("$override -> forwarded $(jq -c '{models, route, transforms}' <<<"$body")")
+  done
+  printf '%s\n' "${failures[@]}"
+  [ "${#failures[@]}" -eq 0 ]
+}
+
+@test "node-red key is refused for an underlying model string" {
+  upstream_reset
+  gw_call "$(test_env KEY_NODE_RED)" openrouter/qwen/qwen3.8-2.4t-a95b
+  [ "$GW_STATUS" -ge 400 ] && [ "$GW_STATUS" -lt 500 ]
   [ "$(upstream_requests | jq length)" = "0" ]
 }
 

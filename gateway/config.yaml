@@ -201,7 +201,8 @@ model_list:
 litellm_settings:
   max_budget: 32
   budget_duration: 30d
-  callbacks: ["prometheus"]
+  # request_guard (gateway/request_guard.py) strips routing fields clients could send.
+  callbacks: ["prometheus", "request_guard.request_guard"]
   # Also publish health metrics for Postgres and the spend writer (litellm_postgres_* etc.).
   service_callback: ["prometheus_system"]
   require_auth_for_metrics_endpoint: false

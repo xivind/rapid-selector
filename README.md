@@ -74,12 +74,12 @@ All limits are in USD and reset on the 1st of the month at 00:00 UTC.
 | Team or key | Budget | May use |
 |---|---|---|
 | Team `permanent` | $8 | The roles only |
-| Key `node-red` (`KEY_NODE_RED`) | $4, about 30 calls a minute | The roles only |
+| Key `node-red` (`KEY_NODE_RED`) | $4, about 30 calls and 100,000 tokens a minute | The roles only |
 | Team `experiments` | $24 | Every name |
 | Key `chat` (`KEY_CHAT`, used by Open WebUI) | the team's | Every name |
 | Key `smoke-test` (`KEY_SMOKE_TEST`) | $1 | Every name |
 
-Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($34, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list.
+Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($34, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
 Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`.
 
@@ -118,21 +118,22 @@ docker exec rapidselector-db pg_dump -U litellm litellm > "litellm-$(date +%F).s
 ```
 
 ```bash
-./rapidselector.sh stop chat
+docker stop rapidselector-chat
 docker run --rm -v rapidselector_chatdata:/data -v "$PWD":/backup postgres:17.11-alpine tar czf "/backup/chatdata-$(date +%F).tgz" -C /data .
-./rapidselector.sh start chat
+docker start rapidselector-chat
 ```
 
 Keep the secrets (at least `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY` and the virtual keys) safely with the backups: without the salt key, a restored database cannot read its stored provider keys.
 
 ## Stopping all spending (manual kill switch)
 
-Two ways that do not depend on anything else running:
+Two ways that do not depend on anything else running (not even secrets-service):
 1. In OpenRouter's dashboard, disable the gateway's inference key. This stops everything at once.
-2. On the host, stop the gateway:
+2. On the host, stop the gateway with plain Docker:
    ```bash
-   ./rapidselector.sh stop gateway
+   docker stop rapidselector-gateway
    ```
+   Start it again with `./rapidselector.sh up -d`.
 
 ## For developers
 

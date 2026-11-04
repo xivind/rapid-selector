@@ -10,7 +10,7 @@ We go through this together: Claude walks you through each step, you say what yo
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| A1 | Settings: turn auto top-up **off**. Privacy: prompt logging and every opt-in to data collection **off**. Zero data retention **on** for the account, if offered | The settings saved | Which of these you found, and their wording | 0 |
+| A1 | Settings: turn auto top-up **off**. Privacy: prompt logging and every opt-in to data collection **off**. Zero data retention **required** for the account. If the account has an allowed-providers list, limit it to the hosts in `gateway/config.yaml` (DeepInfra, CoreWeave, SiliconFlow, Cloudflare, PrimeIntellect). These are the backstop if a request ever gets past the gateway's pin | The settings saved | Which of these you found, and their exact wording. If zero data retention cannot be required for the account, stop and tell Claude | 0 |
 | A2 | Keys: create the gateway's inference key, named e.g. `rapidselector-gateway`, with a credit limit of **$0.05**, reset **monthly** | The key, shown once | That it exists, its limit and reset. Put the key in the secrets as `RAPIDSELECTOR_OPENROUTER_KEY` | 0 |
 | A3 | Credits: buy the **smallest top-up** offered | The balance | The amount paid, the 5.5% fee, and the balance | the top-up |
 
@@ -44,7 +44,7 @@ The budget alerts are expected to fire during D5. That is part of the test.
 | D2 | Set the inference key's limit to **$34**, monthly | | The new limit | 0 |
 | D3 | **Spend per model:** `./rapidselector.sh run-script scripts/smoke-test.sh --all` | 11 names with 200 and a cost above zero | The output | under $0.05 |
 | D4 | **Hosts and cost:** in OpenRouter's activity log, open each call from D3 | For each call: the provider and quantisation of its pin (e.g. DeepInfra, bf16), and a cost equal to the one in D3's output | Any call with another host, or a cost that differs | 0 |
-| D5 | **Zero data retention, negative.** Claude gives you a temporary entry pinned to an endpoint without zero data retention, to add to `gateway/config.yaml` without committing. `./rapidselector.sh up -d`, call it once with the smoke-test key, then `git checkout gateway/config.yaml` and `./rapidselector.sh up -d` again | The call is refused by OpenRouter (no endpoint matches) | The status and message | 0 |
+| D5 | **Zero data retention, negative.** Claude gives you a temporary entry pinned to an endpoint without zero data retention, to add to `gateway/config.yaml` without committing. `./rapidselector.sh up -d`, then call it once with the **master key** (the other keys may only use the 11 names, so the gateway would refuse them before anything is sent). Then `git checkout gateway/config.yaml` and `./rapidselector.sh up -d` again | The call is refused by **OpenRouter**, with a message about no endpoint matching the data policy or the provider list. A refusal from the gateway itself (401, "not allowed to access model") does not count | The status and the full message | 0 |
 | D6 | **Test A, empty balance.** `./rapidselector.sh run-script scripts/drain-balance.sh --max-usd <balance + 1>` and type `drain` | Calls with 200 until the balance runs out, then refusals, a burst of 5, `stopped: refused` | The summary, and the balance in OpenRouter's dashboard afterwards: zero, or below zero, and by how much | the rest of the top-up |
 | D7 | The regular top-up | The balance | Amount and balance | the top-up |
 

@@ -42,6 +42,7 @@ services:
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
     volumes:
       - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/request_guard.py:/app/request_guard.py:ro
     ports:
       - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT:-4000}:4000"
     mem_limit: 1536m
