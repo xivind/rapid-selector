@@ -12,7 +12,7 @@ llama-3.2-1b-instruct@cloudflare|meta-llama/llama-3.2-1b-instruct|cloudflare|0.0
 llama-3.1-8b-instruct@deepinfra|meta-llama/llama-3.1-8b-instruct|deepinfra/fp8|0.00000002|0.00000004|2048|experiment|false
 gpt-oss-20b@deepinfra|openai/gpt-oss-20b|deepinfra/bf16|0.00000003|0.00000014|8192|experiment|true
 gpt-oss-120b@deepinfra|openai/gpt-oss-120b|deepinfra/bf16|0.000000037|0.00000017|8192|experiment|true
-gpt-oss-120b@primeintellect|openai/gpt-oss-120b|primeintellect/fp4|0.000000035|0.00000013|8192|experiment|true
+gpt-oss-120b@primeintellect|openai/gpt-oss-120b|primeintellect/fp4|0.000000026|0.000000095|8192|experiment|true
 deepseek-v4.1-flash@deepinfra|deepseek/deepseek-v4.1-flash|deepinfra/fp8|0.00000014|0.00000042|8192|experiment|true
 qwen3.8-2.4t-a95b@siliconflow|qwen/qwen3.8-2.4t-a95b|siliconflow/fp8|0.000002|0.000006|8192|experiment|true'
 

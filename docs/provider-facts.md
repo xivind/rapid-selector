@@ -75,6 +75,8 @@ From `tests/gateway.bats` against the fake upstream.
 - **`allowed_routes` is necessary:** without it, a virtual key that names a model it may use (e.g. `classify`) gets HTTP 200 from `/openrouter/v1/chat/completions`, and the request goes out with `Bearer None`. With it, the route is refused (401/403).
 - Budgets come back as floats (`1.0`).
 
+- **The database stopping fails closed:** with Postgres stopped, a key whose budget is used up is still refused (422, from LiteLLM's cache), and a key not in the cache gets `503` "Service Unavailable, the authentication database is temporarily unreachable". When Postgres returns, calls work again within seconds, without restarting the gateway.
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03
@@ -93,6 +95,9 @@ From `tests/chat.bats` against the gateway and the fake upstream.
 - The image has `curl`, used for its healthcheck (`/health`).
 
 ## OpenRouter catalogue
+
+### Price changes seen, 2026-11-03 and 2026-11-04
+- `openai/gpt-oss-120b` at `primeintellect/fp4` had three prices within a day: $0.03 / $0.11, then $0.035 / $0.13, then $0.026 / $0.095 per million tokens. `tests/check-prices.sh` caught the last change. The other ten pinned endpoints kept their prices.
 
 ### From OpenRouter's API, 2026-11-03
 Sources: `GET https://openrouter.ai/api/v1/models` (453 models) and `GET https://openrouter.ai/api/v1/endpoints/zdr` (1,090 zero data retention endpoints).
