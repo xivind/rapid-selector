@@ -92,9 +92,11 @@ key="$(api POST /key/generate "$(jq -nc --arg m "$MODEL" --argjson b "$max_usd" 
 CALL=(curl -sS --max-time "$CURL_TIMEOUT" -w '%{http_code}' -X POST "$GATEWAY/v1/chat/completions"
   -H "Authorization: Bearer $key" -H 'Content-Type: application/json')
 
-# classify <status> <body file>: prints ok, in-flight, limit, gateway or fault.
+# classify <status> <body file> <cost>: prints ok, in-flight, limit, gateway or fault.
+# An answer with no cost is a fault: uncounted spend would make --max-usd useless.
 classify() {
-  if [ "$1" = "200" ]; then echo ok
+  if [ "$1" = "200" ]; then
+    if awk -v c="${3:-0}" 'BEGIN { exit !(c + 0 > 0) }'; then echo ok; else echo fault; fi
   elif grep -q 'openrouter_in_flight_budget' "$2"; then echo in-flight
   elif [ "$1" = "402" ] || grep -Eq 'openrouter_key_limit|openrouter_credits' "$2"; then echo limit
   elif [ "$1" = "422" ] && grep -q 'budget_exceeded' "$2"; then echo gateway
@@ -121,6 +123,9 @@ while :; do
   body="$(jq -nc --arg m "$MODEL" --argjson t "$tokens" \
     '{model:$m, max_tokens:$t, messages:[{role:"user",content:"Write a long, detailed essay about the history of microfilm."}]}')"
   for ((i = 1; i <= n; i++)); do
+    # A failed call leaves these files alone, so empty them: the last round's refusal must not count.
+    : > "$tmp/h$i"
+    : > "$tmp/b$i"
     "${CALL[@]}" -D "$tmp/h$i" -o "$tmp/b$i" -d "$body" > "$tmp/s$i" &
   done
   wait
@@ -132,15 +137,17 @@ while :; do
   for ((i = 1; i <= n; i++)); do
     status="$(cat "$tmp/s$i")"
     statuses+=" $status"
-    outcomes+=" $(classify "$status" "$tmp/b$i")"
+    cost="$( (grep -i '^x-litellm-response-cost:' "$tmp/h$i" || true) | tail -1 | cut -d: -f2- | tr -d ' \r')"
+    outcome="$(classify "$status" "$tmp/b$i" "$cost")"
+    outcomes+=" $outcome"
     if [ "$status" = "200" ]; then
       round_answered=$((round_answered + 1))
-      cost="$( (grep -i '^x-litellm-response-cost:' "$tmp/h$i" || true) | tail -1 | cut -d: -f2- | tr -d ' \r')"
+      [ "$outcome" = "ok" ] || last+=("200 with no recorded cost")
       spent="$(awk -v s="$spent" -v c="${cost:-0}" 'BEGIN { printf "%.6f", s + c }')"
     else
-      last+=("$status $( (head -c 600 "$tmp/b$i" 2>/dev/null || true) | tr '\n' ' ')")
-      [ "${#last[@]}" -gt 3 ] && last=("${last[@]: -3}")
+      last+=("$status $(head -c 600 "$tmp/b$i" | tr '\n' ' ')")
     fi
+    [ "${#last[@]}" -gt 3 ] && last=("${last[@]: -3}")
   done
   answered=$((answered + round_answered))
   echo "round $round: max_tokens $tokens:$statuses, spent $spent"
@@ -172,7 +179,7 @@ esac
 recorded=unknown
 for _ in $(seq 1 "$SPEND_WAIT"); do
   recorded="$(api GET "/key/info?key=$key" 2>/dev/null | jq -r '.info.spend // "unknown"' || echo unknown)"
-  if [ "$answered" -eq 0 ] || awk -v r="$recorded" 'BEGIN { exit !(r + 0 > 0) }'; then break; fi
+  if [ "$answered" -eq 0 ] || awk -v r="$recorded" -v s="$spent" 'BEGIN { exit !(r + 0 >= s * 0.99) }'; then break; fi
   sleep 1
 done
 echo "calls_succeeded $answered"

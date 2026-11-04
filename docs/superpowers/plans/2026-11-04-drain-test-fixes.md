@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Branch `drain-test-fixes`. It reaches `main` only after level 1 passes on `sandbox`.
-- This machine has no Docker. Level 1 is verified by the owner on `sandbox`, before step B2, and never with the real stack up: the suite shares the project name and deletes its volumes.
+- This machine has no Docker. Level 1 is verified by the owner on `sandbox`, before step B2, and never with the real stack up: both use the same fixed container names.
 - No real OpenRouter calls while building. The live check `tests/check-prices.sh` is free and allowed.
 - Everything in English. Commit messages end with the attribution line from the session.
 - No new dependencies in the repository.

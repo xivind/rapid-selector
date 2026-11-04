@@ -50,7 +50,7 @@ The gateway drops `Retry-After`, so the wait is fixed. The summary keeps its lin
 
 ## Design: `docs/test-procedures/phase-0.md`
 
-- **New B1a:** run `tests/run.sh` on `sandbox` before B2. It also gives the first full level 1 run on arm64. It must never run once the real stack is up, because it shares the project name and deletes its volumes. A guard against that is recorded as a new deferred finding, 32.
+- **New B1a:** run `tests/run.sh` on `sandbox` before B2. It also gives the first full level 1 run on arm64. It cannot run beside the real stack, because both use the same fixed container names. A guard against that is recorded as a new deferred finding, 32.
 - **B1:** `chmod 600` on `.env` and the token file, and hex-only secrets using the commands in `.env.example` (findings 21 and 30).
 - **C1:** the `production` merge is already done (#181); restarting Prometheus remains.
 - **New C5, reboot check (29, 31):** after a reboot, ports 4000 and 4010 listen on the LAN address only, all services are healthy, and "database failing" has not fired after 10 minutes.

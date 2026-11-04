@@ -218,6 +218,39 @@ drain_keys_left() {
   grep -q "round 1: max_tokens 8192: 000," <<<"$output"
 }
 
+@test "a connection failure after a refusal is still a fault" {
+  # The first call is refused at once; the next one outlives the time limit.
+  fake_mode '{"refuse_first":1,"refusal":"key_limit_402","delay_ms":3000}'
+  DRAIN_CURL_TIMEOUT=1 run drain "drain" --max-usd 1 --max-tokens 64 --parallel 1
+  echo "$output"
+  grep -q "stopped: error" <<<"$output"
+  grep -q "round 2: max_tokens 32: 000," <<<"$output"
+}
+
+@test "an answer with no cost is a fault, so spend cannot go uncounted" {
+  fake_mode '{"cost":0}'
+  run drain "drain" --max-usd 1 --max-calls 3 --parallel 1
+  echo "$output"
+  grep -q "stopped: error" <<<"$output"
+  [ "$(calls_received)" = "1" ]
+}
+
+@test "the cost of the calls adds up over a mixed round" {
+  fake_mode '{"fail_after":2}'
+  run drain "drain" --max-usd 1 --max-tokens 32 --parallel 5
+  echo "$output"
+  grep -qx "cost_of_calls_usd 0.012400" <<<"$output"
+}
+
+@test "the summary waits for all the spend to be recorded" {
+  # Spend is written every 10 seconds, so these calls span at least one write.
+  fake_mode '{"delay_ms":6000}'
+  run drain "drain" --max-usd 1 --max-calls 3 --parallel 1
+  echo "$output"
+  recorded="$(grep '^recorded_spend_usd' <<<"$output" | cut -d' ' -f2)"
+  awk -v r="$recorded" 'BEGIN { exit !(r > 0.0186 * 0.99) }'
+}
+
 @test "bad numbers are refused before anything is created" {
   for args in "--parallel 0" "--max-tokens 0" "--parallel x" "--max-tokens 1.5"; do
     # shellcheck disable=SC2086  # the flag and its value are meant to split

@@ -121,14 +121,13 @@ class Handler(BaseHTTPRequestHandler):
             gen_id = f"gen-fake-{state['next_id']}"
             state["next_id"] += 1
 
-        if mode["delay_ms"]:
-            time.sleep(mode["delay_ms"] / 1000)
-
         status = mode["status"]
         if refused(mode, call_number, body):
             code, error = REFUSALS[mode["refusal"]]
             self._send_json(code, {"error": {"code": code, **error}})
             return
+        if mode["delay_ms"]:
+            time.sleep(mode["delay_ms"] / 1000)
         if status != 200:
             self._send_json(status, {"error": {"code": status, "message": "Fake upstream error"}})
             return
