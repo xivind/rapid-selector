@@ -61,6 +61,13 @@ STUB
   grep -q "flex tier" <<<"$output"
 }
 
+@test "check-prices fails for an endpoint with Safety Retention" {
+  jq '.data[0].safety_retention = true' "$ZDR_ENDPOINTS_FILE" > "$BATS_TEST_TMPDIR/retention.json"
+  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/retention.json" run "$REPO/tests/check-prices.sh"
+  [ "$status" -eq 1 ]
+  grep -q "Safety Retention" <<<"$output"
+}
+
 @test "check-arm64 passes for the pinned images" {
   run "$REPO/tests/check-arm64.sh"
   echo "$output"

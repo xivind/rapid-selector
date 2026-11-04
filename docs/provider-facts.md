@@ -31,6 +31,14 @@ Sources: https://openrouter.ai/docs/api-reference/limits and https://openrouter.
 - **The docs give both 402 and 403 for a spent key limit.** "Handling 402 errors" lists `openrouter_key_limit`, while the budget section says "the key's own limit" gets a 403 before reaching a provider, with `"scope": "key_limit"`. Level 3 shows which one is real. This qualifies the 2026-11-03 entry above.
 - Whether in-flight holds count against a key's `limit_remaining` is not stated. Holds are described only against the account's balance.
 
+### Safety Retention, checked 2026-11-04
+Sources: https://openrouter.ai/docs/guides/features/zdr, `GET /api/v1/endpoints/zdr` and the account's settings page.
+- **Safety Retention is not zero data retention:** "OpenRouter or a provider may retain prompts and responses from any request, whether flagged or not, only to detect, investigate, and prevent abuse." Not used for training.
+- **`provider.zdr: true` depends on the account:** "the request will only be routed to ZDR endpoints, plus Safety Retention endpoints if your settings allow them", and "self-serve accounts allow Safety Retention and enterprise accounts use ZDR only". So zero data retention needs `ZDR only` in the account's settings, under "All other models" and "Google".
+- **The public list includes those endpoints,** marked `safety_retention: true`. All 11 pinned endpoints had `false` on this date. `tests/check-prices.sh` now fails on `true`.
+- **Zero data retention has an exception:** "no routine storage of prompts or responses after processing, apart from the CSAM exception described on this page". The page also mentions a planned change dated 2026-10-27, not checked further.
+- **Not stated:** whether Gemma on CoreWeave counts as a Google model in the account setting. The account's eligibility count stayed at 121 models after choosing `ZDR only`; each model was not looked up by name.
+
 ## LiteLLM
 
 ### 2026-11-02 (owner) and 2026-11-03 (checked)
