@@ -42,6 +42,7 @@ read -r answer || true
 [ "$answer" = "drain" ] || die 1 "not confirmed; nothing was called"
 
 key=""
+# shellcheck disable=SC2329  # called by the EXIT trap below
 cleanup() {
   if [ -n "$key" ]; then
     api POST /key/delete "$(jq -nc --arg k "$key" '{keys:[$k]}')" >/dev/null 2>&1 \
