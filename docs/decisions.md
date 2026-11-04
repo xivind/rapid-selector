@@ -77,7 +77,7 @@ Done by the owner in OpenRouter's dashboard. Auto top-up: off by default, and it
 Created by the owner as a workspace API key: `rapidselector-gateway`, credit limit $0.05, monthly reset. The limit rises to $34 at step D2.
 
 ### 2026-11-04: Step A3, the first top-up
-The owner bought $5 of credit and paid $7.25 with Google Pay through Stripe, so OpenRouter holds no card. The balance shows $5.00, auto top-up is still off, and there is no sign of a subscription or recurring fee. The cost ceiling for the procedure is therefore $6 of credit, not counting the regular top-up at D7. The $2.25 on top was higher than the 5.5% fee alone: see open question 20 below.
+The owner bought $5 of credit and paid $7.25 with Google Pay through Stripe, so OpenRouter holds no card. The balance shows $5.00, auto top-up is still off, and there is no sign of a subscription or recurring fee. The cost ceiling for the procedure is therefore $6 of credit, not counting the regular top-up at D7. The $2.25 on top was higher than the 5.5% fee alone: see open question 37 below.
 
 ## Open
 
@@ -103,7 +103,7 @@ The owner bought $5 of credit and paid $7.25 with Google Pay through Stripe, so 
 18. **Which OpenRouter endpoint gives the inference key's limit and usage to the management key?** Phase 1.
 19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for `llm`.
 
-20. **Is the $34 limit too high for the 400 NOK budget, now that VAT is known?** The budget allowed for the 5.5% fee, not VAT. $5 of credit cost $7.25, which fits ($5 + a $0.80 fee) × 1.25 VAT exactly; the $0.80 minimum is an inference, since OpenRouter's pricing page gives only "5.5%" and "VAT/GST may be added on invoices". At 5.5% plus 25% VAT, $34 of credit costs about $44.84, and 400 NOK (roughly $35–40) buys about $26.50–30.30 of credit. To be decided by the owner before step D2, which sets the limit, with the receipt's breakdown and the current exchange rate.
+37. **Is the $34 limit too high for the 400 NOK budget, now that VAT is known?** The budget allowed for the 5.5% fee, not VAT. $5 of credit cost $7.25, which fits ($5 + a $0.80 fee) × 1.25 VAT exactly; the $0.80 minimum is an inference, since OpenRouter's pricing page gives only "5.5%" and "VAT/GST may be added on invoices". At 5.5% plus 25% VAT, $34 of credit costs about $44.84, and 400 NOK (roughly $35–40) buys about $26.50–30.30 of credit. To be decided by the owner before step D2, which sets the limit, with the receipt's breakdown and the current exchange rate.
 
 ### Deferred findings from the phase 0 review (2026-11-04)
 Minor, not fixed yet; each to be decided by the owner.
