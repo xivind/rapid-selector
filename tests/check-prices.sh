@@ -9,8 +9,13 @@ set -uo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 config="${1:-$repo/gateway/config.yaml}"
 
-endpoints="$(curl -sS --max-time 60 https://openrouter.ai/api/v1/endpoints/zdr)" \
-  || { echo "cannot reach OpenRouter's API"; exit 2; }
+# ZDR_ENDPOINTS_FILE: a saved copy of the endpoint list, for the tests; normally fetched live.
+if [ -n "${ZDR_ENDPOINTS_FILE:-}" ]; then
+  endpoints="$(cat "$ZDR_ENDPOINTS_FILE")"
+else
+  endpoints="$(curl -sS --max-time 60 https://openrouter.ai/api/v1/endpoints/zdr)" \
+    || { echo "cannot reach OpenRouter's API"; exit 2; }
+fi
 
 mapfile -t entries < <(awk '
   /^[[:space:]]*- model_name:/ { if (name != "") print name, model, input, output, slug; name = $3; model = input = output = slug = "-" }
