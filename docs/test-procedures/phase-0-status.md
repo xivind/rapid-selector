@@ -1,0 +1,110 @@
+# Phase 0: where the walkthrough stands
+
+A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+
+## Next step: B1
+
+Steps A1, A2, A3 and B1a are done and recorded. **B1 has been handed to the owner, who paused before reporting a result.** Ask how far they got before repeating anything. If the secret `rapidselector` already exists in secrets-service, do not regenerate it: changing `LITELLM_SALT_KEY` is only safe before the first start, and a second run of the commands would replace every secret.
+
+### The B1 instructions as given
+
+All on `sandbox`, in `/home/pi/code/rapid-selector`. Nothing starts yet, and it costs nothing.
+
+1. Get the code and create the settings file:
+   ```bash
+   cd ~/code/rapid-selector && git switch main && git pull
+   hostname -I
+   cp .env.example .env && chmod 600 .env
+   nano .env
+   ```
+   In `.env`, leave the secret lines empty and set:
+   - `RAPIDSELECTOR_LAN_ADDRESS=` sandbox's address, expected `192.168.1.212`
+   - `SECRETS_SOURCE=secrets-service`
+   - `SECRETS_SERVICE_TOKEN_FILE=/home/pi/.config/rapidselector/secrets-service.token`
+2. In secrets-service's admin UI, `http://home-assistant:8002`, create a client named `rapidselector` and copy its token. If a secret `rapidselector` is already listed, stop.
+3. Save the token. `read` waits silently; paste and press Enter:
+   ```bash
+   mkdir -p ~/.config/rapidselector && chmod 700 ~/.config/rapidselector
+   read -rs TOKEN
+   (umask 077; printf '%s\n' "$TOKEN" > ~/.config/rapidselector/secrets-service.token)
+   unset TOKEN
+   ```
+4. Generate and store the secrets. Paste the OpenRouter key from A2 at the silent `read`:
+   ```bash
+   read -rs ORKEY
+   (umask 077; jq -n --arg k1 "$(openssl rand -hex 32)" --arg k2 "sk-$(openssl rand -hex 24)" --arg k3 "$(openssl rand -hex 32)" --arg k4 "$(openssl rand -hex 16)" --arg k5 "$ORKEY" --arg k6 "$(openssl rand -hex 32)" --arg k7 "sk-$(openssl rand -hex 24)" --arg k8 "sk-$(openssl rand -hex 24)" --arg k9 "sk-$(openssl rand -hex 24)" '{blob:{POSTGRES_PASSWORD:$k1,LITELLM_MASTER_KEY:$k2,LITELLM_SALT_KEY:$k3,LITELLM_UI_PASSWORD:$k4,RAPIDSELECTOR_OPENROUTER_KEY:$k5,WEBUI_SECRET_KEY:$k6,KEY_CHAT:$k7,KEY_NODE_RED:$k8,KEY_SMOKE_TEST:$k9}}' > ~/rapidselector-secrets.json)
+   unset ORKEY
+   T=~/.config/rapidselector/secrets-service.token
+   curl -sS -X PUT -H "Authorization: Bearer $(cat $T)" -H 'Content-Type: application/json' --data "@$HOME/rapidselector-secrets.json" http://home-assistant:8002/secrets/rapidselector; echo
+   curl -sS -H "Authorization: Bearer $(cat $T)" http://home-assistant:8002/secrets/rapidselector | jq -r '.blob | keys[]'
+   ```
+   Expected: a `"status":"success"` line, then 9 names and no values.
+5. If all 9 are there, `rm ~/rapidselector-secrets.json`.
+
+Report back: the settings are in place, the `hostname -I` address, the 9 names, and that the file is deleted. Then record B1 and go on to B2.
+
+## How we work through the procedure
+
+These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
+
+- `docs/test-procedures/phase-0.md`, one step at a time: what to run or click, what they should see, what it costs. **Wait for their report before the next step.** Record every result in `docs/decisions.md`, and commit and push it.
+- **Stop and ask before anything that spends money beyond the procedure's stated cost.** The ceiling is $6 of credit ($1 plus the $5 top-up), not counting D7's regular top-up.
+- **The owner never pastes a secret value to Claude.** Names and statuses only.
+- The owner is new to Compose. Plain language, complete commands, and say what each output should look like.
+- The owner welcomes pushback and pushes back too: ask whether something is needed before proposing a change to a host. Example: the memory cgroup boot setting, proposed and then rightly dropped.
+- Code changes use the superpowers skills and tests first.
+
+## State of things
+
+### OpenRouter
+
+| What | State |
+|---|---|
+| Balance | $5.00, nothing spent yet. $7.25 paid |
+| Inference key | `rapidselector-gateway`: limit $0.05, monthly reset. The value is with the owner, and goes into secrets-service in B1 |
+| Management key | None. Only tower needs one, in phase 1 |
+| Auto top-up | Off, and no card on file (Google Pay through Stripe) |
+| Zero data retention | All 5 toggles on, `ZDR only` under "All other models" and "Google" |
+| Data training and the 1% discount | All off |
+| Allowed providers | Cloudflare, CoreWeave, DeepInfra, SiliconFlow |
+
+### `sandbox`
+
+- Clone at `/home/pi/code/rapid-selector`, on `main` or `drain-test-fixes` depending on how far B1 got. `.env` may not exist yet.
+- `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
+- No real stack started yet. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
+- All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.
+
+### Repositories
+
+- **`rapid-selector`:** PR #2 is merged to `main`. Branch **`phase-0-walkthrough`** is pushed but has no PR yet. It holds the records of A1 to A3, and the Safety Retention check in `tests/check-prices.sh`. **Merge it before D3, or `sandbox`'s `tests/check-prices.sh` will not have that check.** This machine's checkout is on that branch.
+- **`production`:** the rapid-selector changes (#181) and the alert note (#183) are merged. This machine's checkout is on `main`, 2 commits behind, with a graphify file modified by its hook, not by us.
+
+## To do before particular steps
+
+- **Before D2, the owner decides the monthly limit (open question 37).** VAT was not in the 400 NOK budget: $34 of credit costs about $44.84, and 400 NOK buys about $26.50–30.30. Ask for the receipt's breakdown and check the exchange rate. Lowering the limit also means changing the LiteLLM budgets to stay below it ($32 global in `gateway/config.yaml`; $8 and $24 for the teams, $4 and $1 for the keys in `scripts/setup-keys.sh`), `docs/decisions.md`, and the procedure and alert notes that quote $19.20 (20% of $24), then running `setup-keys.sh` and testing. Fees also weigh on D7: if the minimum fee is real, a small top-up pays proportionally more.
+- **Before D5, Claude must choose the temporary entry:** a real endpoint without zero data retention. The account now refuses it in up to three ways (the pin's `zdr: true`, `ZDR only`, and allowed providers). An endpoint at one of the four allowed hosts tests the data policy on its own, if one exists. Check `GET /api/v1/models/<model>/endpoints` against `/api/v1/endpoints/zdr`.
+- **B5** compares `free -h` with the figure noted at B2, and Claude records whether the limits in `docker-compose.yml` need changing.
+- **C1:** only the Prometheus restart remains. The job is merged in `production`; check it is pulled where Prometheus runs.
+- **C2** runs in a separate local Claude Code session in the `production` repository.
+- **C5, the reboot,** also settles deferred finding 31.
+- **D1's expected result** is not known: whether simultaneous calls cross a key limit is what it tests. Key usage already includes B6's spend. What it shows holds for a small balance on a new account (`docs/provider-facts.md`).
+- **E2:** Claude writes the restore commands then.
+
+## Deferred, for the owner to decide
+
+Findings 20–25, 30 and 32–36 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
+
+## For developers on this machine
+
+This Chromebook has no Docker, so `tests/run.sh` does not work here. The previous session ran `tests/drain.bats` and the upstream tests in `tests/fakes.bats` with real LiteLLM v1.106.6 and real Postgres outside Docker. That setup was in a scratchpad that is gone. To rebuild it, outside the repository:
+
+- `uv venv` with Python 3.11, then install `litellm[proxy]==1.106.6`, `prisma`, `pgserver` and `prometheus_client`. Run `prisma generate --schema=<venv>/lib/python3.11/site-packages/litellm/proxy/schema.prisma`.
+- Start Postgres with `pgserver.get_server(path, cleanup_mode=None)`. Its address needs a host for Prisma: `postgresql://postgres@localhost/postgres?host=<socket dir>`.
+- Run `tests/fakes/upstream.py` from a copy with the port changed to `127.0.0.1:18000`.
+- Create `tests/.artifacts/test.env` with `ensure_test_env` from `tests/helpers.bash`. From `gateway/`, with the variables from that file plus `DATABASE_URL`, `OPENROUTER_API_BASE=http://127.0.0.1:18000/v1`, `LITELLM_LOCAL_MODEL_COST_MAP=True` and `PYTHONDONTWRITEBYTECODE=1`, run `litellm --config config.yaml --host 127.0.0.1 --port 4000 --num_workers 1`. The first start takes about a minute.
+- Put a stand-in `docker` that only does `exit 0` first on `PATH`, then `npx --yes bats@1.11.0 tests/drain.bats`.
+
+The tests that need real Docker (compose config, `docker inspect`, restarts) cannot run this way, and the owner runs those on `sandbox`.
+
+Never use `pkill -f` or `pgrep -f` with a pattern from your own command in the Bash tool: it matches the tool's shell. It killed a command and caused a false test failure in the previous session.
