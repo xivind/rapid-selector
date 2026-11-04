@@ -77,6 +77,10 @@ From `tests/gateway.bats` against the fake upstream.
 
 - **The database stopping fails closed:** with Postgres stopped, a key whose budget is used up is still refused (422, from LiteLLM's cache), and a key not in the cache gets `503` "Service Unavailable, the authentication database is temporarily unreachable". When Postgres returns, calls work again within seconds, without restarting the gateway.
 
+- **Metric labels seen on a running gateway:** team budgets as `litellm_remaining_team_budget_metric` and `litellm_team_max_budget_metric` with labels `team` and `team_alias`; `litellm_deployment_failure_responses_total` and `litellm_deployment_total_requests_total` with `requested_model` and `model_group` (the role name); `litellm_proxy_failed_requests_metric_total` with `exception_status` (e.g. `401` for an unknown key, `500`). The exact alert queries are in the `production` repository, `grafana/rapidselector-alerts.md`.
+- **About 8 failed Postgres queries at every start:** `litellm_postgres_failed_requests_total{error_class="RawQueryError",function_name="query_raw"}` is 8 after start and stays there with traffic (142 → 167 total queries, still 8 failed). Nothing about them appears in the log.
+- **The admin UI** is at `/ui`, which redirects to `/ui/`.
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03
