@@ -114,7 +114,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         with lock:
-            state["requests"].append({"path": self.path, "headers": dict(self.headers), "body": body})
+            state["requests"].append({"path": self.path, "headers": dict(self.headers), "body": body, "at": time.time()})
             mode = dict(state["mode"])
             state["calls_since_mode"] += 1
             call_number = state["calls_since_mode"]
