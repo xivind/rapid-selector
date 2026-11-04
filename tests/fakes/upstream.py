@@ -1,7 +1,7 @@
 """Fake OpenAI-compatible upstream standing in for OpenRouter in level 1 tests.
 
 Standard library only. Records every request it receives and can be switched
-between success, 402 and 5xx, with configurable token counts and cost.
+between success, OpenRouter's refusals and 5xx, with configurable token counts and cost.
 """
 
 import json
@@ -16,10 +16,44 @@ DEFAULT_MODE = {
     "prompt_tokens": 100,
     "completion_tokens": 50,
     "fail_after": None,
+    "refusal": None,
+    "refuse_first": None,
+    "refuse_above_tokens": None,
+}
+
+# OpenRouter's documented refusals (https://openrouter.ai/docs/api-reference/limits, 2026-11-04).
+REFUSALS = {
+    None: (402, {"message": "Insufficient credits"}),
+    "in_flight": (402, {
+        "message": "This request would exceed your available credits given your current in-flight requests.",
+        "metadata": {"reason": "in_flight_budget_exhausted", "limit_source": "openrouter_in_flight_budget"},
+    }),
+    "weight": (402, {
+        "message": "This request is too expensive for your in-flight budget.",
+        "metadata": {"reason": "weight_exceeds_budget", "limit_source": "openrouter_credits"},
+    }),
+    "key_limit_402": (402, {
+        "message": "Key limit exceeded.",
+        "metadata": {"limit_source": "openrouter_key_limit"},
+    }),
+    "key_limit_403": (403, {
+        "message": "Key limit exceeded.",
+        "metadata": {"limit_source": "openrouter_key_limit", "scope": "key_limit"},
+    }),
 }
 
 lock = threading.Lock()
 state = {"mode": dict(DEFAULT_MODE), "calls_since_mode": 0, "requests": [], "next_id": 1}
+
+
+def refused(mode, call_number, body):
+    """Whether this call gets the mode's refusal."""
+    return (
+        mode["status"] == 402
+        or (mode["fail_after"] is not None and call_number > mode["fail_after"])
+        or (mode["refuse_first"] is not None and call_number <= mode["refuse_first"])
+        or (mode["refuse_above_tokens"] is not None and body.get("max_tokens", 0) > mode["refuse_above_tokens"])
+    )
 
 
 def usage_for(mode):
@@ -91,10 +125,9 @@ class Handler(BaseHTTPRequestHandler):
             time.sleep(mode["delay_ms"] / 1000)
 
         status = mode["status"]
-        if mode["fail_after"] is not None and call_number > mode["fail_after"]:
-            status = 402
-        if status == 402:
-            self._send_json(402, {"error": {"code": 402, "message": "Insufficient credits"}})
+        if refused(mode, call_number, body):
+            code, error = REFUSALS[mode["refusal"]]
+            self._send_json(code, {"error": {"code": code, **error}})
             return
         if status != 200:
             self._send_json(status, {"error": {"code": status, "message": "Fake upstream error"}})

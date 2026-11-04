@@ -78,6 +78,42 @@ setup() {
   [ "$codes" = "200 200 402 402 " ]
 }
 
+# post_with_refusal <refusal name>: one call in that mode; prints the body, then the status.
+post_with_refusal() {
+  curl -sS -X POST "$FAKE_UPSTREAM_URL/_mode" -d "{\"status\":402,\"refusal\":\"$1\"}" >/dev/null
+  curl -sS -w '\n%{http_code}' -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","messages":[]}'
+}
+
+@test "fake upstream sends the chosen refusal" {
+  for row in "in_flight 402 openrouter_in_flight_budget in_flight_budget_exhausted" \
+             "weight 402 openrouter_credits weight_exceeds_budget" \
+             "key_limit_402 402 openrouter_key_limit null" \
+             "key_limit_403 403 openrouter_key_limit null"; do
+    read -r name code source reason <<<"$row"
+    run post_with_refusal "$name"
+    [ "${lines[1]}" = "$code" ] || { echo "$name: status ${lines[1]}"; false; }
+    [ "$(jq -r '.error.metadata.limit_source' <<<"${lines[0]}")" = "$source" ]
+    [ "$(jq -r '.error.metadata.reason' <<<"${lines[0]}")" = "$reason" ]
+  done
+}
+
+@test "fake upstream refuses the first N calls" {
+  curl -sS -X POST "$FAKE_UPSTREAM_URL/_mode" -d '{"status":200,"refuse_first":2}' >/dev/null
+  codes=""
+  for _ in 1 2 3 4; do
+    codes+="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","messages":[]}') "
+  done
+  [ "$codes" = "402 402 200 200 " ]
+}
+
+@test "fake upstream refuses above a token count" {
+  curl -sS -X POST "$FAKE_UPSTREAM_URL/_mode" -d '{"status":200,"refuse_above_tokens":100}' >/dev/null
+  run curl -sS -o /dev/null -w '%{http_code}' -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","max_tokens":200,"messages":[]}'
+  [ "$output" = "402" ]
+  run curl -sS -o /dev/null -w '%{http_code}' -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","max_tokens":100,"messages":[]}'
+  [ "$output" = "200" ]
+}
+
 @test "fake upstream uses the configured token counts" {
   curl -sS -X POST "$FAKE_UPSTREAM_URL/_mode" -d '{"status":200,"prompt_tokens":7,"completion_tokens":100000}' >/dev/null
   run curl -sS -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","messages":[]}'
