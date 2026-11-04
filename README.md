@@ -19,6 +19,7 @@ Ports bind only to the host's LAN address (`RAPIDSELECTOR_LAN_ADDRESS`), never t
 
 - A Raspberry Pi 5 (arm64) with Docker and the Compose v2 plugin (`docker compose version` works).
 - `curl`, `jq` and `openssl` on the host.
+- Optional: enforced memory limits. Raspberry Pi OS ships with the kernel's memory control off, and Docker then ignores the limits in `docker-compose.yml` (`docker info` warns `No memory limit support`). To turn it on, add `cgroup_enable=memory cgroup_memory=1` to the single line in `/boot/firmware/cmdline.txt` and reboot. It affects the whole host.
 - An OpenRouter account with a prepaid balance and **auto top-up off**.
 
 ## First setup

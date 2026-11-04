@@ -129,6 +129,13 @@ Sources: `GET https://openrouter.ai/api/v1/models` (453 models) and `GET https:/
 - Reasoning defaults: `gpt-oss-120b` and `gpt-oss-20b` reason always (default effort `medium`); `deepseek-v4.1-flash` by default (effort `high`); `qwen3.8-2.4t-a95b` always (default effort `xhigh`); `gemma-4-26b-a4b-it` optionally, off by default.
 - Prices for the phase 0 starting set are in `superpowers/specs/2026-11-03-phase-0-foundation-design.md`.
 
+## Docker on Raspberry Pi OS
+
+### On `sandbox`, 2026-11-04
+Pi 5, 8 GB, Docker with cgroup v2.
+- The kernel boots with `cgroup_disable=memory`, seen in `/proc/cmdline`, and `docker info` warns `No memory limit support` and `No swap limit support`.
+- With that, Docker silently drops `mem_limit`: `docker inspect` shows `HostConfig.Memory` as 0. `tests/chat.bats` also failed on `docker stats`' memory figure, which fits this; the figure itself was not seen.
+
 ## Docker in the cloud sandbox
 
 ### 2026-11-03

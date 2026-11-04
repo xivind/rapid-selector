@@ -64,6 +64,9 @@ Implemented following `superpowers/plans/2026-11-03-phase-0-foundation.md`; 79 l
 ### 2026-11-04: Drain test and procedure changed before any money was spent
 Option 3 of 3 in `superpowers/specs/2026-11-04-drain-test-fixes-design.md`, chosen by the owner. `scripts/drain-balance.sh` now sends rounds of parallel calls (default 5) instead of a burst after the first refusal, does not start a round that could pass `--max-usd`, and tells limit refusals from faults, the gateway's budget and temporary in-flight refusals. It halves `max_tokens` on a limit refusal, down to 16. Reasons: a passing 429 or 503 would have been reported as a working limit; D6 could have stopped with money left; only simultaneous calls can show a call crossing a limit. Added to the procedure: a level 1 run on `sandbox` before B2 (B1a), a reboot check (C5) and a budget alert test (D8). Corrected: D6 does not fire the alerts by itself. Results about simultaneous calls hold for a small balance on a new account (`provider-facts.md`).
 
+### 2026-11-04: Memory limits are not enforced on the owner's Pis
+The kernel's memory control stays off on `sandbox`, and the limits stay in `docker-compose.yml`, where they work on any host that has it. Decided by the owner. Reason: they protect the host, not the budget; none of the owner's other containers have limits; and turning it on changes the whole host, `webserver` included. The cost: a memory leak in a service could fill the host, and `node_exporter` shows the host, not which container. To revisit if step B5 looks high or a host memory alert fires: the README has the one-line boot setting. `CLAUDE.md` changed with the owner's permission.
+
 ## Open
 
 ### Settle during design or phase 0

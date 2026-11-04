@@ -19,11 +19,11 @@ We go through this together: Claude walks you through each step, you say what yo
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
 | B1 | Clone the repository, `cp .env.example .env`, fill in the settings (`RAPIDSELECTOR_LAN_ADDRESS` = sandbox's address, `SECRETS_SOURCE=secrets-service`, the token file). `chmod 600 .env` and the token file. Generate the secrets with the commands in `.env.example` (hex only: other characters break `DATABASE_URL`) and store them as the secret `rapidselector` in secrets-service | | That the secret exists with all 9 fields (names only, never values) | 0 |
-| B1a | `tests/run.sh` (needs Docker, `jq`, `openssl` and Node's `npx`). **Only here, before B2:** the tests use the same container names as the real stack, so they cannot run beside it | `All N test files passed.` Takes a while | The last lines, and any test that failed | 0 |
-| B2 | `./rapidselector.sh up -d`, then `./rapidselector.sh ps` after a few minutes | `rapidselector-db`, `rapidselector-gateway` and `rapidselector-chat`, all `healthy` | The `ps` output | 0 |
+| B1a | Install `jq` if it is missing. Without Node on the host, fetch the test runner: `git clone --depth 1 --branch v1.11.0 https://github.com/bats-core/bats-core.git ~/bats-core`. Run `~/bats-core/bin/bats tests/*.bats 2>&1 \| tee ~/level1.log`, then `grep -c '^ok' ~/level1.log; grep '^not ok' ~/level1.log`. **Only here, before B2:** the tests use the same container names as the real stack, so they cannot run beside it | A count of passed tests and no `not ok` lines. Takes about 25 minutes, plus the first image download of about 1.9 GB | Both results | 0 |
+| B2 | `free -h`, to note the memory in use. Then `./rapidselector.sh up -d`, and `./rapidselector.sh ps` after a few minutes | `rapidselector-db`, `rapidselector-gateway` and `rapidselector-chat`, all `healthy` | The `free -h` and `ps` output | 0 |
 | B3 | `./rapidselector.sh run-script scripts/setup-keys.sh` | A table with 2 teams and 3 keys: `permanent` 8, `experiments` 24, `node-red` 4, `chat` team, `smoke-test` 1 | The table | 0 |
 | B4 | Open `http://sandbox:4010`, create the admin account | Open WebUI, with the 11 names in the model list | That it worked and the names are there | 0 |
-| B5 | `docker stats --no-stream` | Memory per container | The output. Claude sets the memory limits from it in a commit | 0 |
+| B5 | `free -h`, then `ps -eo rss,comm --sort=-rss \| head -15`. `docker stats` shows no memory where the kernel's memory control is off | Memory in use compared with B2, and the biggest processes | Both outputs. Claude compares them with the limits in `docker-compose.yml`, and records whether to change anything | 0 |
 | B6 | `./rapidselector.sh run-script scripts/smoke-test.sh` | Four roles with status 200 and a cost above zero, two `refused:` lines, `OK` | The output | under $0.01 |
 
 ## C. `production` repository (warnings and backups before money is spent)

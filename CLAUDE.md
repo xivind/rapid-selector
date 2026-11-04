@@ -93,7 +93,7 @@ We assemble existing components where they exist and build only what is unique t
 - Services that the owner or the home network must reach are published on fixed ports defined in `.env`. The README must include a table of addresses and ports.
 - Postgres publishes no port at all. Only services on the Compose network can reach it.
 - No custom networks and no `network_mode: host`. Use Compose's automatic default network, where services find each other by service name. Clients outside the project reach the services via the Pi's LAN address and published ports.
-- Set memory limits per container. Postgres and volumes live on the SSD.
+- Set memory limits per container in `docker-compose.yml`. A host whose kernel has memory control turned off ignores them, and turning it on is not required (`docs/decisions.md`). Postgres and volumes live on the SSD.
 - Pin image versions. No `latest`.
 - Set a retention period for LiteLLM's spend log so the database does not grow without bound.
 - Secrets are environment variables with fixed names, listed in `.env.example`, which is kept up to date. They come from `.env` (never committed, listed in `.gitignore`) or from a secret store through `rapidselector.sh`. Compose refuses to run without them.
