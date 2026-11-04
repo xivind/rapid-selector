@@ -3,6 +3,8 @@
 # Fake answers report 100 prompt and 1000 completion tokens, so one call to
 # qwen3.8-2.4t-a95b@siliconflow costs 100 x $2/M + 1000 x $6/M = $0.0062.
 
+bats_require_minimum_version 1.5.0
+
 load helpers
 
 setup_file() {
