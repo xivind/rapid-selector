@@ -1,0 +1,5 @@
+# Level 1 overlay: a gateway config without prices on classify (tests/smoke.bats).
+services:
+  gateway:
+    volumes:
+      - ./tests/config.noprice.yaml:/app/config.yaml:ro

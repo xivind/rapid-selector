@@ -1,0 +1,107 @@
+# rapid-selector: run it through ./rapidselector.sh, which loads settings and secrets.
+name: rapidselector
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:17.11-alpine
+    container_name: rapidselector-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_DB: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    mem_limit: 512m
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  gateway:
+    image: ghcr.io/berriai/litellm-database:v1.106.6
+    container_name: rapidselector-gateway
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    environment:
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/litellm
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?set LITELLM_SALT_KEY}
+      RAPIDSELECTOR_OPENROUTER_KEY: ${RAPIDSELECTOR_OPENROUTER_KEY:?set RAPIDSELECTOR_OPENROUTER_KEY}
+      UI_USERNAME: admin
+      UI_PASSWORD: ${LITELLM_UI_PASSWORD:?set LITELLM_UI_PASSWORD}
+      # Use the price map shipped in the image; do not fetch it from GitHub at every start.
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
+    volumes:
+      - ./gateway/config.yaml:/app/config.yaml:ro
+      - ./gateway/request_guard.py:/app/request_guard.py:ro
+    ports:
+      - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT:-4000}:4000"
+    mem_limit: 1536m
+    logging: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      start_period: 120s
+      retries: 6
+
+  chat:
+    image: ghcr.io/open-webui/open-webui:v0.13.0
+    container_name: rapidselector-chat
+    restart: unless-stopped
+    environment:
+      # The gateway is the only connection, with chat's own virtual key.
+      OPENAI_API_BASE_URL: http://gateway:4000/v1
+      OPENAI_API_KEY: ${KEY_CHAT:?set KEY_CHAT}
+      ENABLE_OLLAMA_API: "False"
+      ENABLE_DIRECT_CONNECTIONS: "False"
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY}
+      # Settings live here, not in the admin panel: changes made there are not saved.
+      ENABLE_PERSISTENT_CONFIG: "False"
+      # Only the first account (the admin) can be created.
+      ENABLE_SIGNUP: "False"
+      # Background calls: titles only, with the cheapest model; everything else off.
+      ENABLE_TITLE_GENERATION: "True"
+      TASK_MODEL_EXTERNAL: llama-3.1-8b-instruct@deepinfra
+      ENABLE_TAGS_GENERATION: "False"
+      ENABLE_FOLLOW_UP_GENERATION: "False"
+      ENABLE_AUTOCOMPLETE_GENERATION: "False"
+      ENABLE_SEARCH_QUERY_GENERATION: "False"
+      ENABLE_RETRIEVAL_QUERY_GENERATION: "False"
+      # No outside services.
+      ENABLE_WEB_SEARCH: "False"
+      ENABLE_IMAGE_GENERATION: "False"
+      ENABLE_EVALUATION_ARENA_MODELS: "False"
+      # No local embedding model (memory, downloads).
+      BYPASS_EMBEDDING_AND_RETRIEVAL: "True"
+    volumes:
+      - chatdata:/app/backend/data
+    ports:
+      - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${CHAT_PORT:-4010}:8080"
+    mem_limit: 1536m
+    logging: *logging
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 180s
+      retries: 6
+
+volumes:
+  pgdata:
+  chatdata:

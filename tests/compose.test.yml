@@ -1,0 +1,11 @@
+# Level 1 overlay for the full stack: docker-compose.yml + tests/compose.fakes.yml + this file.
+# Points the gateway at the fake upstream.
+name: rapidselector-test
+
+services:
+  gateway:
+    environment:
+      OPENROUTER_API_BASE: http://fake-upstream:8000/v1
+    depends_on:
+      fake-upstream:
+        condition: service_healthy
