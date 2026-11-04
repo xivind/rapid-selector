@@ -67,6 +67,9 @@ Option 3 of 3 in `superpowers/specs/2026-11-04-drain-test-fixes-design.md`, chos
 ### 2026-11-04: Memory limits are not enforced on the owner's Pis
 The kernel's memory control stays off on `sandbox`, and the limits stay in `docker-compose.yml`, where they work on any host that has it. Decided by the owner. Reason: they protect the host, not the budget; none of the owner's other containers have limits; and turning it on changes the whole host, `webserver` included. The cost: a memory leak in a service could fill the host, and `node_exporter` shows the host, not which container. To revisit if step B5 looks high or a host memory alert fires: the README has the one-line boot setting. `CLAUDE.md` changed with the owner's permission.
 
+### 2026-11-04: Level 1 passes on `sandbox` (step B1a)
+The first full run on the Pi 5, arm64, on branch `drain-test-fixes`: 101 of 103 tests passed in about 25 minutes. The two failures (`chat starts without downloading models`, `every container has a memory limit and log rotation`) came from the kernel's memory control being off. After the decision above changed those tests, `tests/chat.bats` and `tests/resilience.bats` passed in full (12 of 12), so every test has now passed on the Pi, though not in one run. `jq` had to be installed on `sandbox`, and `bats` was fetched directly, since `sandbox` has no Node. The fake upstream was used: nothing was spent. This also shows the images run on arm64 (open question 7). Whether the stack fits in memory is still to see at step B5.
+
 ## Open
 
 ### Settle during design or phase 0
