@@ -36,10 +36,10 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 - Holds OpenRouter's management key, and is the only service that does.
 
 ### Cost summary
-- Always in tower, with or without Grafana: spent today, this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
-- Displays amounts in NOK using an exchange rate from `.env`. Limits themselves are in USD.
+- Always in tower, with or without Grafana: spent today, this week and this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
+- All amounts in USD, as OpenRouter and LiteLLM account in USD (decided 2026-11-05).
 - Shows when OpenRouter's key limit and LiteLLM's budgets next reset. Both are set to reset on the 1st of the month at 00:00 UTC, and a mismatch must be visible.
-- History over time and alerts are in Grafana, when that integration is on.
+- Grafana shows the same periods and longer ones, and the alerts, when that integration is on.
 
 ### Reconciliation
 - Compares LiteLLM's recorded spend with OpenRouter's actual usage. Discrepancies must be clearly visible.

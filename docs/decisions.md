@@ -162,6 +162,9 @@ Decided by the owner while designing tower part 1 (option B of 3; A was git only
 ### 2026-11-05: Tower's look is "distinctive" (level B)
 Chosen by the owner from three mockups of the first screen: A clean and functional (the production stack's Bootstrap look), B distinctive, C experimental (interactive D3 or canvas maps). B: a visual identity of its own, shown as dark, warm and typographic, a nod to Bush's microfilm machine, with custom but simple charts. Settles the first half of question 10; the stack is next.
 
+### 2026-11-05: Tower in USD, for today, this week and this month
+Decided by the owner. Tower shows amounts in USD only, not NOK, to keep it simple; `requirements.md` changed. It covers today, this week and this month, and Grafana the same periods plus longer ones. The owner also agreed to three proposals: tower does not repeat Grafana's history; a "Log" section lists kill switch changes and balance snapshots; usage per role and model comes from the gateway's spend log, if the open-source version offers the reports (to check).
+
 ## Open
 
 ### Settle during design or phase 0
