@@ -11,7 +11,10 @@ A handoff between sessions, written 2026-11-04 and last updated at the end of 20
 ## Next, in order (the owner picks)
 
 1. **Check the 06:00 backup of 2026-11-06.** `home-assistant` pulled `production` at C1 and C3 installed the key, so `rapidselector-postgres` and `rapidselector-chat` should have run. If both are `backup_last_status` 1, that is E1: record the file sizes (for `min_bytes`), and raise the backup count from 9 to 11 as `grafana/rapidselector-alerts.md` in `production` describes ("Backup missing" rule, the Overview **Backup** panel, Loki Visualizations' **Backup Jobs OK**), from a Claude Code session in `production`.
-2. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once (the single-call command is in this session's D3 record: smoke-test key, `max_tokens` 256, `reasoning_effort` low, printing only the status and `x-litellm-response-cost`). If it answers, its host on OpenRouter's Logs page should be DeepInfra. If it keeps failing over days, the owner decides whether to re-pin it.
+2. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once, on `sandbox` in `~/code/rapid-selector` (prints only the status and the recorded cost):
+   ```bash
+   ./rapidselector.sh run-script bash -c 'printf "Authorization: Bearer %s\n" "$KEY_SMOKE_TEST" | curl -sS --max-time 120 -H @- -H "Content-Type: application/json" -D - -o /dev/null -d "{\"model\":\"gpt-oss-20b@deepinfra\",\"max_tokens\":256,\"reasoning_effort\":\"low\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word ok.\"}]}" "http://$RAPIDSELECTOR_LAN_ADDRESS:$GATEWAY_PORT/v1/chat/completions" | grep -i -E "^HTTP|x-litellm-response-cost"'
+   ``` If it answers, its host on OpenRouter's Logs page should be DeepInfra. If it keeps failing over days, the owner decides whether to re-pin it.
 3. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
 4. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
 5. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
@@ -36,6 +39,8 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 - The owner is new to Compose. Plain language, complete commands, and say what each output should look like.
 - The owner welcomes pushback and pushes back too: ask whether something is needed before proposing a change to a host. Example: the memory cgroup boot setting, proposed and then rightly dropped.
 - Code changes use the superpowers skills and tests first.
+- **Pasting is fragile on the owner's terminal:** a very long line broke (`subsh>`), a heredoc waited (`heredoc>`) and an indented Python block failed. Keep commands to short lines, never ask for a heredoc or indented code to be pasted, and put anything longer in a committed script the owner pulls. Run a silent `read -rs` line on its own.
+- Every secret goes through `./rapidselector.sh run-script bash -c '…'` with the header on stdin (`curl -H @-`), and output that could hold a key goes through `sed -E "s/sk-[A-Za-z0-9_-]+/sk-REDACTED/g"`.
 
 ## State of things
 
