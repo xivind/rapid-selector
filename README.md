@@ -222,13 +222,13 @@ Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and
 Clients call a **role**, never a specific model: `classify`, `summarise`, `code` or `chat`. The model behind a role can change without touching the client.
 
 ```bash
-curl http://llm:4000/v1/chat/completions \
+curl http://<host>:4000/v1/chat/completions \
   -H "Authorization: Bearer $KEY_NODE_RED" \
   -H "Content-Type: application/json" \
   -d '{"model": "classify", "max_tokens": 200, "messages": [{"role": "user", "content": "Is this event important? Door opened at 03:12."}]}'
 ```
 
-`llm` is a name on the router pointing to the current host. Any OpenAI-compatible client works with base URL `http://llm:4000/v1` and the client's own key. In Node-RED, use an HTTP request node with these headers.
+`<host>` is the name of the host running the gateway. Any OpenAI-compatible client works with base URL `http://<host>:4000/v1` and the client's own key. In Node-RED, use an HTTP request node with these headers.
 
 **Every client must:**
 - use a fixed timeout, and treat a failed call as "skip this step and log it": models are an enhancement, nothing at home may depend on them;

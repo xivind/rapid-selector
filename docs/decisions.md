@@ -32,7 +32,7 @@ Agreed section by section and written in `superpowers/specs/2026-11-03-rapid-sel
 - **The core works on its own; integrations are optional.** Prometheus and Grafana, secrets-service, backup-orchestrator and Loki are switched on in configuration. Reason: others may use the repository.
 - **Secrets are environment variables from a pluggable source:** `.env` by default, or secrets-service through `rapidselector.sh`. The owner uses secrets-service. Reason: if `home-assistant` is down, there are bigger problems than the gateway.
 - **Hosts:** `sandbox` (Pi 5, 8 GB) while testing, then `webserver` (Pi 5, 16 GB) once stable.
-- **Clients reach the gateway as `llm`,** a name alias on the router pointing to the current host.
+- **Clients reach the gateway as `llm`,** a name alias on the router pointing to the current host. *Replaced by "Clients call the host by name", 2026-11-05.*
 - **Names are prefixed with `rapidselector`:** Compose project, containers, volumes and the images we build.
 - **The allowlist is `gateway/config.yaml`,** in LiteLLM's format, with roles for permanent use and `model@host` names for experiments. Settles proposal 11.
 - **Default `max_tokens` per model** in the allowlist. Settles proposal 13.
@@ -116,8 +116,11 @@ Created through the Grafana MCP from a separate session in the `production` repo
 ### 2026-11-05: Step C3, the backup key
 On `sandbox`, the user `rapidselector-backup` and `/usr/local/bin/rapidselector-export.sh` were installed, with `home-assistant`'s new key restricted to that script. From `home-assistant`, `postgres` returned a dump ending in `-- PostgreSQL database dump complete`, and `chat` returned paths under `app/backend/data/`, with `rapidselector-chat` stopped and started again; all three services were `healthy` afterwards. The user is in the `docker` group, so its forced command is what limits it. The chat backup holds `cache/embedding/models/`, though embeddings are off and no download was seen; to look at with the file sizes at E1. The owner keeps `grafana/rapidselector-alerts.md` in `production`. It cost nothing.
 
-### 2026-11-05: Step C4, Node-RED can reach the gateway (router alias still open)
-On `messagebroker`, with a fresh Node-RED backup first (`ok`), the owner ran `nodered/create-container-nodered.sh` as it is. That script deletes the image and takes the newest, but Node-RED stayed at v5.0.9. The container's hosts and volume matched the script beforehand. Afterwards it was `healthy`, flows started with no errors or missing nodes, `/etc/hosts` has `192.168.1.212 llm`, it reached `http://llm:4000/metrics/`, and the owner checked the flows in the editor. The router alias and `ping llm` remain. It cost nothing.
+### 2026-11-05: Step C4, Node-RED can reach the gateway
+On `messagebroker`, with a fresh Node-RED backup first (`ok`), the owner ran `nodered/create-container-nodered.sh` as it is. That script deletes the image and takes the newest, but Node-RED stayed at v5.0.9. The container's hosts and volume matched the script beforehand. Afterwards it was `healthy`, flows started with no errors or missing nodes, `/etc/hosts` has `192.168.1.212 llm`, it reached `http://llm:4000/metrics/`, and the owner checked the flows in the editor. The router alias was dropped: see "Clients call the host by name" below. It cost nothing.
+
+### 2026-11-05: Clients call the host by name
+Clients reach the gateway at the host's own name, today `http://sandbox:4000`, not through an alias `llm`. Decided by the owner, who has a Google Nest router and doubted it can hold an alias. Reason: it matches how everything else in the home is called, and moving to `webserver` is a one-time change. The cost: every flow and app that calls the gateway must be edited at the move. Node-RED already has `sandbox` in its `--add-host` list.
 
 ## Open
 
@@ -141,7 +144,7 @@ On `messagebroker`, with a fresh Node-RED backup first (`ok`), the owner ran `no
 16. ~~How is the empty-balance case tested?~~ **Settled 2026-11-03:** both ways, at the first top-up: test B (key limit) first, then the spend and host checks, then test A (use up the smallest top-up). Ceiling $1 plus the top-up. Claude walks the owner through it.
 17. **Can tower use an admin key other than LiteLLM's master key?** Phase 1.
 18. **Which OpenRouter endpoint gives the inference key's limit and usage to the management key?** Phase 1.
-19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for `llm`.
+19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for every host it calls.
 
 37. **Is the $34 limit too high for the 400 NOK budget, now that VAT is known?** The budget allowed for the 5.5% fee, not VAT. $5 of credit cost $7.25, which fits ($5 + a $0.80 fee) × 1.25 VAT exactly; the $0.80 minimum is an inference, since OpenRouter's pricing page gives only "5.5%" and "VAT/GST may be added on invoices". At 5.5% plus 25% VAT, $34 of credit costs about $44.84, and 400 NOK (roughly $35–40) buys about $26.50–30.30 of credit. To be decided by the owner before step D2, which sets the limit, with the receipt's breakdown and the current exchange rate.
 

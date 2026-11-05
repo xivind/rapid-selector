@@ -77,7 +77,7 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 
 ## Programmatic access
 
-- The gateway's OpenAI-compatible HTTP API is the default. A Docker app uses any OpenAI-compatible client with the gateway's address (`llm`) and its own virtual key. Node-RED uses its HTTP request node. No extra service is needed.
+- The gateway's OpenAI-compatible HTTP API is the default. A Docker app uses any OpenAI-compatible client with the gateway's address (`http://<host>:4000`) and its own virtual key. Node-RED uses its HTTP request node. No extra service is needed.
 - Clients call roles, never specific models.
 - Every client handles a failed call by skipping that step and logging it: a fixed timeout, at most one retry on a timeout or 5xx, and no retry on budget or limit errors.
 - Every new use case, whatever it is:

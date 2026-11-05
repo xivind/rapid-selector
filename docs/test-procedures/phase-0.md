@@ -33,7 +33,7 @@ We go through this together: Claude walks you through each step, you say what yo
 | C1 | The `production` changes are already merged (#181). Pull them where Prometheus runs, and restart Prometheus | Target `rapidselector-gateway` is `up` in Prometheus | Target status | 0 |
 | C2 | In a local Claude Code session in the `production` repository (with `GRAFANA_MCP_TOKEN` set), create the alert rules from `grafana/rapidselector-alerts.md` through the Grafana MCP | The rules in folder **Alerts**, group **LLM** | That they exist | 0 |
 | C3 | Install the forced-command SSH key for the backup jobs on `sandbox`, as described in `backup-orchestrator/README.md` | | That it is installed | 0 |
-| C4 | Add `--add-host="llm:<sandbox's address>"` to Node-RED (already in the branch), restart Node-RED. Create the alias `llm` → `sandbox` on the router | `ping llm` from a computer answers from sandbox's address | The ping result | 0 |
+| C4 | Node-RED already has `sandbox` in its `--add-host` list. On `messagebroker`: `docker exec nodered wget -qO /dev/null http://sandbox:4000/metrics/ && echo gateway reachable` | `gateway reachable` | The result | 0 |
 | C5 | **Reboot check.** `sudo reboot`. When sandbox is back, wait 10 minutes (chat takes a few minutes to start). Then `ss -tln '( sport = :4000 or sport = :4010 )'` and `./rapidselector.sh ps`, and look at the alert rules | Both ports listen on sandbox's LAN address only, never `0.0.0.0`. All three services `healthy`. "rapid-selector: database failing" has not fired | The `ss` and `ps` output, and the state of that rule | 0 |
 
 D6 will not fire the alerts by itself. The budget rules need under 20% of a team's budget left (over $19.20 spent of `experiments`' $24), and the failure rule watches only the roles, while the drain test calls an experiment name. D8 tests the budget alerts on purpose. The failure-rate rule stays unproven until it fires for real.
@@ -57,6 +57,6 @@ D6 will not fire the alerts by itself. The budget rules need under 20% of a team
 |---|---|---|---|---|
 | E1 | After the first nightly backup run, check `backup_last_status` for `rapidselector-postgres` and `rapidselector-chat` in Grafana or Prometheus | Both 1 | Both values and the file sizes, so `min_bytes` can be set. Then raise the backup count from 9 to 11, as `grafana/rapidselector-alerts.md` in `production` describes | 0 |
 | E2 | **Restore rehearsal:** Claude gives you the commands to restore the newest dump into a separate Compose project on `sandbox` and call it with `KEY_NODE_RED` | The call is answered | The result | under $0.001 |
-| E3 | **First real use:** a Node-RED flow with an HTTP request node that calls `classify` at `http://llm:4000/v1/chat/completions` with `KEY_NODE_RED` | An answer | That it works | under $0.001 |
+| E3 | **First real use:** a Node-RED flow with an HTTP request node that calls `classify` at `http://sandbox:4000/v1/chat/completions` with `KEY_NODE_RED` | An answer | That it works | under $0.001 |
 
 When every step is done and recorded, phase 0 is verified.
