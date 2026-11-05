@@ -171,6 +171,16 @@ Chosen by the owner (option 1 of 3): FastAPI and Jinja2, rendered on the server,
 ### 2026-11-05: The management key expires after a year
 Decided by the owner (option B of 3; A no expiry, C 90 days). Tower shows the days left, a Grafana alert warns 30 days before, and the README gets the steps to create a new key and update the secret. When it expires, tower cannot read the balance or use kill switch level 2; the README's manual ways still work. Settles question 6.
 
+### 2026-11-05: Tower changes models, roles and budgets, with guard rails, and runs the checks
+Decided by the owner, replacing "Tower shows every setting, and changes none" for these settings. Reason: running scripts from the terminal means remembering when to run each, and model choices are the owner's data, not code. What changes:
+- **Runs from tower:** the price check, on a schedule and on demand; the smoke test, on demand, showing its cost first; key and budget setup, as tower's own editing.
+- **Stays in the terminal:** the level 1 tests (they start containers with the real stack's names) and the drain tests (they spend on purpose).
+- **Editable in tower:** models and roles, written through the gateway's API and stored in its database, with tower enforcing `CLAUDE.md`'s rules on every change (one pinned host, fallbacks off, zero data retention, allowed hosts only), fetching the host's price from OpenRouter, and running the smoke test on that model; team and key budgets, with key budgets within their team's and the teams within the global budget, and the global budget below the key limit; the OpenRouter key limit.
+- **Read-only:** Open WebUI's settings, ports and secrets, which need containers recreated; tower gets no access to Docker's socket.
+- **Instead of git history:** a change log in tower, backed up, and an export of the setup. `gateway/config.yaml` stays as the starting set for a fresh install.
+- **Split:** part 1a (viewing, kill switch, scheduled checks), then part 1b (editing).
+To check before the design relies on it: that the open-source gateway stores models added through its API (`store_model_in_db`). Overall design principle 3 ("Nothing is added through an admin UI") changes with this.
+
 ## Open
 
 ### Settle during design or phase 0
