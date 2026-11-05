@@ -141,7 +141,7 @@ Decided by the owner, who wanted a round number and can change it later in OpenR
 Set by the owner on OpenRouter's Keys page. `GET /api/v1/key` with the gateway's key: `limit` 35, `limit_reset` monthly, `limit_remaining` 34.906750225, `usage_monthly` 0.093249775. It cost nothing.
 
 ### 2026-11-05: Step D3, spend per model (one model still to answer)
-`tests/check-prices.sh`: `ok` for all 11 entries. `smoke-test.sh --all`: 10 names with 200 and a cost above zero, `qwen3.8-2.4t-a95b@siliconflow` the largest at $0.00023; both probes refused with 403; $0.00026194 in total. `gpt-oss-20b@deepinfra` got 429. The gateway's log shows it came from DeepInfra through OpenRouter: "temporarily rate-limited upstream", `provider_error_code` `engine_overloaded`, `limit_source` `upstream_provider_shared_pool`, passed on with no fallback, as the pin requires, after LiteLLM retried twice. The model is to be called once more.
+`tests/check-prices.sh`: `ok` for all 11 entries. `smoke-test.sh --all`: 10 names with 200 and a cost above zero, `qwen3.8-2.4t-a95b@siliconflow` the largest at $0.00023; both probes refused with 403; $0.00026194 in total. `gpt-oss-20b@deepinfra` got 429. The gateway's log shows it came from DeepInfra through OpenRouter: "temporarily rate-limited upstream", `provider_error_code` `engine_overloaded`, `limit_source` `upstream_provider_shared_pool`, passed on with no fallback, as the pin requires, after LiteLLM retried twice. Called once more a few minutes later: 429 again, cost 0.
 
 ## Open
 
