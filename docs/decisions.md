@@ -190,6 +190,9 @@ Decided by the owner from the builder check of the part 1a design: one release b
 ### 2026-11-05: Tower part 1b, a change applies straight away, tested before the switch
 Decided by the owner while designing part 1b. A change made in tower applies at once, not as a draft: tower checks the rules, fetches the host's price, adds the new model under a temporary name, makes one test call there, and only if it answers with a cost above zero moves the role or name over; then it logs the change with an undo. Each step is shown live on the page with `htmx`. If the test fails, nothing changes for clients. Rejected: a staged draft applied in one go, and applying first then undoing on failure. The owner notes that clients must in any case be resilient to a failed call, as the README already asks.
 
+### 2026-11-05: Tower part 1b, removing something in use
+Agreed by the owner (Claude's proposal): before removing a model, role or experiment name, tower shows what uses it (which keys are allowed it, and its calls this week). A role can be pointed at another model instead of being deleted; an experiment name can be removed, which also drops it from the keys' allowed lists. A role that a key in team `permanent` may call is never removed outright, so a flow cannot break without warning.
+
 ## Open
 
 ### Settle during design or phase 0
