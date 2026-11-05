@@ -45,7 +45,7 @@ Agreed section by section and written in `superpowers/specs/2026-11-03-rapid-sel
 ### 2026-11-03: Phase 0 design
 Agreed section by section and written in `superpowers/specs/2026-11-03-phase-0-foundation-design.md`. The decisions in it:
 
-- **Limits, in USD:** OpenRouter inference key $34 a month; LiteLLM global $32; team `permanent` $8 (key `node-red` $4); team `experiments` $24 (key `smoke-test` $1). All reset on the 1st at 00:00 UTC.
+- **Limits, in USD:** OpenRouter inference key $34 a month (raised to $35 on 2026-11-05, question 37); LiteLLM global $32; team `permanent` $8 (key `node-red` $4); team `experiments` $24 (key `smoke-test` $1). All reset on the 1st at 00:00 UTC.
 - **Starting set:** four roles (`classify`, `summarise`, `code`, `chat`) and seven experiment names, each pinned to one zero data retention endpoint. No free models.
 - **Ports:** gateway 4000, `chat` 4010, tower 4020.
 - **Open WebUI:** titles on with `llama-3.1-8b-instruct@deepinfra`; other background calls, web search and image generation off; settings fixed by environment variables.
@@ -134,6 +134,9 @@ So the limit is enforced, but against spend OpenRouter has already counted, and 
 
 **Decided by the owner, the same day: accept it** (option A of 2; B was to measure the delay, for about $0.05–0.10 more). The key limit is a backstop that can be passed by whatever is running, or starts, before OpenRouter has counted the spend; the owner expects the delay to be seconds, a minute at most, which is not measured. The gateway's budgets stay below the key limit, so the gateway stops first in normal use, and the balance stays the hard cap and is kept small.
 
+### 2026-11-05: The key's monthly limit is $35
+Decided by the owner, who wanted a round number and can change it later in OpenRouter's dashboard. Settles question 37. At about 9.28 NOK per USD (mid-market, early November 2026), 400 NOK is about $43 including everything. Credit plus the 5.5% fee plus 25% VAT, as $5 cost $7.25 at A3: $35 a month costs about $46.16, about 428 NOK, if fully used; $32 would have been about 392 NOK. The receipt's breakdown was not read. The gateway's budgets stay as they are ($32 global), so in normal use the gateway stops at $32, about 392 NOK, and the key limit is the backstop $3 above it. Raising or lowering the key limit needs only the dashboard; changing the gateway's budgets needs `gateway/config.yaml` and `scripts/setup-keys.sh`, kept below the key limit.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -158,7 +161,7 @@ So the limit is enforced, but against spend OpenRouter has already counted, and 
 18. **Which OpenRouter endpoint gives the inference key's limit and usage to the management key?** Phase 1.
 19. **Node-RED name resolution** (`production` repository, any time). Node-RED uses `--add-host` for every name. Hypothesis: Docker falls back to public DNS because the host's resolver is a local address, and pointing the container at the router (`--dns`) would fix it. Check `/etc/resolv.conf` on `messagebroker` and inside the container. Until fixed, Node-RED needs `--add-host` for every host it calls.
 
-37. **Is the $34 limit too high for the 400 NOK budget, now that VAT is known?** The budget allowed for the 5.5% fee, not VAT. $5 of credit cost $7.25, which fits ($5 + a $0.80 fee) × 1.25 VAT exactly; the $0.80 minimum is an inference, since OpenRouter's pricing page gives only "5.5%" and "VAT/GST may be added on invoices". At 5.5% plus 25% VAT, $34 of credit costs about $44.84, and 400 NOK (roughly $35–40) buys about $26.50–30.30 of credit. To be decided by the owner before step D2, which sets the limit, with the receipt's breakdown and the current exchange rate.
+37. ~~Is the $34 limit too high for the 400 NOK budget, now that VAT is known?~~ **Settled 2026-11-05:** see "The key's monthly limit is $35".
 
 ### Deferred findings from the phase 0 review (2026-11-04)
 Minor, not fixed yet; each to be decided by the owner.

@@ -33,7 +33,7 @@ In OpenRouter's dashboard:
 
 1. Turn **auto top-up off**.
 2. Turn off prompt logging and every opt-in to data collection, and require zero data retention for the account.
-3. Create an API key for the gateway with a **monthly credit limit**. $34 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). The key is shown only once, so keep it at hand for step 3.
+3. Create an API key for the gateway with a **monthly credit limit**. $35 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). The key is shown only once, so keep it at hand for step 3.
 4. Buy credits. The whole balance is the most you can lose, so keep it small.
 
 ### 2. Get the code and create the settings file
@@ -213,7 +213,7 @@ All limits are in USD and reset on the 1st of the month at 00:00 UTC.
 | Key `chat` (`KEY_CHAT`, used by Open WebUI) | the team's | Every name |
 | Key `smoke-test` (`KEY_SMOKE_TEST`) | $1 | Every name |
 
-Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($34, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
+Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($35, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
 Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`.
 

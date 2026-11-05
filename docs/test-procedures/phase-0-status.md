@@ -2,7 +2,7 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: question 37, then D2
+## Next step: D2, a key limit of $35
 
 D1 is recorded: the key limit stops calls, but only after spend is counted, so it went 86% past. The owner accepted that (`docs/decisions.md`).
 
@@ -47,7 +47,6 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ## To do before particular steps
 
-- **Before D2, the owner decides the monthly limit (open question 37).** VAT was not in the 400 NOK budget: $34 of credit costs about $44.84, and 400 NOK buys about $26.50–30.30. Ask for the receipt's breakdown and check the exchange rate. Lowering the limit also means changing the LiteLLM budgets to stay below it ($32 global in `gateway/config.yaml`; $8 and $24 for the teams, $4 and $1 for the keys in `scripts/setup-keys.sh`), `docs/decisions.md`, and the procedure and alert notes that quote $19.20 (20% of $24), then running `setup-keys.sh` and testing. Fees also weigh on D7: if the minimum fee is real, a small top-up pays proportionally more.
 - **Before D5, Claude must choose the temporary entry:** a real endpoint without zero data retention. The account now refuses it in up to three ways (the pin's `zdr: true`, `ZDR only`, and allowed providers). An endpoint at one of the four allowed hosts tests the data policy on its own, if one exists. Check `GET /api/v1/models/<model>/endpoints` against `/api/v1/endpoints/zdr`.
 - **C5, the reboot,** also settles deferred finding 31.
 - **D1's expected result** is not known: whether simultaneous calls cross a key limit is what it tests. Key usage already includes B6's spend. What it shows holds for a small balance on a new account (`docs/provider-facts.md`).
