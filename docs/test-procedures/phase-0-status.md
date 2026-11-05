@@ -14,7 +14,7 @@ All of A and B, and C1 to C4, are done. C5 waits for the move to `webserver`, by
 
 Started while phase 0 waits for D6. Decided with the owner, all in `docs/decisions.md`: tower shows every setting and changes none (option B); look B, distinctive; stack 1 (FastAPI, Jinja2, own CSS, server-side SVG, htmx, Peewee and SQLite, pytest); USD only; today, this week (from Monday 00:00 UTC) and this month, with Grafana the same and longer; no history beyond that in tower; a "Log" section for kill switch changes and balance snapshots; the management key expires after a year, with a warning 30 days before. The arena and promptfoo wait (`docs/roadmap.md`, phase 2). Mockups are in `.superpowers/brainstorm/` (not committed). The docs research is in `docs/provider-facts.md` (2026-11-05 entries).
 
-Next: settle the open points below with the owner, then write `docs/superpowers/specs/2026-11-0X-tower-part-1-design.md`, run the builder check, and get the owner's approval before any plan or code. Building waits until D6 to D8 are done, unless the owner decides otherwise.
+Draft written: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md`. Next: the builder check, the owner's answers to its questions, and the owner's approval, before any plan or code. Building waits until D6 to D8 are done, unless the owner decides otherwise.
 
 Open points:
 - **OpenRouter's account settings** are left out of tower, by the owner's decision: no API, and a hand-kept record would go stale.
@@ -23,7 +23,7 @@ Open points:
 - **Tower's gateway key:** a key owned by a `proxy_admin` user, narrowed with `allowed_routes`, instead of the master key (question 17). To try at level 1.
 - **Usage per role and model:** from `/user/daily/activity` or `/spend/logs`; to try at level 1 whether roles appear by their name. OpenRouter's `/api/v1/activity` covers completed days only, so today comes from the gateway and the key's `usage_daily`.
 - **Editing (part 1b), decided 2026-11-05:** models must then live only in the gateway's database, as a same-named model in `config.yaml` would be load-balanced with it (`provider-facts.md`). `config.yaml` keeps the general settings; the starting set becomes a seed tower loads on a fresh install. First thing to try: that `provider`, prices and `max_tokens` can be set through `/model/new`. Tower warns before renaming or removing a role a key uses.
-- **Order proposed by Claude, not yet confirmed:** design part 1a (viewing, kill switch, scheduled price check and smoke test) first, part 1b (editing) after.
+- **Order agreed with the owner:** design part 1a (viewing, kill switch, scheduled price check and smoke test) first, part 1b (editing) after.
 - **D1 bears on the kill switch:** the key limit stops calls late, so level 2 (disable the key) and level 1 are the fast stops; whether a disable takes effect at once is not documented.
 
 ## How we work through the procedure
