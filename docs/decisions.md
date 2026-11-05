@@ -130,7 +130,9 @@ Decided by the owner. The check still has to pass, so phase 0 is not verified un
 
 Then, with the owner's approval, two checks that cost nothing. `GET /api/v1/key` with the gateway's key showed it is the key with the limit: `limit` 0.05, `limit_reset` monthly, one budget, `scope` `key_limit`, `spend_usd` 0.093249775, `remaining_usd` −0.0432, no guardrail or workspace budget. The workspace has only that key. One call to `classify` afterwards was refused: HTTP 403, `limit_source` `openrouter_key_limit`, `scope` `key_limit`, "Key limit exceeded (monthly limit) … $0.09 of $0.05 used", passed on by the gateway as 403 `permission_error`.
 
-So the limit is enforced, but against spend OpenRouter has already counted, and calls started before that pass and are charged in full: here 86% past the limit, $0.043. How long the delay is was not measured. Spend stayed within the step's stated cost. What this means for the monthly cap is for the owner to decide.
+So the limit is enforced, but against spend OpenRouter has already counted, and calls started before that pass and are charged in full: here 86% past the limit, $0.043. How long the delay is was not measured. Spend stayed within the step's stated cost.
+
+**Decided by the owner, the same day: accept it** (option A of 2; B was to measure the delay, for about $0.05–0.10 more). The key limit is a backstop that can be passed by whatever is running, or starts, before OpenRouter has counted the spend; the owner expects the delay to be seconds, a minute at most, which is not measured. The gateway's budgets stay below the key limit, so the gateway stops first in normal use, and the balance stays the hard cap and is kept small.
 
 ## Open
 
