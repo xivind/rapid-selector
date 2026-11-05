@@ -143,6 +143,9 @@ Set by the owner on OpenRouter's Keys page. `GET /api/v1/key` with the gateway's
 ### 2026-11-05: Step D3, spend per model (one model still to answer)
 `tests/check-prices.sh`: `ok` for all 11 entries. `smoke-test.sh --all`: 10 names with 200 and a cost above zero, `qwen3.8-2.4t-a95b@siliconflow` the largest at $0.00023; both probes refused with 403; $0.00026194 in total. `gpt-oss-20b@deepinfra` got 429. The gateway's log shows it came from DeepInfra through OpenRouter: "temporarily rate-limited upstream", `provider_error_code` `engine_overloaded`, `limit_source` `upstream_provider_shared_pool`, passed on with no fallback, as the pin requires, after LiteLLM retried twice. Called once more a few minutes later: 429 again, cost 0.
 
+### 2026-11-05: Step D4, costs match; hosts not yet seen
+OpenRouter's per-model summary for the period agrees with the gateway once each call is cut off at six decimals: gpt-oss-120b $0.000017 (four calls: 4 + 4 + 4 + 5 millionths), DeepSeek V4.1 Flash $0.00001, Qwen3 Coder $0.000002, Gemma 4 $0.000004, Mistral Small 3.2 $0.000002 (two calls each, B6 and D3), Qwen3.8 $0.0935 (D1 plus D3), and Llama 3.2 1B and Llama 3.1 8B $0, as both cost under a millionth ($0.00000086 and $0.00000044). That summary shows no host or quantisation, so the pins are still to be checked per call.
+
 ## Open
 
 ### Settle during design or phase 0
