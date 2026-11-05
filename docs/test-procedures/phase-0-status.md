@@ -23,7 +23,7 @@ Open points:
 - **Tower's gateway key:** a key owned by a `proxy_admin` user, narrowed with `allowed_routes`, instead of the master key (question 17). To try at level 1.
 - **Usage per role and model:** from `/user/daily/activity` or `/spend/logs`; to try at level 1 whether roles appear by their name. OpenRouter's `/api/v1/activity` covers completed days only, so today comes from the gateway and the key's `usage_daily`.
 - **Editing (part 1b), decided 2026-11-05:** models must then live only in the gateway's database, as a same-named model in `config.yaml` would be load-balanced with it (`provider-facts.md`). `config.yaml` keeps the general settings; the starting set becomes a seed tower loads on a fresh install. First thing to try: that `provider`, prices and `max_tokens` can be set through `/model/new`. Tower warns before renaming or removing a role a key uses.
-- **Order agreed:** design part 1a (viewing, kill switch, scheduled price check and smoke test) first, part 1b (editing) after.
+- **Order proposed by Claude, not yet confirmed:** design part 1a (viewing, kill switch, scheduled price check and smoke test) first, part 1b (editing) after.
 - **D1 bears on the kill switch:** the key limit stops calls late, so level 2 (disable the key) and level 1 are the fast stops; whether a disable takes effect at once is not documented.
 
 ## How we work through the procedure
