@@ -10,6 +10,20 @@ D1 is recorded: the key limit stops calls, but only after spend is counted, so i
 
 All of A and B, and C1 to C4, are done. C5 waits for the move to `webserver`, by the owner's decision, and phase 0 is not verified until it has passed. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and they work there. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
 
+## Tower part 1: design in progress (brainstorming, 2026-11-05)
+
+Started while phase 0 waits for D6. Decided with the owner, all in `docs/decisions.md`: tower shows every setting and changes none (option B); look B, distinctive; stack 1 (FastAPI, Jinja2, own CSS, server-side SVG, htmx, Peewee and SQLite, pytest); USD only; today, this week (from Monday 00:00 UTC) and this month, with Grafana the same and longer; no history beyond that in tower; a "Log" section for kill switch changes and balance snapshots; the management key expires after a year, with a warning 30 days before. The arena and promptfoo wait (`docs/roadmap.md`, phase 2). Mockups are in `.superpowers/brainstorm/` (not committed). The docs research is in `docs/provider-facts.md` (2026-11-05 entries).
+
+Next: settle the open points below with the owner, then write `docs/superpowers/specs/2026-11-0X-tower-part-1-design.md`, run the builder check, and get the owner's approval before any plan or code. Building waits until D6 to D8 are done, unless the owner decides otherwise.
+
+Open points:
+- **OpenRouter's account settings** (zero data retention, allowed providers, data training, auto top-up) have no API. Tower can show them only as recorded by hand, with the date they were last checked. For the owner to decide.
+- **Open WebUI's settings** are only in `docker-compose.yml`. Claude's proposal: tower reads that file, mounted read-only, and shows `chat`'s non-secret variables.
+- **Kill switch level 1** has to block each virtual key in turn (`/key/block`), as no call blocks them all; tower must also block keys added later. Releasing unblocks exactly those it blocked.
+- **Tower's gateway key:** a key owned by a `proxy_admin` user, narrowed with `allowed_routes`, instead of the master key (question 17). To try at level 1.
+- **Usage per role and model:** from `/user/daily/activity` or `/spend/logs`; to try at level 1 whether roles appear by their name. OpenRouter's `/api/v1/activity` covers completed days only, so today comes from the gateway and the key's `usage_daily`.
+- **D1 bears on the kill switch:** the key limit stops calls late, so level 2 (disable the key) and level 1 are the fast stops; whether a disable takes effect at once is not documented.
+
 ## How we work through the procedure
 
 These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:

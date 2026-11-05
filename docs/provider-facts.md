@@ -37,6 +37,15 @@ Source: step D1 on `sandbox` (`decisions.md`), a new account with a $5 balance.
 - The limit is checked against spend already counted. Five calls at once, then five more, then five more, on a $0.05 limit: all 15 were answered and charged in full, $0.0932, and the next call afterwards was refused. The delay was not measured.
 - `GET /api/v1/key` with the key itself showed `limit`, `limit_reset`, `limit_remaining` (0 when spent, not negative), `usage`, `usage_daily`, `usage_weekly`, `usage_monthly`, and `budgets` and `effective_budget`, where `remaining_usd` was negative (−0.0432). No prompt is sent, and no charge was seen.
 
+### Management API, checked in the docs 2026-11-05
+Sources: https://openrouter.ai/docs/guides/overview/auth/management-api-keys, https://openrouter.ai/docs/api/api-reference/api-keys/get-a-single-api-key.md, .../update-an-api-key.md, .../list-api-keys.md, https://openrouter.ai/docs/api/api-reference/credits/get-remaining-credits.md, https://openrouter.ai/docs/api/api-reference/analytics/get-user-activity-grouped-by-endpoint.md. Not yet tried.
+- **One key:** `GET /api/v1/keys/{hash}` with the management key gives `limit`, `limit_remaining`, `limit_reset`, `usage`, `usage_daily`, `usage_weekly` (UTC, Monday to Sunday), `usage_monthly`, `disabled`, `expires_at`, `last_used_at` and a masked `label`. `hash` is not the key itself. `GET /api/v1/keys` lists keys (`include_disabled`, `include_expired`). Answers question 18.
+- **Disable and enable:** `PATCH /api/v1/keys/{hash}` with `{"disabled": true}` or `{"disabled": false}`. The docs do not say how quickly it takes effect.
+- **Balance:** `GET /api/v1/credits`, management key only, gives `total_credits` and `total_usage`; the balance is the difference, which the page does not spell out.
+- **Usage per model:** `GET /api/v1/activity`, management key only: one row per day, model and endpoint, with `provider_name`, `requests`, tokens and `usage` in USD, for the last 30 completed UTC days, so not today. Filter with `api_key_hash`.
+- **Account settings:** no endpoint for zero data retention, allowed providers, data training or auto top-up. `/api/v1/organization/settings` exists, but has only a model-catalog filter and returns 404 for a personal account.
+- **Expiry:** fixed at creation and cannot be changed; afterwards every request gets `401` "API key expired". A non-management key on these routes gets 403 "Only management keys can perform this operation".
+
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
 - **$5.00 of credit cost $7.25** from Norway, and the balance showed exactly $5.00. The breakdown was not read from the receipt. ($5 + $0.80) × 1.25 gives exactly $7.25, while 5.5% and 25% VAT alone would give $6.59, so a minimum fee of about $0.80 is likely. The pricing page does not state one.
@@ -116,6 +125,13 @@ Against a fake upstream sending the documented bodies. `tests/drain.bats` covers
 - **Retries:** 403, 429 and 503 reach the upstream 3 times for each client call; 402 and 404 once.
 - **Default request timeout:** 6000 seconds (`DEFAULT_REQUEST_TIMEOUT_SECONDS`, `litellm/__init__.py`), not 600.
 - **`/model/info` with the master key** has the price at `.model_info.output_cost_per_token`.
+
+### Spend reports, roles and blocking, checked in the docs 2026-11-05
+Sources: https://docs.litellm.ai/docs/proxy/cost_tracking, .../virtual_keys, .../access_control, .../users. https://docs.litellm.ai/docs/proxy/enterprise returned 404, so the Enterprise list was not seen. Not yet tried on v1.106.6.
+- **Free, by the pages' labels:** `/spend/logs` and `/spend/logs/v2` (per request, the latter paginated), `/user/daily/activity` (per day, broken down by model, provider and API key), `/key/info`, `/team/info`, `/user/info`, `/spend/keys`. A banner lists "spend tracking" among Enterprise features, which the pages do not reconcile with this.
+- **Enterprise:** `/global/spend/report`. Team-admin roles and delegated permissions, including `/team/daily/activity` for team members, are "Premium".
+- **Blocking:** `POST /key/block` and `/key/unblock` with `{"key": ...}`, one key at a time, not labelled Enterprise. No call blocks a team or all keys at once on these pages.
+- **Admin rights without the master key:** a key owned by a user with role `proxy_admin` can call admin routes, and `allowed_routes` can narrow it; `proxy_admin_viewer` sees all keys and spend but "cannot … make any changes", so presumably not block. Not labelled Enterprise. Bears on question 17.
 
 ## Open WebUI
 
