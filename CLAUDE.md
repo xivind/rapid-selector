@@ -87,13 +87,13 @@ We assemble existing components where they exist and build only what is unique t
 
 ## Platform and operations
 
-- **Target:** Raspberry Pi 5, arm64, with memory limits that fit in 8 GB, Docker with the Compose v2 plugin (`docker compose`, not the deprecated `docker-compose`). All images must be available for `linux/arm64`. Our own images must be buildable for arm64.
+- **Target:** Raspberry Pi 5, arm64, with 8 GB of memory that the stack must fit in, Docker with the Compose v2 plugin (`docker compose`, not the deprecated `docker-compose`). All images must be available for `linux/arm64`. Our own images must be buildable for arm64.
 - The owner has not used Compose before. The README must explain the few commands needed (up, down, logs, update) and assume no prior knowledge.
 - Published ports must be bound explicitly to the Pi's LAN address from `.env`, never to `0.0.0.0`. Docker writes its own iptables rules and bypasses common firewall rules such as ufw, so the firewall alone is not enough.
 - Services that the owner or the home network must reach are published on fixed ports defined in `.env`. The README must include a table of addresses and ports.
 - Postgres publishes no port at all. Only services on the Compose network can reach it.
 - No custom networks and no `network_mode: host`. Use Compose's automatic default network, where services find each other by service name. Clients outside the project reach the services via the Pi's LAN address and published ports.
-- Set memory limits per container in `docker-compose.yml`. A host whose kernel has memory control turned off ignores them, and turning it on is not required (`docs/decisions.md`). Postgres and volumes live on the SSD.
+- Containers have no memory limits (`docs/decisions.md`). Postgres and volumes live on the SSD.
 - Pin image versions. No `latest`.
 - Set a retention period for LiteLLM's spend log so the database does not grow without bound.
 - Secrets are environment variables with fixed names, listed in `.env.example`, which is kept up to date. They come from `.env` (never committed, listed in `.gitignore`) or from a secret store through `rapidselector.sh`. Compose refuses to run without them.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Load settings and secrets, then run docker compose.
-#   ./rapidselector.sh up -d | down | logs -f | ps | <any docker compose command>
+#   ./rapidselector.sh up | down | logs -f | ps | <any docker compose command>
+#   (up always runs detached)
 #   ./rapidselector.sh update   (pull new images, then recreate what changed)
 #   ./rapidselector.sh run-script scripts/setup-keys.sh   (run one of our scripts with the secrets)
 # Settings come from .env (or $RAPIDSELECTOR_ENV_FILE). Secrets come from .env or,
@@ -18,6 +19,12 @@ if [ "${1:-}" = "run-script" ]; then
   shift
   [ "$#" -ge 1 ] || die 2 "usage: rapidselector.sh run-script <script> [args...]"
   exec "$@"
+fi
+
+if [ "${1:-}" = "up" ]; then
+  shift
+  [ "${1:-}" != "-d" ] || shift
+  exec docker compose up -d "$@"
 fi
 
 if [ "${1:-}" = "update" ]; then

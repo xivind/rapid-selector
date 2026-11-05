@@ -68,6 +68,34 @@ blob_json() {
   for line in "${lines[@]}"; do grep -qxF "$line" "$DOCKER_CALL_LOG"; done
 }
 
+@test "up runs detached without being asked" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  run "$REPO/rapidselector.sh" up
+  [ "$status" -eq 0 ]
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose up -d" ]
+}
+
+@test "up keeps the arguments it is given" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  run "$REPO/rapidselector.sh" up gateway
+  [ "$status" -eq 0 ]
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose up -d gateway" ]
+}
+
+@test "up -d does not pass the switch twice" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  run "$REPO/rapidselector.sh" up -d
+  [ "$status" -eq 0 ]
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose up -d" ]
+}
+
+@test "the Compose file sets no memory limit, which hosts without memory control warn about" {
+  ! grep -q 'mem_limit' "$REPO/docker-compose.yml"
+}
+
 @test "values with \$, quotes and spaces arrive unchanged" {
   mapfile -t lines < <(all_secrets_lines | grep -v '^POSTGRES_PASSWORD=')
   write_env env "${lines[@]}" 'POSTGRES_PASSWORD=a$HOME "b" '"'c'"' d\e'

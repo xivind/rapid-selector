@@ -18,7 +18,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    mem_limit: 512m
     logging: *logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
@@ -45,7 +44,6 @@ services:
       - ./gateway/request_guard.py:/app/request_guard.py:ro
     ports:
       - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT:-4000}:4000"
-    mem_limit: 1536m
     logging: *logging
     depends_on:
       db:
@@ -90,7 +88,6 @@ services:
       - chatdata:/app/backend/data
     ports:
       - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${CHAT_PORT:-4010}:8080"
-    mem_limit: 1536m
     logging: *logging
     depends_on:
       gateway:

@@ -36,5 +36,5 @@ Researched on 2026-11-02 and left out for now:
     - **Privacy:** SearXNG is on the LAN, but queries still reach outside search engines, and fetched pages go to the model's host. Check what SearXNG logs and sends.
     - **Untrusted content:** a fetched page can carry instructions. Acceptable in chat, but not for flows that act on a model's answer without checking it.
     - **Comparisons:** keep it off in arena and benchmark runs, so that they compare models and not search results.
-    - **Fit:** it needs its own memory limit, based on real use on the Pi, and stays optional and off by default, as an integration.
+    - **Fit:** its memory use must be checked on the Pi, and it stays optional and off by default, as an integration.
 - **Automatic fallback to another model or host** for important flows: possible within the allowlist, but every fallback needs its own price and testing. Left out while models are an enhancement.
