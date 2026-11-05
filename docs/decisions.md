@@ -137,6 +137,9 @@ So the limit is enforced, but against spend OpenRouter has already counted, and 
 ### 2026-11-05: The key's monthly limit is $35
 Decided by the owner, who wanted a round number and can change it later in OpenRouter's dashboard. Settles question 37. At about 9.28 NOK per USD (mid-market, early November 2026), 400 NOK is about $43 including everything. Credit plus the 5.5% fee plus 25% VAT, as $5 cost $7.25 at A3: $35 a month costs about $46.16, about 428 NOK, if fully used; $32 would have been about 392 NOK. The receipt's breakdown was not read. The gateway's budgets stay as they are ($32 global), so in normal use the gateway stops at $32, about 392 NOK, and the key limit is the backstop $3 above it. Raising or lowering the key limit needs only the dashboard; changing the gateway's budgets needs `gateway/config.yaml` and `scripts/setup-keys.sh`, kept below the key limit.
 
+### 2026-11-05: Step D2, the key limit raised to $35
+Set by the owner on OpenRouter's Keys page. `GET /api/v1/key` with the gateway's key: `limit` 35, `limit_reset` monthly, `limit_remaining` 34.906750225, `usage_monthly` 0.093249775. It cost nothing.
+
 ## Open
 
 ### Settle during design or phase 0

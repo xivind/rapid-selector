@@ -2,7 +2,7 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: D2, a key limit of $35
+## Next step: D3
 
 D1 is recorded: the key limit stops calls, but only after spend is counted, so it went 86% past. The owner accepted that (`docs/decisions.md`).
 
@@ -26,7 +26,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 | What | State |
 |---|---|
 | Balance | About $4.91: $0.00000978 spent at B6 and $0.0932 at D1. $7.25 paid |
-| Inference key | `rapidselector-gateway`: limit $0.05, monthly reset. The value is in secrets-service, as `RAPIDSELECTOR_OPENROUTER_KEY` |
+| Inference key | `rapidselector-gateway`: limit $35 since D2, monthly reset. The value is in secrets-service, as `RAPIDSELECTOR_OPENROUTER_KEY` |
 | Management key | None. Only tower needs one, in phase 1 |
 | Auto top-up | Off, and no card on file (Google Pay through Stripe) |
 | Zero data retention | All 5 toggles on, `ZDR only` under "All other models" and "Google" |
