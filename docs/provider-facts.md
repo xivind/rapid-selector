@@ -31,6 +31,12 @@ Sources: https://openrouter.ai/docs/api-reference/limits and https://openrouter.
 - **The docs give both 402 and 403 for a spent key limit.** "Handling 402 errors" lists `openrouter_key_limit`, while the budget section says "the key's own limit" gets a 403 before reaching a provider, with `"scope": "key_limit"`. Level 3 shows which one is real. This qualifies the 2026-11-03 entry above.
 - Whether in-flight holds count against a key's `limit_remaining` is not stated. Holds are described only against the account's balance.
 
+### Key limits in practice, 2026-11-05
+Source: step D1 on `sandbox` (`decisions.md`), a new account with a $5 balance.
+- A spent key limit is refused with **403**, not 402: `"limit_source": "openrouter_key_limit"`, `"scope": "key_limit"`, and `limit_usd`, `spend_usd` and `resets_at` in the metadata. This settles the conflict in the 2026-11-04 entry above, for this account.
+- The limit is checked against spend already counted. Five calls at once, then five more, then five more, on a $0.05 limit: all 15 were answered and charged in full, $0.0932, and the next call afterwards was refused. The delay was not measured.
+- `GET /api/v1/key` with the key itself showed `limit`, `limit_reset`, `limit_remaining` (0 when spent, not negative), `usage`, `usage_daily`, `usage_weekly`, `usage_monthly`, and `budgets` and `effective_budget`, where `remaining_usd` was negative (−0.0432). No prompt is sent, and no charge was seen.
+
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
 - **$5.00 of credit cost $7.25** from Norway, and the balance showed exactly $5.00. The breakdown was not read from the receipt. ($5 + $0.80) × 1.25 gives exactly $7.25, while 5.5% and 25% VAT alone would give $6.59, so a minimum fee of about $0.80 is likely. The pricing page does not state one.
