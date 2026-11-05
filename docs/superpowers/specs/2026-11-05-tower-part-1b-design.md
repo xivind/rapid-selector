@@ -1,6 +1,6 @@
 # Tower, part 1b: change models, roles and budgets
 
-A project: the second part of `tower`, built after part 1a (`2026-11-05-tower-part-1a-design.md`), whose look, stack, login, data and tests it shares. Status: draft, 2026-11-05, written from a design conversation with the owner; through the builder check, the owner's answers written in; awaiting the owner's approval.
+A project: the second part of `tower`, built after part 1a (`2026-11-05-tower-part-1a-design.md`), whose look, stack, login, data and tests it shares. Status: approved by the owner, 2026-11-05, after the builder check. Built after part 1a; its plan comes after 1a's.
 
 ## Why
 

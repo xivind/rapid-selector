@@ -202,6 +202,9 @@ Decided by the owner. **No undo button:** too much for what it gives; the Log sh
 ### 2026-11-05: Tower part 1b edits roles fully, and the names each key may call
 Decided by the owner from the builder check (option B of 2; A kept removing and renaming roles in the terminal). Tower creates, renames and removes roles and points them at models, and edits which names each team and key may call, within the rules in the part 1b design: confirmation by typing the name, a "what uses it" screen, team `permanent` holding roles only, no alias after a rename. This replaces "a role a `permanent` key may call is never removed outright" from "Tower part 1b, removing something in use".
 
+### 2026-11-05: Tower part 1b's design approved
+`superpowers/specs/2026-11-05-tower-part-1b-design.md`, approved by the owner after the builder check.
+
 ## Open
 
 ### Settle during design or phase 0
