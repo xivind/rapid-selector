@@ -156,6 +156,9 @@ First try, the same day: refused with HTTP 404, "openai/gpt-oss-20b:batch cannot
 ### 2026-11-05: Step D5, an endpoint outside the account's settings is refused
 With the temporary entry `zdr-negative-test` (`openai/gpt-oss-20b` pinned to `darkbloom/fp8`, which has no zero data retention) and the master key: HTTP 404 from OpenRouter, "No allowed providers are available for the selected model … your account's allowed-providers setting permits only: coreweave, deepinfra, cloudflare, siliconflow", `failed_routing_step` "Filter by Allowed Providers". The gateway passed it on as 404 and tried no fallback. Nothing was charged. So the account's allowed-provider list stopped it, before the data policy was reached; the data policy on its own stays untested, since no allowed provider has an ordinary endpoint without zero data retention (see "Step D5's temporary entry"). The script that added the entry is deleted.
 
+### 2026-11-05: Tower shows every setting, and changes none
+Decided by the owner while designing tower part 1 (option B of 3; A was git only with nothing shown, C was changing roles and models from tower). Tower shows every setting, neatly organised: each role and experiment name with its model, host pin, price, default `max_tokens` and zero data retention; teams and keys with budgets, spend, resets, allowed names and rate limits; the OpenRouter key's limit, usage and reset; whether the latest price check passed; Open WebUI's settings; and OpenRouter's account settings. Secret values are shown only as set or not set. Changes still go through `gateway/config.yaml` and `scripts/setup-keys.sh` in git, the price check and the smoke test. Reason: one place to see the whole setup, without a second way to change it. How tower reads Open WebUI's and OpenRouter's account settings is for the design.
+
 ## Open
 
 ### Settle during design or phase 0
