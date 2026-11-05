@@ -73,7 +73,7 @@ From `CLAUDE.md`, the overall design and the phase 0 build:
 - **Key limit** and what is left, with the gateway's global budget marked on the same bar.
 - **Forecast** for the month: spend so far divided by the days passed, times the days in the month. Shown as an estimate. (Claude's call.)
 - **Resets:** the key limit's `limit_reset` and the gateway's budget windows. A mismatch is shown, not hidden.
-- **Top roles and models:** calls and spend for the chosen period, today, week or month, from the gateway.
+- **Top roles and models:** calls and spend for the chosen period, today, week or month, from the gateway. ROLES counts the four roles; MODELS counts each model at its host (`model@host`) across every name that uses it, roles and experiment names together, so `chat` and `gpt-oss-120b@deepinfra` both count towards `gpt-oss-120b` at DeepInfra. The two rows are two views of the same calls, not parts of one total. (Claude's call, from the owner's "which models are most used, which roles are most used".)
 - **Reconciliation:** see below.
 - **Checks:** the latest price check and smoke test, with their time and result.
 
@@ -86,16 +86,16 @@ Every setting tower can read, grouped:
 - **Teams and keys:** budgets, spend, reset, allowed names, rate limits. From `/team/info` and `/key/info`.
 - **OpenRouter key:** limit, reset, usage, whether disabled, its masked label. From the management API.
 - **Management key:** days until it expires (decided: one year).
-- **Gateway settings:** global budget and window, spend log retention, from the gateway where its API shows them.
+- **Gateway settings:** global budget and window, spend log retention. From the gateway's API where it shows them; otherwise from `gateway/config.yaml`, mounted read-only into tower and labelled as the file. (Claude's call.)
 - **Open WebUI:** its non-secret settings, read from `docker-compose.yml`, mounted read-only into tower. (Claude's proposal; the owner has not yet confirmed it.)
-- **Secrets:** each by name, shown only as set or not set.
+- **Secrets:** tower's own secrets by name, shown only as set or not set. Tower is not given the others; the page says that Compose refuses to start the stack unless every secret in `.env.example` is set. (Claude's call: passing other services' secrets, or even a list of them, into tower would widen what it holds for little gain.)
 
 ### Log
 Kill switch changes (who, when, which level, result), each price check and smoke test run, and balance snapshots. Newest first.
 
 ## Reconciliation
 
-- **This month:** the gateway's recorded spend for the month against the OpenRouter key's `usage_monthly`. The difference in dollars and percent. Flagged when it is more than $0.05 or 5% of the month's spend, whichever is larger. (Claude's call; to revisit after real use.)
+- **This month:** the gateway's recorded spend for the calendar month (UTC), summed from its spend logs and including calls made with the master key, since every call uses the same OpenRouter key, against that key's `usage_monthly`. The difference in dollars and percent. Flagged when it is more than $0.05 or 5% of the month's spend, whichever is larger. (Claude's call; to revisit after real use.)
 - **Per completed day:** OpenRouter's `GET /api/v1/activity` for the gateway's key (`api_key_hash`) gives each day's usage per model and host, for the last 30 completed days; the gateway's spend per day and model is set beside it. Today is not in OpenRouter's activity, so today's line uses the key's `usage_daily`.
 - **Known causes of small gaps:** OpenRouter counts spend a little late (D1), and costs below a millionth of a dollar are rounded in some of its views (D4). A gap that persists past a day is the one that matters.
 
@@ -142,7 +142,7 @@ Look B, from the mockup: a dark, warm background, a serif for headings and large
 ## Testing
 
 - **Level 1 (no Pi, no money):** `pytest` for tower's own logic; and tower against the real LiteLLM image and the fake upstream, extended with OpenRouter's management routes (`/keys`, `/keys/{hash}`, `/credits`, `/activity`, `/endpoints/zdr`). Covers: the kill switch's both levels, including releasing only what it blocked, a key added while engaged, and a failed read-back; the price check against a saved endpoint list; reconciliation's flag; that no secret value appears in any page, log or metric; login.
-- **To try first at level 1:** usage per role and model from `/user/daily/activity` or `/spend/logs` in v1.106.6; the `proxy_admin` key with `allowed_routes`.
+- **To try first at level 1:** usage per role and model from `/user/daily/activity` or `/spend/logs` in v1.106.6 (if neither gives it per name, Usage falls back to OpenRouter's per model and host figures for completed days, without the split by role, and the owner is told); the `proxy_admin` key with `allowed_routes`; whether the management key appears in `GET /api/v1/keys` with its expiry (if not, an owner-set `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`).
 - **Level 2 and 3 (owner, on the Pi):** a test procedure, written with the plan, covering: real balance and key figures against OpenRouter's dashboard; level 1 stopping Node-RED's and chat's calls; level 2 disabling the real key, how fast a call is then refused, and re-enabling it; the smoke test's cost against its estimate.
 
 ## Changes in the `production` repository
