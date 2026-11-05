@@ -165,6 +165,12 @@ Chosen by the owner from three mockups of the first screen: A clean and function
 ### 2026-11-05: Tower in USD, for today, this week and this month
 Decided by the owner. Tower shows amounts in USD only, not NOK, to keep it simple; `requirements.md` changed. It covers today, this week and this month, and Grafana the same periods plus longer ones. The owner also agreed to three proposals: tower does not repeat Grafana's history; a "Log" section lists kill switch changes and balance snapshots; usage per role and model comes from the gateway's spend log, if the open-source version offers the reports (to check).
 
+### 2026-11-05: Tower's stack
+Chosen by the owner (option 1 of 3): FastAPI and Jinja2, rendered on the server, with our own stylesheet instead of Bootstrap, charts drawn as SVG on the server, `htmx` for parts of a page that update or act, and SQLite through Peewee for tower's own data, tested with `pytest`. A richer chart in phase 2 can use D3 on its own page. The others: 2, FastAPI serving data to plain JavaScript with D3 or Observable Plot in the browser; 3, Svelte or React in front of FastAPI, with Node tooling and a build step. Reason: the owner's production stack, one language and one test setup, the fewest moving parts, and enough for look B. The owner asked that none be a dying technology: in early November 2026, FastAPI had 0.139.1 (July 2026), Peewee 4.0.8 (June 2026), htmx is on version 2 with version 4 under way; Jinja2 was not checked. Settles question 10.
+
+### 2026-11-05: The management key expires after a year
+Decided by the owner (option B of 3; A no expiry, C 90 days). Tower shows the days left, a Grafana alert warns 30 days before, and the README gets the steps to create a new key and update the secret. When it expires, tower cannot read the balance or use kill switch level 2; the README's manual ways still work. Settles question 6.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -174,11 +180,11 @@ Decided by the owner. Tower shows amounts in USD only, not NOK, to keep it simpl
 3. **How does LiteLLM record OpenRouter spend?** Either explicit prices in the gateway config, or the actual cost from OpenRouter's response if LiteLLM reads it. Also confirm that LiteLLM passes on the host pin and zero data retention settings. **Answered in part at level 1, 2026-11-04** (`provider-facts.md`): LiteLLM v1.106.6 records OpenRouter's `usage.cost` when the response has one, and the configured price otherwise; it forwards the `provider` object unchanged, and `gateway/request_guard.py` stops a request body from replacing it (`extra_body`) or adding OpenRouter routing (`models`, `route`, `transforms`). Still to see at level 3: that OpenRouter's real responses carry the cost, and that the pins are honoured.
 4. ~~Is the Standard plan free of any subscription fee?~~ **Settled 2026-11-04:** no sign of a subscription or recurring fee after the first top-up, and OpenRouter's pricing page says "no minimums and no lock-in".
 5. **Do the wanted models have zero data retention hosts?** For example, `lfm-2.5-2.6b` had none listed. Every entry in the phase 0 starting set is on OpenRouter's list of zero data retention endpoints (2026-11-03); level 3 confirms they are honoured.
-6. **Management key expiry.** OpenRouter recommends an expiry date on every management key, and it cannot be changed after creation. Decide whether to use one, and how `tower` gets a new key before the old one expires.
+6. ~~Management key expiry.~~ **Settled 2026-11-05:** a year, with a warning (see "The management key expires after a year").
 7. ~~Does the stack fit on the Pi?~~ **Settled 2026-11-05, while idle:** the images run on arm64 (B1a), and the stack takes about 1.3 GiB of the 8 GB (B5). Open WebUI's local embedding is off.
 8. ~~Is LiteLLM's spend log retention free or an Enterprise feature?~~ **Settled 2026-11-03:** free ("Retention and cleanup are open source"); set to `90d` in phase 0.
 9. ~~Which Open WebUI features call outside services, and how are they turned off?~~ **Settled 2026-11-03:** web search, image generation, the Ollama connection and direct connections are turned off with environment variables, and `ENABLE_PERSISTENT_CONFIG=False` keeps them off (phase 0 spec, section 4).
-10. **`tower` stack.** The owner chooses, after options and a recommendation are presented. Phase 1, first, together with the level of visual ambition (A clean and functional, B distinctive, C experimental; see the overall design, section 11).
+10. ~~`tower` stack.~~ **Settled 2026-11-05:** look B and stack 1 (see "Tower's stack").
 11. ~~Are LiteLLM teams available in the open-source version?~~ **Settled 2026-11-04 (level 1):** yes. Teams, team budgets and custom key values work in v1.106.6 without a licence.
 12. ~~Which error does LiteLLM return for an exhausted budget?~~ **Settled 2026-11-04 (level 1):** HTTP 422 with `"type": "budget_exceeded"` (the docs' example says 400). Key and team budgets stop within one call; the global budget overshot by a few calls, and the team budgets, which add up to it, are what stop spend promptly. The README tells clients not to retry it.
 13. ~~Does LiteLLM's `/metrics` require auth by default?~~ **Settled 2026-11-03:** yes, from v1.85.0. Turned off (`require_auth_for_metrics_endpoint: false`), like `node_exporter` on the owner's hosts.
