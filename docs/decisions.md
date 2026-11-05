@@ -113,6 +113,9 @@ On `home-assistant`, the owner pulled the `production` repository and restarted 
 ### 2026-11-05: Step C2, the alert rules
 Created through the Grafana MCP from a separate session in the `production` repository: all 8 rules in folder Alerts, evaluated every 60 seconds, read back as matching the notes, and none firing. Grafana went from 19 to 27 rules. The owner named the group `LLM` instead of `rapid-selector`; the rules keep their `rapid-selector:` names. Three rules are `Normal`, and five are `Normal (NoData)`, as nothing has happened yet for them to measure. The backup count stays at 9 until E1.
 
+### 2026-11-05: Step C3, the backup key
+On `sandbox`, the user `rapidselector-backup` and `/usr/local/bin/rapidselector-export.sh` were installed, with `home-assistant`'s new key restricted to that script. From `home-assistant`, `postgres` returned a dump ending in `-- PostgreSQL database dump complete`, and `chat` returned paths under `app/backend/data/`, with `rapidselector-chat` stopped and started again; all three services were `healthy` afterwards. The user is in the `docker` group, so its forced command is what limits it. The chat backup holds `cache/embedding/models/`, though embeddings are off and no download was seen; to look at with the file sizes at E1. The owner keeps `grafana/rapidselector-alerts.md` in `production`. It cost nothing.
+
 ## Open
 
 ### Settle during design or phase 0
