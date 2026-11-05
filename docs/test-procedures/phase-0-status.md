@@ -2,9 +2,9 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: D3, call `gpt-oss-20b@deepinfra` once more
+## Next step: D3's last call, `gpt-oss-20b@deepinfra`, then D5
 
-It got 429 from DeepInfra (`engine_overloaded`) in the first run; the other ten passed (`docs/decisions.md`).
+It got 429 from DeepInfra (`engine_overloaded`) twice; the other ten passed D3 and D4 (`docs/decisions.md`). If it answers, its host should show DeepInfra on OpenRouter's Logs page.
 
 D1 is recorded: the key limit stops calls, but only after spend is counted, so it went 86% past. The owner accepted that (`docs/decisions.md`).
 
