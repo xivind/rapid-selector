@@ -54,7 +54,7 @@ classify → mistral-small-3.2-24b @ DeepInfra fp8
 3. **Cost shown and confirmed.** A new model or a model swap can cost money (`CLAUDE.md`), so tower shows its price and the test call's worst case before going on.
 4. **Test call.** The new entry is added under a temporary name, the smoke-test call is made to it with `KEY_SMOKE_TEST`, and it must answer with a recorded cost above zero. If it fails, the temporary entry is removed, nothing changes for clients, and tower shows why.
 5. **Switch.** The role or name moves to the new entry, and the old entry and the temporary name are removed, so there is never more than one entry per name.
-6. **Keys.** Allowed names follow, and the temporary name is allowed for the smoke-test key during the test call only: a new experiment name is added to team `experiments` and its keys; a removed one is taken off; roles stay in team `permanent`'s and `node-red`'s lists.
+6. **Keys.** Allowed names follow: a new experiment name is added to team `experiments` and its keys; a removed one is taken off; roles are handled as in "Roles and allowed names". The temporary name is allowed for the smoke-test key during the test call only.
 7. **Logged** with time, what changed, the old and the new value side by side, and the test call's result and cost.
 
 ## Experiment names
@@ -103,7 +103,7 @@ Before removing a model or an experiment name, tower shows what uses it: which k
 
 ## Testing
 
-- **Level 1:** `pytest` for the rules, the price lookup, the order of limits and the removal rule; tower against the real LiteLLM image with `store_model_in_db: true` and the fake upstream, extended as in 1a. Covers: a change that passes; each rule broken; a failed test call leaving nothing changed; never two entries with one name; removing a role a `permanent` key may call is refused; the starting set loads once and only into an empty database; the export loads back as a starting set; no secret in any page, log or export.
+- **Level 1:** `pytest` for the rules, the price lookup, the order of limits and the removal rule; tower against the real LiteLLM image with `store_model_in_db: true` and the fake upstream, extended as in 1a. Covers: a change that passes; each rule broken; a failed test call leaving nothing changed; never two entries with one name; creating, renaming and removing a role, with its allowed lists following and the Open WebUI title name refused; a key's allowed names kept within its team's, and roles only in team `permanent`; the starting set loads once and only into an empty database; the export loads back as a starting set; no secret in any page, log or export.
 - **First to try at level 1:** that a database model with `api_key: os.environ/RAPIDSELECTOR_OPENROUTER_KEY` is resolved by the gateway and the `/openrouter` pass-through stays refused; that `/model/new` and `PATCH /model/{id}/update` accept `extra_body.provider`, the per-token prices, `max_tokens` and custom `model_info` fields, and that the gateway records those prices; how a temporary name behaves for the test call.
 - **Existing tests:** the level 1 tests load the starting set the same way; those that read `config.yaml` directly change to the gateway's API.
 - **Level 2 and 3 (owner, on the Pi):** a test procedure written with the plan: the one-time move of the 11 models, with the smoke test; a role swapped from tower and called from Node-RED; a budget raised and lowered; the key limit changed and read back in OpenRouter's dashboard.
