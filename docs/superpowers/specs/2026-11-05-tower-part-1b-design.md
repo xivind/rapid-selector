@@ -1,6 +1,6 @@
 # Tower, part 1b: change models, roles and budgets
 
-A project: the second part of `tower`, built after part 1a (`2026-11-05-tower-part-1a-design.md`), whose look, stack, login, data and tests it shares. Status: draft, 2026-11-05, written from a design conversation with the owner; through the builder check, one question to the owner open; not yet approved.
+A project: the second part of `tower`, built after part 1a (`2026-11-05-tower-part-1a-design.md`), whose look, stack, login, data and tests it shares. Status: draft, 2026-11-05, written from a design conversation with the owner; through the builder check, the owner's answers written in; awaiting the owner's approval.
 
 ## Why
 
@@ -9,18 +9,18 @@ The settings the owner changes most often are which models are in the list and w
 ## Goals, non-goals and anti-goals
 
 **Goals:**
-1. Add, change and remove models and experiment names, and point each role at a model and host, from tower.
+1. Add, change and remove models and experiment names; create, rename and remove roles and point each at a model and host; and choose which names each team and key may call, from tower.
 2. Change team and key budgets, and the OpenRouter key's monthly limit.
 3. On every change, enforce `CLAUDE.md`'s rules, fetch the host's price, and prove the recorded spend with a test call before the switch.
 4. Show each step live, log every change with old and new value, and export the whole setup.
 5. Move the current 11 models out of `gateway/config.yaml` once, into the gateway's database.
 
-**Non-goals:** an undo button (decided: the Log shows old and new values, and a change is reset by hand through the same editing); staged drafts applied together; changing Open WebUI's settings, ports or secrets (they need containers recreated; tower gets no access to Docker's socket); creating or deleting virtual keys or teams; the arena.
+**Non-goals:** an undo button (decided: the Log shows old and new values, and a change is reset by hand through the same editing); staged drafts applied together; changing Open WebUI's settings, ports or secrets (they need containers recreated; tower gets no access to Docker's socket); creating or deleting virtual keys or teams; aliases that keep an old role name working after a rename; the arena.
 
 **Anti-goals:**
 - A model live in the gateway that breaks a rule: no pin, fallbacks on, no zero data retention, a host outside the allowed four, or a price of zero or not the host's.
 - Two entries with the same name, which LiteLLM load-balances (`provider-facts.md`), breaking the pin.
-- A flow breaking without warning because a role it calls was removed.
+- A flow breaking without warning because a role it calls was removed or renamed.
 - A limit raised without the owner seeing what it can cost.
 
 ## Constraints
@@ -65,9 +65,19 @@ An experiment name is always built from its model and host, `<model>@<host>`, so
 
 New entries refer to the OpenRouter key as `os.environ/RAPIDSELECTOR_OPENROUTER_KEY`, which the gateway resolves itself, so tower never holds the key. **If level 1 shows that v1.106.6 does not resolve that reference for models stored in its database, the build stops and the owner decides**: a stored LiteLLM credential risks handing the `/openrouter` pass-through, which records $0 spend, a real key again, and giving tower the key breaks `CLAUDE.md`'s principle 2.
 
-## Removing something in use
+## Roles and allowed names
 
-Before removing a model, role or experiment name, tower shows what uses it: which keys are allowed it and its calls this week. A role can be pointed at another model instead of being deleted. An experiment name can be removed, which also takes it off the keys' allowed lists. A role that a key in team `permanent` may call is never removed outright. Renaming a role is a removal plus an addition, under the same rule.
+Full editing of roles, decided by the owner (option B; A was pointing roles at models only, with removing and renaming done in the terminal).
+
+- **Create a role:** a lower-case name without `@`, so it cannot be mistaken for an experiment name, and not already in use. Its model and host go through the steps in "Making a change". It is then added to team `permanent`'s allowed names; which keys get it is chosen in the same form.
+- **Point a role at another model:** the steps in "Making a change".
+- **Rename a role:** tower first shows what calls the old name (the keys allowed it, and its calls this week), and that every client calling it must be changed, since the old name stops working at once. With the new name typed to confirm, tower creates the new role on the same entry, moves it into every list that had the old one, and removes the old name. No alias is kept.
+- **Remove a role:** the same "what uses it" screen, and the role's name typed to confirm. It is then taken off every allowed list and removed. A name Open WebUI uses for titles (`TASK_MODEL_EXTERNAL`, which tower reads from `docker-compose.yml`) cannot be removed or renamed from tower; the page says to change `docker-compose.yml` first.
+- **Allowed names:** for each team and each key, the names it may call, chosen from the current roles and experiment names. A key's names must be within its team's. Team `permanent` and its keys may hold roles only (`CLAUDE.md`: clients call roles); team `experiments` may hold both. Each change is logged with the old and new list.
+
+## Removing a model or an experiment name
+
+Before removing a model or an experiment name, tower shows what uses it: which keys are allowed it and its calls this week. A model behind a role can only be replaced, not removed, while the role exists. An experiment name can be removed, which also takes it off the keys' allowed lists.
 
 ## Budgets and the key limit
 

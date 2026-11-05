@@ -199,6 +199,9 @@ Agreed by the owner (Claude's proposal): tower keeps the order of limits (each k
 ### 2026-11-05: Tower part 1b, no undo button; a starting set and an export
 Decided by the owner. **No undo button:** too much for what it gives; the Log shows the old and new value of every change side by side, and a change is reset by hand through the normal editing, with the same checks. **Starting set:** the 11 models move from `gateway/config.yaml` to `gateway/starting-set.yaml`, in the same format; `config.yaml` keeps the general settings only. Tower loads the starting set into the gateway's database only when it has no models: on a fresh install, or once when 1b is deployed. **Export:** the current models, roles, prices, pins and budgets in that same format, usable as a starting set and as a snapshot. The level 1 tests load the starting set the same way, and those that read `config.yaml` directly change to the gateway's API.
 
+### 2026-11-05: Tower part 1b edits roles fully, and the names each key may call
+Decided by the owner from the builder check (option B of 2; A kept removing and renaming roles in the terminal). Tower creates, renames and removes roles and points them at models, and edits which names each team and key may call, within the rules in the part 1b design: confirmation by typing the name, a "what uses it" screen, team `permanent` holding roles only, no alias after a rename. This replaces "a role a `permanent` key may call is never removed outright" from "Tower part 1b, removing something in use".
+
 ## Open
 
 ### Settle during design or phase 0
