@@ -193,6 +193,9 @@ Decided by the owner while designing part 1b. A change made in tower applies at 
 ### 2026-11-05: Tower part 1b, removing something in use
 Agreed by the owner (Claude's proposal): before removing a model, role or experiment name, tower shows what uses it (which keys are allowed it, and its calls this week). A role can be pointed at another model instead of being deleted; an experiment name can be removed, which also drops it from the keys' allowed lists. A role that a key in team `permanent` may call is never removed outright, so a flow cannot break without warning.
 
+### 2026-11-05: Tower part 1b, editing budgets and the key limit
+Agreed by the owner (Claude's proposal): tower keeps the order of limits (each key's budget within its team's, the teams within the global budget, the global budget below the OpenRouter key's monthly limit) and refuses a change that breaks it, saying why. Raising a limit is flagged as able to cost money: old and new figure, and what it means for a month at full use, then a confirmation. Lowering one below this month's spend is allowed, with a warning. Changes apply at once: the key limit through the management key, the rest through the gateway.
+
 ## Open
 
 ### Settle during design or phase 0
