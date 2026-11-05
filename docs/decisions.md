@@ -101,6 +101,11 @@ Decided by the owner: containers should always run in the background. `docker co
 
 Checked by the owner on `sandbox`, on branch `phase-0-walkthrough`: `./rapidselector.sh up` without `-d` recreated the three containers and returned to the prompt, with no `Limitation discarded` lines, and all three were `healthy` about a minute later, with ports as at B2.
 
+### 2026-11-05: Step B5, the stack fits in memory
+Measured on `sandbox` a few minutes after the containers were recreated, idle, with no model called yet. `free -h`: 2.3 GiB used, 5.6 GiB available, of 7.9 GiB, swap unused. Before the first start (B2) it was 1.0 GiB used and 6.8 GiB available, so the stack takes about 1.2–1.3 GiB. The biggest processes: `python3` at about 857 MiB, presumably Open WebUI, and `litellm` at about 593 MiB; the largest `postgres` process listed is about 27 MiB. Nothing needs changing. Use under load has not been measured; the models run elsewhere, so the Pi only handles the traffic. The chat page also opened as the existing admin account after the recreation, without asking to create one, so the account survived. It cost nothing.
+
+## Open
+
 ### Settle during design or phase 0
 
 1. **Is the loss really capped?** Test with a very small balance, since this costs a little real money. The docs mention negative balances without saying how far one can go (`provider-facts.md`). The test needs a cost ceiling agreed in advance.
@@ -109,7 +114,7 @@ Checked by the owner on `sandbox`, on branch `phase-0-walkthrough`: `./rapidsele
 4. ~~Is the Standard plan free of any subscription fee?~~ **Settled 2026-11-04:** no sign of a subscription or recurring fee after the first top-up, and OpenRouter's pricing page says "no minimums and no lock-in".
 5. **Do the wanted models have zero data retention hosts?** For example, `lfm-2.5-2.6b` had none listed. Every entry in the phase 0 starting set is on OpenRouter's list of zero data retention endpoints (2026-11-03); level 3 confirms they are honoured.
 6. **Management key expiry.** OpenRouter recommends an expiry date on every management key, and it cannot be changed after creation. Decide whether to use one, and how `tower` gets a new key before the old one expires.
-7. **Does the stack fit on the Pi?** Check that LiteLLM's images (including the Postgres variant) exist for arm64, and how much RAM LiteLLM and Open WebUI need. Open WebUI's local embedding and RAG features may need to be turned off.
+7. ~~Does the stack fit on the Pi?~~ **Settled 2026-11-05, while idle:** the images run on arm64 (B1a), and the stack takes about 1.3 GiB of the 8 GB (B5). Open WebUI's local embedding is off.
 8. ~~Is LiteLLM's spend log retention free or an Enterprise feature?~~ **Settled 2026-11-03:** free ("Retention and cleanup are open source"); set to `90d` in phase 0.
 9. ~~Which Open WebUI features call outside services, and how are they turned off?~~ **Settled 2026-11-03:** web search, image generation, the Ollama connection and direct connections are turned off with environment variables, and `ENABLE_PERSISTENT_CONFIG=False` keeps them off (phase 0 spec, section 4).
 10. **`tower` stack.** The owner chooses, after options and a recommendation are presented. Phase 1, first, together with the level of visual ambition (A clean and functional, B distinctive, C experimental; see the overall design, section 11).
