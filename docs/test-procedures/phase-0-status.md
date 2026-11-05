@@ -2,9 +2,9 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: check the new start command on `sandbox`, then B5
+## Next step: B5
 
-Steps A1, A2, A3, B1a, B1, B2, B3 and B4 are done. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup; these are on `phase-0-walkthrough` and not yet tried on the Pi. `sandbox` switches to that branch and runs `./rapidselector.sh up`: expect the containers recreated, no `Limitation discarded`, all `healthy`, and the chat login and keys kept. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
+Steps A1, A2, A3, B1a, B1, B2, B3 and B4 are done. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and the new `up` works there. The owner has not yet said whether the chat login survived the recreation: ask at B5. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
 
 ## How we work through the procedure
 
@@ -33,7 +33,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on `main` until the check above. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
+- Clone at `/home/pi/code/rapid-selector`, on `phase-0-walkthrough`. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
 - `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
 - The real stack started at B2. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
 - All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.

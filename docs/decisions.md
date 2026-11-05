@@ -99,6 +99,8 @@ Decided by the owner, after seeing `Limitation discarded` for all three containe
 ### 2026-11-05: `up` is always detached
 Decided by the owner: containers should always run in the background. `docker compose up` stays attached without `-d`, and neither a Compose file setting nor a `COMPOSE_*` variable changes that (`provider-facts.md`), so `./rapidselector.sh up` adds `-d` itself. `up -d` still works. Other commands, and calls with options before `up`, are passed on unchanged.
 
+Checked by the owner on `sandbox`, on branch `phase-0-walkthrough`: `./rapidselector.sh up` without `-d` recreated the three containers and returned to the prompt, with no `Limitation discarded` lines, and all three were `healthy` about a minute later, with ports as at B2.
+
 ### Settle during design or phase 0
 
 1. **Is the loss really capped?** Test with a very small balance, since this costs a little real money. The docs mention negative balances without saying how far one can go (`provider-facts.md`). The test needs a cost ceiling agreed in advance.
