@@ -2,9 +2,9 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: B6
+## Next step: C1
 
-Steps A1, A2, A3, B1a, B1, B2, B3, B4 and B5 are done. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and they work there. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
+All of A, and B1a to B6, are done. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and they work there. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
 
 ## How we work through the procedure
 
@@ -23,7 +23,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 | What | State |
 |---|---|
-| Balance | $5.00, nothing spent yet. $7.25 paid |
+| Balance | About $5.00: $0.00000978 spent at B6. $7.25 paid |
 | Inference key | `rapidselector-gateway`: limit $0.05, monthly reset. The value is in secrets-service, as `RAPIDSELECTOR_OPENROUTER_KEY` |
 | Management key | None. Only tower needs one, in phase 1 |
 | Auto top-up | Off, and no card on file (Google Pay through Stripe) |

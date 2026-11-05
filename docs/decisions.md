@@ -104,6 +104,9 @@ Checked by the owner on `sandbox`, on branch `phase-0-walkthrough`: `./rapidsele
 ### 2026-11-05: Step B5, the stack fits in memory
 Measured on `sandbox` a few minutes after the containers were recreated, idle, with no model called yet. `free -h`: 2.3 GiB used, 5.6 GiB available, of 7.9 GiB, swap unused. Before the first start (B2) it was 1.0 GiB used and 6.8 GiB available, so the stack takes about 1.2–1.3 GiB. The biggest processes: `python3` at about 857 MiB, presumably Open WebUI, and `litellm` at about 593 MiB; the largest `postgres` process listed is about 27 MiB. Nothing needs changing. Use under load has not been measured; the models run elsewhere, so the Pi only handles the traffic. The chat page also opened as the existing admin account after the recreation, without asking to create one, so the account survived. It cost nothing.
 
+### 2026-11-05: Step B6, the smoke test, and the first real spend
+On `sandbox`, `smoke-test.sh` got status 200 and a cost above zero for all four roles: `chat` $0.00000494, `classify` $0.00000108, `code` $0.00000126, `summarise` $0.00000250, in total $0.00000978. `openai/gpt-4o` and `/openrouter/v1/chat/completions` were both refused with 403, and it ended with `OK`. OpenRouter's activity page shows 4 requests, one each for the four pinned models, at $0.000004, $0.000001, $0.000002 and $0.000001: the gateway's figures cut off at six decimals, so the two agree. The balance and the key's usage were not read this time. The same page also has a table of the four models with figures from $0.0526 to $0.0952, which is not spend (the calls could not have cost that, and the key's $0.05 limit did not trigger); what it measures was not settled. The live `tests/check-prices.sh` passed for all 11 entries the same day.
+
 ## Open
 
 ### Settle during design or phase 0
