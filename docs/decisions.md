@@ -187,6 +187,9 @@ Decided by the owner from the builder check of the part 1a design: one release b
 ### 2026-11-05: Tower part 1a's design approved
 `superpowers/specs/2026-11-05-tower-part-1a-design.md`, approved by the owner after the builder check.
 
+### 2026-11-05: Tower part 1b, a change applies straight away, tested before the switch
+Decided by the owner while designing part 1b. A change made in tower applies at once, not as a draft: tower checks the rules, fetches the host's price, adds the new model under a temporary name, makes one test call there, and only if it answers with a cost above zero moves the role or name over; then it logs the change with an undo. Each step is shown live on the page with `htmx`. If the test fails, nothing changes for clients. Rejected: a staged draft applied in one go, and applying first then undoing on failure. The owner notes that clients must in any case be resilient to a failed call, as the README already asks.
+
 ## Open
 
 ### Settle during design or phase 0
