@@ -149,6 +149,9 @@ Pi 5, 8 GB, Docker with cgroup v2.
 - The kernel boots with `cgroup_disable=memory`, seen in `/proc/cmdline`, and `docker info` warns `No memory limit support` and `No swap limit support`.
 - With that, Docker silently drops `mem_limit`: `docker inspect` shows `HostConfig.Memory` as 0. `tests/chat.bats` also failed on `docker stats`' memory figure, which fits this; the figure itself was not seen.
 
+### Compose, 2026-11-05
+- `docker compose up` attaches by default and stops the containers when it exits; `-d`, `--detach` or `--wait` detach it. The environment variables page lists no `COMPOSE_*` variable for it. The service attribute `attach: false` only stops Compose collecting that service's logs. The services page's attributes from `links` onward were read in summary, not verbatim. Sources: https://docs.docker.com/reference/cli/docker/compose/up/, https://docs.docker.com/compose/how-tos/environment-variables/envvars/, https://docs.docker.com/reference/compose-file/services/
+
 ## Docker in the cloud sandbox
 
 ### 2026-11-03

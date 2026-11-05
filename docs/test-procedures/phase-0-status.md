@@ -2,9 +2,9 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: B4
+## Next step: check the new start command on `sandbox`, then B5
 
-Steps A1, A2, A3, B1a, B1, B2 and B3 are done and recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
+Steps A1, A2, A3, B1a, B1, B2, B3 and B4 are done. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup; these are on `phase-0-walkthrough` and not yet tried on the Pi. `sandbox` switches to that branch and runs `./rapidselector.sh up`: expect the containers recreated, no `Limitation discarded`, all `healthy`, and the chat login and keys kept. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
 
 ## How we work through the procedure
 
@@ -33,21 +33,21 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on `main`. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
+- Clone at `/home/pi/code/rapid-selector`, on `main` until the check above. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
 - `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
 - The real stack started at B2. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
 - All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.
 
 ### Repositories
 
-- **`rapid-selector`:** PR #2 is merged to `main`. Branch **`phase-0-walkthrough`** is pushed but has no PR yet. It holds the records of A1 to A3, and the Safety Retention check in `tests/check-prices.sh`. **Merge it before D3, or `sandbox`'s `tests/check-prices.sh` will not have that check.** This machine's checkout is on that branch.
+- **`rapid-selector`:** PR #2 is merged to `main`. Branch **`phase-0-walkthrough`** is pushed but has no PR yet. It holds the records from A1 on, the Safety Retention check in `tests/check-prices.sh`, the always-detached `up`, the removal of the memory limits and the README's setup. **Merge it before D3, or `sandbox`'s `tests/check-prices.sh` will not have that check.** This machine's checkout is on that branch.
 - **`production`:** the rapid-selector changes (#181) and the alert note (#183) are merged. This machine's checkout is on `main`, 2 commits behind, with a graphify file modified by its hook, not by us.
 
 ## To do before particular steps
 
 - **Before D2, the owner decides the monthly limit (open question 37).** VAT was not in the 400 NOK budget: $34 of credit costs about $44.84, and 400 NOK buys about $26.50–30.30. Ask for the receipt's breakdown and check the exchange rate. Lowering the limit also means changing the LiteLLM budgets to stay below it ($32 global in `gateway/config.yaml`; $8 and $24 for the teams, $4 and $1 for the keys in `scripts/setup-keys.sh`), `docs/decisions.md`, and the procedure and alert notes that quote $19.20 (20% of $24), then running `setup-keys.sh` and testing. Fees also weigh on D7: if the minimum fee is real, a small top-up pays proportionally more.
 - **Before D5, Claude must choose the temporary entry:** a real endpoint without zero data retention. The account now refuses it in up to three ways (the pin's `zdr: true`, `ZDR only`, and allowed providers). An endpoint at one of the four allowed hosts tests the data policy on its own, if one exists. Check `GET /api/v1/models/<model>/endpoints` against `/api/v1/endpoints/zdr`.
-- **B5** compares `free -h` with the figure noted at B2 (1.0 GiB used before the start), and Claude records whether the limits in `docker-compose.yml` need changing.
+- **B5** compares `free -h` with the figure noted at B2 (1.0 GiB used before the start), and Claude records whether the stack fits.
 - **C1:** only the Prometheus restart remains. The job is merged in `production`; check it is pulled where Prometheus runs.
 - **C2** runs in a separate local Claude Code session in the `production` repository.
 - **C5, the reboot,** also settles deferred finding 31.

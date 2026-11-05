@@ -65,6 +65,8 @@ Implemented following `superpowers/plans/2026-11-03-phase-0-foundation.md`; 79 l
 Option 3 of 3 in `superpowers/specs/2026-11-04-drain-test-fixes-design.md`, chosen by the owner. `scripts/drain-balance.sh` now sends rounds of parallel calls (default 5) instead of a burst after the first refusal, does not start a round that could pass `--max-usd`, and tells limit refusals from faults, the gateway's budget and temporary in-flight refusals. It halves `max_tokens` on a limit refusal, down to 16. Reasons: a passing 429 or 503 would have been reported as a working limit; D6 could have stopped with money left; only simultaneous calls can show a call crossing a limit. Added to the procedure: a level 1 run on `sandbox` before B2 (B1a), a reboot check (C5) and a budget alert test (D8). Corrected: D6 does not fire the alerts by itself. Results about simultaneous calls hold for a small balance on a new account (`provider-facts.md`).
 
 ### 2026-11-04: Memory limits are not enforced on the owner's Pis
+*Replaced by "Memory limits removed", 2026-11-05.*
+
 The kernel's memory control stays off on `sandbox`, and the limits stay in `docker-compose.yml`, where they work on any host that has it. Decided by the owner. Reason: they protect the host, not the budget; none of the owner's other containers have limits; and turning it on changes the whole host, `webserver` included. The cost: a memory leak in a service could fill the host, and `node_exporter` shows the host, not which container. To revisit if step B5 looks high or a host memory alert fires: the README has the one-line boot setting. `CLAUDE.md` changed with the owner's permission.
 
 ### 2026-11-04: Level 1 passes on `sandbox` (step B1a)
@@ -88,7 +90,14 @@ Done by the owner. `sandbox` is on `main`, and `hostname -I` gives `192.168.1.21
 ### 2026-11-05: Step B3, teams and keys registered
 `setup-keys.sh` printed the expected table: team `permanent` $8 and 4 names; team `experiments` $24 and 11 names; `node-red` in `permanent`, $4, 4 names, 30 calls a minute; `chat` in `experiments`, using the team's budget, 11 names; `smoke-test` in `experiments`, $1, 11 names. Budgets show the `30d` window. Whether they reset on the 1st, as LiteLLM's docs say, cannot be seen until a month has turned. It cost nothing.
 
-## Open
+### 2026-11-05: Step B4, the chat admin account
+The owner created the admin account in Open WebUI and sees all 11 names in the model list: 4 roles and 7 experiments. No chat message was sent, and it cost nothing.
+
+### 2026-11-05: Memory limits removed
+Decided by the owner, after seeing `Limitation discarded` for all three containers at B2. `mem_limit` is gone from `docker-compose.yml`, and `CLAUDE.md` changed by the same decision. Reason: the limits do nothing on the owner's hosts, and the warning appears at every start. The cost: on a host with memory control on, nothing now stops a leak in one container from filling the host; others using the repository must add limits themselves, and the README says so. To bring them back: the values were 512m for `db` and 1536m each for `gateway` and `chat`, and a Pi also needs `cgroup_enable=memory cgroup_memory=1` in `/boot/firmware/cmdline.txt` and a reboot, which affects the whole host.
+
+### 2026-11-05: `up` is always detached
+Decided by the owner: containers should always run in the background. `docker compose up` stays attached without `-d`, and neither a Compose file setting nor a `COMPOSE_*` variable changes that (`provider-facts.md`), so `./rapidselector.sh up` adds `-d` itself. `up -d` still works. Other commands, and calls with options before `up`, are passed on unchanged.
 
 ### Settle during design or phase 0
 
@@ -126,7 +135,7 @@ Minor, not fixed yet; each to be decided by the owner.
 27. ~~`drain-balance.sh`'s burst of 5 is outside `--max-usd`, and any non-200 counts as "refused".~~ **Settled 2026-11-04:** the burst is gone, rounds are checked against `--max-usd`, and refusals are sorted.
 28. ~~The status the gateway returns for a 402 from OpenRouter is not asserted.~~ **Settled 2026-11-04 (level 1):** 402 and 403 are passed on, asserted through `tests/drain.bats`. Level 3 shows OpenRouter's real answers.
 29. ~~The procedure lacks a live `tests/check-prices.sh` run before D3 and D4, and a reboot check (ports bound to the LAN address at boot).~~ **Settled 2026-11-04:** added before D3 and D6, and as step C5. Live check today: all 11 entries match.
-30. README gaps: `chmod 600` on `.env` and the token file; `setup-keys.sh` must be rerun after adding a model; rotating a `KEY_*` leaves the old key active; admin-UI edits to fields `setup-keys.sh` does not send stay.
+30. README gaps: `setup-keys.sh` must be rerun after adding a model; rotating a `KEY_*` leaves the old key active; admin-UI edits to fields `setup-keys.sh` does not send stay.
 31. The "database failing" alert may see a rise if Prometheus's first scrape lands while LiteLLM counts its start-up query failures; checked by the reboot at step C5.
 32. `tests/run.sh` has no guard against a host running the real stack. The test stack has its own project name (`rapidselector-test`, in `tests/compose.test.yml` and `tests/compose.fakes.yml`), so by reading the files its `down -v` should leave the real volumes alone, but both stacks use the same fixed container names, so starting it there fails. The README and step B1a say not to do it; a guard could refuse with a clear message. Not tried on a host with the real stack.
 33. Two timing checks in `tests/drain.bats` ("--parallel sends the calls of a round at once" and "the default is 5 calls at once") expect calls to arrive within 1.5 seconds of each other, which may fail spuriously on slower arm64 hardware. A longer `delay_ms` and a wider margin would keep the check.
