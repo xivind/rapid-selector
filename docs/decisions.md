@@ -196,6 +196,9 @@ Agreed by the owner (Claude's proposal): before removing a model, role or experi
 ### 2026-11-05: Tower part 1b, editing budgets and the key limit
 Agreed by the owner (Claude's proposal): tower keeps the order of limits (each key's budget within its team's, the teams within the global budget, the global budget below the OpenRouter key's monthly limit) and refuses a change that breaks it, saying why. Raising a limit is flagged as able to cost money: old and new figure, and what it means for a month at full use, then a confirmation. Lowering one below this month's spend is allowed, with a warning. Changes apply at once: the key limit through the management key, the rest through the gateway.
 
+### 2026-11-05: Tower part 1b, no undo button; a starting set and an export
+Decided by the owner. **No undo button:** too much for what it gives; the Log shows the old and new value of every change side by side, and a change is reset by hand through the normal editing, with the same checks. **Starting set:** the 11 models move from `gateway/config.yaml` to `gateway/starting-set.yaml`, in the same format; `config.yaml` keeps the general settings only. Tower loads the starting set into the gateway's database only when it has no models: on a fresh install, or once when 1b is deployed. **Export:** the current models, roles, prices, pins and budgets in that same format, usable as a starting set and as a snapshot. The level 1 tests load the starting set the same way, and those that read `config.yaml` directly change to the gateway's API.
+
 ## Open
 
 ### Settle during design or phase 0
