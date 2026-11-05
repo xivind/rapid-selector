@@ -1,30 +1,30 @@
 # Phase 0: where the walkthrough stands
 
-A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+A handoff between sessions, written 2026-11-04 and last updated at the end of 2026-11-05. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: D6 (the owner decides when), and D3's last call another day
+## Where we are (end of 2026-11-05)
 
-`gpt-oss-20b@deepinfra` got 429 from DeepInfra (`engine_overloaded`) three times; the other ten passed D3 and D4 (`docs/decisions.md`). If it answers, its host should show DeepInfra on OpenRouter's Logs page.
+- **Phase 0:** A1–A3, B1a, B1–B6, C1–C4, D1, D2, D4 and D5 are done and recorded in `docs/decisions.md`. D3 passed for 10 of 11 names. C5 waits for the move to `webserver`, by the owner's decision, so phase 0 is not verified until it has passed there.
+- **Tower:** the designs for part 1a (see, stop and check) and part 1b (full editing of models, roles, allowed names and budgets) are **approved**: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md` and `…-tower-part-1b-design.md`. Every decision behind them is in `docs/decisions.md` (2026-11-05 entries). No plan or code yet.
+- **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
 
-D1 is recorded: the key limit stops calls, but only after spend is counted, so it went 86% past. The owner accepted that (`docs/decisions.md`).
+## Next, in order (the owner picks)
 
-All of A and B, and C1 to C4, are done. C5 waits for the move to `webserver`, by the owner's decision, and phase 0 is not verified until it has passed. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and they work there. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
+1. **Check the 06:00 backup of 2026-11-06.** `home-assistant` pulled `production` at C1 and C3 installed the key, so `rapidselector-postgres` and `rapidselector-chat` should have run. If both are `backup_last_status` 1, that is E1: record the file sizes (for `min_bytes`), and raise the backup count from 9 to 11 as `grafana/rapidselector-alerts.md` in `production` describes ("Backup missing" rule, the Overview **Backup** panel, Loki Visualizations' **Backup Jobs OK**), from a Claude Code session in `production`.
+2. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once (the single-call command is in this session's D3 record: smoke-test key, `max_tokens` 256, `reasoning_effort` low, printing only the status and `x-litellm-response-cost`). If it answers, its host on OpenRouter's Logs page should be DeepInfra. If it keeps failing over days, the owner decides whether to re-pin it.
+3. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
+4. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
+5. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
 
-## Tower part 1: design in progress (brainstorming, 2026-11-05)
+## Things to remember
 
-Started while phase 0 waits for D6. Decided with the owner, all in `docs/decisions.md`: tower shows every setting and changes none (option B); look B, distinctive; stack 1 (FastAPI, Jinja2, own CSS, server-side SVG, htmx, Peewee and SQLite, pytest); USD only; today, this week (from Monday 00:00 UTC) and this month, with Grafana the same and longer; no history beyond that in tower; a "Log" section for kill switch changes and balance snapshots; the management key expires after a year, with a warning 30 days before. The arena and promptfoo wait (`docs/roadmap.md`, phase 2). Mockups are in `.superpowers/brainstorm/` (not committed). The docs research is in `docs/provider-facts.md` (2026-11-05 entries).
-
-**Part 1a's design is approved** (2026-11-05): `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md`. Next: its plan (superpowers:writing-plans), then 1b's, before any code. Building waits for D6 to D8 unless the owner decides otherwise. Part 1b's design is approved too. Building waits until D6 to D8 are done, unless the owner decides otherwise.
-
-Open points:
-- **OpenRouter's account settings** are left out of tower, by the owner's decision: no API, and a hand-kept record would go stale.
-- **Kill switch level 1** has to block each virtual key in turn (`/key/block`), as no call blocks them all; tower must also block keys added later. Releasing unblocks exactly those it blocked.
-- **Tower's gateway key:** a key owned by a `proxy_admin` user, narrowed with `allowed_routes`, instead of the master key (question 17). To try at level 1.
-- **Usage per role and model:** from `/user/daily/activity` or `/spend/logs`; to try at level 1 whether roles appear by their name. OpenRouter's `/api/v1/activity` covers completed days only, so today comes from the gateway and the key's `usage_daily`.
-- **Editing (part 1b), decided 2026-11-05:** models must then live only in the gateway's database, as a same-named model in `config.yaml` would be load-balanced with it (`provider-facts.md`). `config.yaml` keeps the general settings; the starting set becomes a seed tower loads on a fresh install. First thing to try: that `provider`, prices and `max_tokens` can be set through `/model/new`. Tower warns before renaming or removing a role a key uses.
-- **Part 1b design, in progress (2026-11-05):** what it covers is in "Tower changes models, roles and budgets…" and "Tower part 1b, a change applies straight away…" in `docs/decisions.md`. Removing something in use is agreed too. Everything else is agreed too (undo, starting set, export). Draft written and through the builder check: `docs/superpowers/specs/2026-11-05-tower-part-1b-design.md`. The owner chose full role editing (B). **Approved by the owner, 2026-11-05.**
-- **Order agreed with the owner:** design part 1a (viewing, kill switch, scheduled price check and smoke test) first, part 1b (editing) after.
-- **D1 bears on the kill switch:** the key limit stops calls late, so level 2 (disable the key) and level 1 are the fast stops; whether a disable takes effect at once is not documented.
+- **D1:** the key limit stops calls only after their spend is counted (86% past at D1); accepted by the owner. The gateway's budgets stay below the key limit, and tower's kill switch is the fast stop.
+- **D5:** the account's allowed-provider list refused a non-ZDR host; the data policy on its own cannot be tested at the four allowed hosts, as none has an ordinary endpoint without zero data retention.
+- **Config changes:** the gateway reads `gateway/config.yaml` from a mounted file, so after changing it run `./rapidselector.sh restart gateway`; `up` does not reload it.
+- **`tests/resilience.bats`** was edited (memory limits gone) but not run: run it at the next level 1 run.
+- **Findings 38 and 39** (Hugging Face fetch, LiteLLM's own retries) are new and open in `docs/decisions.md`.
+- **Tower, to try first when building:** usage per role from `/user/daily/activity` or `/spend/logs`; a `proxy_admin` key with `allowed_routes` (question 17); whether the management key is listed with its expiry; for 1b, that database models resolve `os.environ/RAPIDSELECTOR_OPENROUTER_KEY` and accept the pin, prices and `max_tokens` (if not, stop and ask the owner), and that the `/openrouter` pass-through stays refused.
+- **Mockups** from the design talk are in `.superpowers/brainstorm/` (not committed); the visual companion is stopped.
 
 ## How we work through the procedure
 
@@ -53,26 +53,25 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on `phase-0-walkthrough`. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
+- Clone at `/home/pi/code/rapid-selector`, on `phase-0-walkthrough`, pulled after D5. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
 - `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
 - The real stack started at B2. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
 - All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.
 
 ### Repositories
 
-- **`rapid-selector`:** PR #2 is merged to `main`. Branch **`phase-0-walkthrough`** is pushed but has no PR yet. It holds the records from A1 on, the Safety Retention check in `tests/check-prices.sh`, the always-detached `up`, the removal of the memory limits and the README's setup. **Merge it before D3, or `sandbox`'s `tests/check-prices.sh` will not have that check.** This machine's checkout is on that branch.
-- **`production`:** the rapid-selector changes (#181) and the alert note (#183) are merged. This machine's checkout is on `main`, 2 commits behind, with a graphify file modified by its hook, not by us.
+- **`rapid-selector`:** PR #2 is merged to `main`. Branch **`phase-0-walkthrough`** is pushed, with no PR yet. It holds the records from A1 on, the Safety Retention check, the always-detached `up`, the removal of the memory limits, the README's setup, the `llm` alias dropped, and both tower designs. This machine's checkout is on that branch.
+- **`production`:** the rapid-selector changes (#181) and the alert note (#183) are merged. On 2026-11-05 Claude pushed two small commits straight to `main`, with the owner's permission: the alert group named `LLM`, and the `llm` line removed from `nodered/create-container-nodered.sh`. This machine's checkout is on `main`, up to date, with graphify files modified by its hook, not by us. `home-assistant` and `messagebroker` pulled `main` during C1 and C4.
 
 ## To do before particular steps
 
 - **C5, the reboot,** also settles deferred finding 31.
-- **D1's expected result** is not known: whether simultaneous calls cross a key limit is what it tests. Key usage already includes B6's spend. What it shows holds for a small balance on a new account (`docs/provider-facts.md`).
 - **E1:** the "Also change" part of `grafana/rapidselector-alerts.md` in `production`, raising the backup count from 9 to 11, was held back from C2: the two new jobs have no `backup_last_success_timestamp_seconds` until their first success, so raising it earlier fires "Backup missing".
 - **E2:** Claude writes the restore commands then.
 
 ## Deferred, for the owner to decide
 
-Findings 20–25, 30 and 32–36 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
+Findings 20–25, 30, 32–36, 38 and 39 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
 
 ## For developers on this machine
 
@@ -85,5 +84,7 @@ This Chromebook has no Docker, so `tests/run.sh` does not work here. The previou
 - Put a stand-in `docker` that only does `exit 0` first on `PATH`, then `npx --yes bats@1.11.0 tests/drain.bats`.
 
 The tests that need real Docker (compose config, `docker inspect`, restarts) cannot run this way, and the owner runs those on `sandbox`.
+
+`tests/rapidselector.bats` and `tests/checks.bats` ran here on 2026-11-05 with the same stand-in `docker` and `tests/fakes/secrets_service.py` copied with its port changed to `127.0.0.1:18002`, started with `FAKE_SECRETS_FILE=tests/.artifacts/secrets.json` (a file holding `{}`); stop it by its process id afterwards.
 
 Never use `pkill -f` or `pgrep -f` with a pattern from your own command in the Bash tool: it matches the tool's shell. It killed a command and caused a false test failure in the previous session.
