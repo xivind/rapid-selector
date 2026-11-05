@@ -133,6 +133,15 @@ Sources: https://docs.litellm.ai/docs/proxy/cost_tracking, .../virtual_keys, ...
 - **Blocking:** `POST /key/block` and `/key/unblock` with `{"key": ...}`, one key at a time, not labelled Enterprise. No call blocks a team or all keys at once on these pages.
 - **Admin rights without the master key:** a key owned by a user with role `proxy_admin` can call admin routes, and `allowed_routes` can narrow it; `proxy_admin_viewer` sees all keys and spend but "cannot … make any changes", so presumably not block. Not labelled Enterprise. Bears on question 17.
 
+### Models through the API, checked in the docs 2026-11-05
+Sources: https://docs.litellm.ai/docs/proxy/model_management, .../configs, .../prod. Not yet tried on v1.106.6; nothing on these pages is marked Enterprise.
+- `POST /model/new`, `PATCH /model/{model_id}/update` (litellm_params or model_info) and `POST /model/delete` with `{"id": ...}` need `store_model_in_db: true`; otherwise `/model/new` fails. Models are stored in Postgres (`LiteLLM_ProxyModelTable`), survive restarts, and apply to new requests at once.
+- Custom `model_info` fields "pass straight through to `GET /model/info`". The pages do not show `extra_body`/`provider`, `max_tokens` or the per-token prices in an API body.
+- **Two sources of truth:** models in `config.yaml` keep working alongside, cannot be edited from the UI, and a database model with the same name "becomes an additional deployment that gets load balanced with it". So a pinned name must exist in one place only.
+- Stored provider credentials are encrypted with `LITELLM_SALT_KEY`.
+- `/config/update` writes `general_settings`, `router_settings` and `litellm_settings` keys into `LiteLLM_Config`; keys declared in `config.yaml` are locked (400).
+- With the database down, "the master key and models defined in the config file keep working"; management endpoints fail.
+
 ## Open WebUI
 
 ### Checked in the docs, 2026-11-03
