@@ -1,6 +1,6 @@
 # Tower, part 1a: see, stop and check
 
-A project: the first part of `tower`, the only interface rapid-selector builds. Status: draft, 2026-11-05, written from a design conversation with the owner; not yet through the builder check or approved.
+A project: the first part of `tower`, the only interface rapid-selector builds. Status: draft, 2026-11-05, written from a design conversation with the owner; through the builder check, the owner's answers written in; awaiting the owner's approval.
 
 Part 1b (changing models, roles and budgets from tower) gets its own design afterwards. The arena and benchmarks are phase 2.
 
@@ -87,7 +87,7 @@ Every setting tower can read, grouped:
 - **OpenRouter key:** limit, reset, usage, whether disabled, its masked label. From the management API.
 - **Management key:** days until it expires (decided: one year).
 - **Gateway settings:** global budget and window, spend log retention. From the gateway's API where it shows them; otherwise from `gateway/config.yaml`, mounted read-only into tower and labelled as the file. (Claude's call.)
-- **Open WebUI:** its non-secret settings, read from `docker-compose.yml`, mounted read-only into tower. (Claude's proposal; the owner has not yet confirmed it.)
+- **Open WebUI:** its non-secret settings, read from `docker-compose.yml`, mounted read-only into tower, and labelled "as in docker-compose.yml": they are what the file says, which is what the running container has unless the file was changed without recreating it. The page says these are changed in `docker-compose.yml`, then `./rapidselector.sh up`. (Confirmed by the owner.)
 - **Secrets:** tower's own secrets by name, shown only as set or not set. Tower is not given the others; the page says that Compose refuses to start the stack unless every secret in `.env.example` is set. (Claude's call: passing other services' secrets, or even a list of them, into tower would widen what it holds for little gain.)
 
 ### Log
@@ -107,7 +107,9 @@ Kill switch changes (who, when, which level, result), each price check and smoke
 
 **State shown** is read back from the source after every change: the keys' `blocked` flags in the gateway and the key's `disabled` flag at OpenRouter. If reading back fails, tower shows the state as unknown, in warning colours, not as engaged.
 
-**Engaging** is one click and a confirmation in the page (no browser pop-ups). **Releasing** is a deliberate action: a separate button and the word `release` typed. Every change is written to the Log with the time and result.
+**Engaging** is one click and a confirmation in the page (no browser pop-ups). **Releasing** is a deliberate action, one level at a time (decided by the owner): a separate button per level and the word `release` typed. Releasing level 2 re-enables the OpenRouter key and leaves level 1 engaged; releasing level 1 then unblocks the keys. So nothing goes from everything stopped to everything running in one click. Every change is written to the Log with the time and result.
+
+**Stopped outside tower** (decided by the owner): if the OpenRouter key is disabled, or a virtual key blocked, by other means, such as the README's manual ways, tower shows it as engaged and marked "outside tower", and never releases it. The page says where to release it: OpenRouter's dashboard, or the gateway's admin UI. Tower releases only what tower engaged.
 
 **Whether OpenRouter's disable takes effect at once is not documented.** It is tested at level 3.
 
