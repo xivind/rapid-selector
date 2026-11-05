@@ -1,6 +1,6 @@
 # Tower, part 1b: change models, roles and budgets
 
-A project: the second part of `tower`, built after part 1a (`2026-11-05-tower-part-1a-design.md`), whose look, stack, login, data and tests it shares. Status: draft, 2026-11-05, written from a design conversation with the owner; not yet through the builder check or approved.
+A project: the second part of `tower`, built after part 1a (`2026-11-05-tower-part-1a-design.md`), whose look, stack, login, data and tests it shares. Status: draft, 2026-11-05, written from a design conversation with the owner; through the builder check, one question to the owner open; not yet approved.
 
 ## Why
 
@@ -54,8 +54,16 @@ classify → mistral-small-3.2-24b @ DeepInfra fp8
 3. **Cost shown and confirmed.** A new model or a model swap can cost money (`CLAUDE.md`), so tower shows its price and the test call's worst case before going on.
 4. **Test call.** The new entry is added under a temporary name, the smoke-test call is made to it with `KEY_SMOKE_TEST`, and it must answer with a recorded cost above zero. If it fails, the temporary entry is removed, nothing changes for clients, and tower shows why.
 5. **Switch.** The role or name moves to the new entry, and the old entry and the temporary name are removed, so there is never more than one entry per name.
-6. **Keys.** Allowed names follow: a new experiment name is added to team `experiments` and its keys; a removed one is taken off; roles stay in team `permanent`'s and `node-red`'s lists.
+6. **Keys.** Allowed names follow, and the temporary name is allowed for the smoke-test key during the test call only: a new experiment name is added to team `experiments` and its keys; a removed one is taken off; roles stay in team `permanent`'s and `node-red`'s lists.
 7. **Logged** with time, what changed, the old and the new value side by side, and the test call's result and cost.
+
+## Experiment names
+
+An experiment name is always built from its model and host, `<model>@<host>`, so it tells the truth. Moving an experiment to another host is therefore a removal and an addition. A name that Open WebUI uses for titles (`TASK_MODEL_EXTERNAL` in `docker-compose.yml`, which tower reads) cannot be removed from tower; the page says to change `docker-compose.yml` first. (Claude's calls.)
+
+## Where the key comes from
+
+New entries refer to the OpenRouter key as `os.environ/RAPIDSELECTOR_OPENROUTER_KEY`, which the gateway resolves itself, so tower never holds the key. **If level 1 shows that v1.106.6 does not resolve that reference for models stored in its database, the build stops and the owner decides**: a stored LiteLLM credential risks handing the `/openrouter` pass-through, which records $0 spend, a real key again, and giving tower the key breaks `CLAUDE.md`'s principle 2.
 
 ## Removing something in use
 
@@ -63,13 +71,21 @@ Before removing a model, role or experiment name, tower shows what uses it: whic
 
 ## Budgets and the key limit
 
-- Tower keeps the order of limits: each key's budget within its team's, the teams within the gateway's global budget, the global budget below the OpenRouter key's monthly limit. A change that breaks it is refused, saying why.
+- Tower keeps the order of limits: each key's own budget at most its team's; the team budgets added together at most the gateway's global budget (today 8 + 24 = 32); the key budgets that are set, added together, at most the global budget (`CLAUDE.md`; today 4 + 1); and the global budget strictly below the OpenRouter key's monthly limit (today 32 < 35). A key without a budget of its own, such as `chat`, uses its team's and is not counted in the sums. A change that breaks this is refused, saying why. (Claude's reading, which today's setup meets.)
 - Raising a limit is flagged as able to cost money: old and new figure, and what it means for a month at full use, then a confirmation.
 - Lowering one below this month's spend is allowed, with a warning.
 - Changes apply at once: the key limit with `PATCH /api/v1/keys/{hash}` and the management key; team and key budgets through the gateway's `/team/update` and `/key/update`; the global budget through `/config/update` if it is not set in `config.yaml` (keys set there are locked), which decides where the global budget lives (left to the builder after trying it).
 - `scripts/setup-keys.sh` stays for a fresh install and the terminal; it must not undo budgets set in tower without saying so. How the two stay consistent is for the builder, with the owner told the result.
 
 ## Starting set and export
+
+**The one-time move, without an outage** (Claude's call): tower loads the 11 models into the database while `config.yaml` still has them. The database entries are identical to the file's, same pin and price, so LiteLLM's load-balancing between the two copies sends every call to the same host. Only when all 11 have loaded and passed does `config.yaml`'s model list go and the gateway restart, so there is never a moment without roles. If any entry fails, tower removes what it loaded and nothing changes; the owner is told which entry failed and why.
+
+**Prices on loading** (Claude's call): the price is fetched from OpenRouter, as for any change. Where it differs from the file's, tower lists the differences before loading and asks for confirmation; an old export therefore loads at today's prices, with the changes shown.
+
+**Test calls on loading** use the gateway's master-key access through tower's own key, not `KEY_SMOKE_TEST`, so a fresh install does not need `setup-keys.sh` to have run first. (Claude's call.)
+
+**Budgets in an export** are applied when it is loaded as a starting set; a fresh install without an export uses `setup-keys.sh`'s figures. (Claude's call.)
 
 - The 11 models move from `gateway/config.yaml` to `gateway/starting-set.yaml`, in the same format. `config.yaml` keeps the general settings only.
 - Tower loads the starting set into the gateway's database **only when the database has no models**: on a fresh install, or once when 1b is deployed. Each entry goes through the same rules and price checks as a change; the test calls run as one smoke test, with its cost shown first. After that tower never reads the file again.
@@ -78,10 +94,10 @@ Before removing a model, role or experiment name, tower shows what uses it: whic
 ## Testing
 
 - **Level 1:** `pytest` for the rules, the price lookup, the order of limits and the removal rule; tower against the real LiteLLM image with `store_model_in_db: true` and the fake upstream, extended as in 1a. Covers: a change that passes; each rule broken; a failed test call leaving nothing changed; never two entries with one name; removing a role a `permanent` key may call is refused; the starting set loads once and only into an empty database; the export loads back as a starting set; no secret in any page, log or export.
-- **First to try at level 1:** that `/model/new` and `PATCH /model/{id}/update` accept `extra_body.provider`, the per-token prices, `max_tokens` and custom `model_info` fields, and that the gateway records those prices; how a temporary name behaves for the test call.
+- **First to try at level 1:** that a database model with `api_key: os.environ/RAPIDSELECTOR_OPENROUTER_KEY` is resolved by the gateway and the `/openrouter` pass-through stays refused; that `/model/new` and `PATCH /model/{id}/update` accept `extra_body.provider`, the per-token prices, `max_tokens` and custom `model_info` fields, and that the gateway records those prices; how a temporary name behaves for the test call.
 - **Existing tests:** the level 1 tests load the starting set the same way; those that read `config.yaml` directly change to the gateway's API.
 - **Level 2 and 3 (owner, on the Pi):** a test procedure written with the plan: the one-time move of the 11 models, with the smoke test; a role swapped from tower and called from Node-RED; a budget raised and lowered; the key limit changed and read back in OpenRouter's dashboard.
 
 ## Left to the builder
 
-The editing forms and their layout within look B, the temporary name's format, how live progress is streamed (polling or server-sent events), the Log's schema additions, the export's file name, and where the global budget lives after trying `/config/update`.
+How the switch is done (for example updating the entry in place with the tested settings, so a name never has two entries or none), refusing test calls while kill switch level 1 is engaged, clearing temporary entries left after a crash, pointing `tests/check-prices.sh` at the gateway's API, the routes tower's gateway key needs, the editing forms and their layout within look B, the temporary name's format, how live progress is streamed (polling or server-sent events), the Log's schema additions, the export's file name, and where the global budget lives after trying `/config/update`.
