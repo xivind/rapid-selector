@@ -159,6 +159,9 @@ With the temporary entry `zdr-negative-test` (`openai/gpt-oss-20b` pinned to `da
 ### 2026-11-05: Tower shows every setting, and changes none
 Decided by the owner while designing tower part 1 (option B of 3; A was git only with nothing shown, C was changing roles and models from tower). Tower shows every setting, neatly organised: each role and experiment name with its model, host pin, price, default `max_tokens` and zero data retention; teams and keys with budgets, spend, resets, allowed names and rate limits; the OpenRouter key's limit, usage and reset; whether the latest price check passed; Open WebUI's settings; and OpenRouter's account settings. Secret values are shown only as set or not set. Changes still go through `gateway/config.yaml` and `scripts/setup-keys.sh` in git, the price check and the smoke test. Reason: one place to see the whole setup, without a second way to change it. How tower reads Open WebUI's and OpenRouter's account settings is for the design.
 
+### 2026-11-05: Tower's look is "distinctive" (level B)
+Chosen by the owner from three mockups of the first screen: A clean and functional (the production stack's Bootstrap look), B distinctive, C experimental (interactive D3 or canvas maps). B: a visual identity of its own, shown as dark, warm and typographic, a nod to Bush's microfilm machine, with custom but simple charts. Settles the first half of question 10; the stack is next.
+
 ## Open
 
 ### Settle during design or phase 0
