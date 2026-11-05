@@ -2,7 +2,7 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: D5, then D3's last call another day
+## Next step: D6 (the owner decides when), and D3's last call another day
 
 `gpt-oss-20b@deepinfra` got 429 from DeepInfra (`engine_overloaded`) three times; the other ten passed D3 and D4 (`docs/decisions.md`). If it answers, its host should show DeepInfra on OpenRouter's Logs page.
 
@@ -49,7 +49,6 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ## To do before particular steps
 
-- **D5:** the entry is chosen (`docs/decisions.md`): `openai/gpt-oss-20b:batch` at `deepinfra/bf16`.
 - **C5, the reboot,** also settles deferred finding 31.
 - **D1's expected result** is not known: whether simultaneous calls cross a key limit is what it tests. Key usage already includes B6's spend. What it shows holds for a small balance on a new account (`docs/provider-facts.md`).
 - **E1:** the "Also change" part of `grafana/rapidselector-alerts.md` in `production`, raising the backup count from 9 to 11, was held back from C2: the two new jobs have no `backup_last_success_timestamp_seconds` until their first success, so raising it earlier fires "Backup missing".

@@ -153,6 +153,9 @@ Claude checked every non-free endpoint OpenRouter lists against `/api/v1/endpoin
 
 First try, the same day: refused with HTTP 404, "openai/gpt-oss-20b:batch cannot be used with the chat/completions endpoint (adapter DeepInfraBatchAdapter)", so the data policy was not tested. Second choice: `openai/gpt-oss-20b` at `darkbloom/fp8` ($0.018 / $0.09 per million tokens), not on the zero data retention list and not an allowed provider. A refusal then shows that the account blocks it, through the provider list, the data policy or both, which is what the procedure accepts; the data policy alone cannot be tested at the four allowed providers, as none has an ordinary endpoint without zero data retention. Also found: the gateway reads `gateway/config.yaml` through a mounted file, so `up` does not reload it, and the procedure and README now say `restart gateway`.
 
+### 2026-11-05: Step D5, an endpoint outside the account's settings is refused
+With the temporary entry `zdr-negative-test` (`openai/gpt-oss-20b` pinned to `darkbloom/fp8`, which has no zero data retention) and the master key: HTTP 404 from OpenRouter, "No allowed providers are available for the selected model … your account's allowed-providers setting permits only: coreweave, deepinfra, cloudflare, siliconflow", `failed_routing_step` "Filter by Allowed Providers". The gateway passed it on as 404 and tried no fallback. Nothing was charged. So the account's allowed-provider list stopped it, before the data policy was reached; the data policy on its own stays untested, since no allowed provider has an ordinary endpoint without zero data retention (see "Step D5's temporary entry"). The script that added the entry is deleted.
+
 ## Open
 
 ### Settle during design or phase 0
