@@ -55,7 +55,7 @@ D6 will not fire the alerts by itself. The budget rules need under 20% of a team
 
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
-| E1 | After the first nightly backup run, check `backup_last_status` for `rapidselector-postgres` and `rapidselector-chat` in Grafana or Prometheus | Both 1 | Both values and the file sizes, so `min_bytes` can be set | 0 |
+| E1 | After the first nightly backup run, check `backup_last_status` for `rapidselector-postgres` and `rapidselector-chat` in Grafana or Prometheus | Both 1 | Both values and the file sizes, so `min_bytes` can be set. Then raise the backup count from 9 to 11, as `grafana/rapidselector-alerts.md` in `production` describes | 0 |
 | E2 | **Restore rehearsal:** Claude gives you the commands to restore the newest dump into a separate Compose project on `sandbox` and call it with `KEY_NODE_RED` | The call is answered | The result | under $0.001 |
 | E3 | **First real use:** a Node-RED flow with an HTTP request node that calls `classify` at `http://llm:4000/v1/chat/completions` with `KEY_NODE_RED` | An answer | That it works | under $0.001 |
 
