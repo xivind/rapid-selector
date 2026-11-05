@@ -215,7 +215,7 @@ All limits are in USD and reset on the 1st of the month at 00:00 UTC.
 
 Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($35, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
-Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`.
+Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file.
 
 ## Calling a model from Node-RED or an app
 
