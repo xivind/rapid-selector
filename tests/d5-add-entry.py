@@ -10,15 +10,15 @@ p = pathlib.Path(__file__).resolve().parent.parent / "gateway" / "config.yaml"
 entry = """  # TEMPORARY, step D5: an endpoint without zero data retention. Never commit.
   - model_name: zdr-negative-test
     litellm_params:
-      model: openrouter/openai/gpt-oss-20b:batch
+      model: openrouter/openai/gpt-oss-20b
       api_key: os.environ/RAPIDSELECTOR_OPENROUTER_KEY
       max_tokens: 16
-      input_cost_per_token: 0.000000024
-      output_cost_per_token: 0.000000112
+      input_cost_per_token: 0.000000018
+      output_cost_per_token: 0.00000009
       extra_body:
         provider:
-          order: ["deepinfra/bf16"]
-          only: ["deepinfra/bf16"]
+          order: ["darkbloom/fp8"]
+          only: ["darkbloom/fp8"]
           allow_fallbacks: false
           zdr: true
           data_collection: deny
