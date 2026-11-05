@@ -188,8 +188,8 @@ Minor, not fixed yet; each to be decided by the owner.
 34. `drain-balance.sh --parallel` with no value exits 1 with no message, from `shift 2` under `set -e`. The other value flags are parsed the same way. Harmless, since no key exists yet.
 35. `api` in `scripts/lib.sh` has no `--max-time`, so a hung gateway can block `drain-balance.sh`'s summary and the deletion of the temporary key `drain-test`.
 36. Gaps in `tests/drain.bats`: no test has a fault and a limit refusal in the same round, or a limit and an in-flight refusal in the same round, and SIGINT is not tested, only TERM (the final review tried INT by hand, and it works).
-37b. *(2026-11-05, seen at D3)* The gateway's log has "You are sending unauthenticated requests to the HF Hub", so LiteLLM fetches something from Hugging Face, probably a tokenizer for counting tokens. No prompt is involved as far as is known, but it is an outside call nobody chose. Find out what it fetches and whether it can be turned off or pinned.
-37c. *(2026-11-05, seen at D3)* LiteLLM retried a 429 twice by itself ("LiteLLM Max Retries: 2"), so one client call can be three calls upstream. A refused call costs nothing, but a retried call that timed out might. The README tells clients to retry at most once, which on top of this makes up to six. Decide whether to set `num_retries`.
+38. *(2026-11-05, seen at D3)* The gateway's log has "You are sending unauthenticated requests to the HF Hub", so LiteLLM fetches something from Hugging Face, probably a tokenizer for counting tokens. No prompt is involved as far as is known, but it is an outside call nobody chose. Find out what it fetches and whether it can be turned off or pinned.
+39. *(2026-11-05, seen at D3)* LiteLLM retries 403, 429 and 503 twice by itself, as level 1 already showed (`provider-facts.md`), and the gateway's log confirmed it for a real 429. One client call can be three calls upstream, and with the README's one client retry, six. A refused call costs nothing; a retried call that timed out might. Decide whether to set `num_retries`.
 
 ### Settle later
 
