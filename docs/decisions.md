@@ -116,6 +116,9 @@ Created through the Grafana MCP from a separate session in the `production` repo
 ### 2026-11-05: Step C3, the backup key
 On `sandbox`, the user `rapidselector-backup` and `/usr/local/bin/rapidselector-export.sh` were installed, with `home-assistant`'s new key restricted to that script. From `home-assistant`, `postgres` returned a dump ending in `-- PostgreSQL database dump complete`, and `chat` returned paths under `app/backend/data/`, with `rapidselector-chat` stopped and started again; all three services were `healthy` afterwards. The user is in the `docker` group, so its forced command is what limits it. The chat backup holds `cache/embedding/models/`, though embeddings are off and no download was seen; to look at with the file sizes at E1. The owner keeps `grafana/rapidselector-alerts.md` in `production`. It cost nothing.
 
+### 2026-11-05: Step C4, Node-RED can reach the gateway (router alias still open)
+On `messagebroker`, with a fresh Node-RED backup first (`ok`), the owner ran `nodered/create-container-nodered.sh` as it is. That script deletes the image and takes the newest, but Node-RED stayed at v5.0.9. The container's hosts and volume matched the script beforehand. Afterwards it was `healthy`, flows started with no errors or missing nodes, `/etc/hosts` has `192.168.1.212 llm`, it reached `http://llm:4000/metrics/`, and the owner checked the flows in the editor. The router alias and `ping llm` remain. It cost nothing.
+
 ## Open
 
 ### Settle during design or phase 0

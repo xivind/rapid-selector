@@ -2,7 +2,7 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: C4
+## Next step: C4's router alias
 
 All of A and B, and C1 to C3, are done. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and they work there. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
 
@@ -48,7 +48,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 - **Before D2, the owner decides the monthly limit (open question 37).** VAT was not in the 400 NOK budget: $34 of credit costs about $44.84, and 400 NOK buys about $26.50–30.30. Ask for the receipt's breakdown and check the exchange rate. Lowering the limit also means changing the LiteLLM budgets to stay below it ($32 global in `gateway/config.yaml`; $8 and $24 for the teams, $4 and $1 for the keys in `scripts/setup-keys.sh`), `docs/decisions.md`, and the procedure and alert notes that quote $19.20 (20% of $24), then running `setup-keys.sh` and testing. Fees also weigh on D7: if the minimum fee is real, a small top-up pays proportionally more.
 - **Before D5, Claude must choose the temporary entry:** a real endpoint without zero data retention. The account now refuses it in up to three ways (the pin's `zdr: true`, `ZDR only`, and allowed providers). An endpoint at one of the four allowed hosts tests the data policy on its own, if one exists. Check `GET /api/v1/models/<model>/endpoints` against `/api/v1/endpoints/zdr`.
 - **C5, the reboot,** also settles deferred finding 31.
-- **C4:** the owner chose to run `nodered/create-container-nodered.sh` as it is, which also upgrades Node-RED to the latest image. Note the old version first, so it can be pinned to go back.
+- **C4:** Node-RED is done. Only the alias `llm` → `sandbox` on the router and `ping llm` remain.
 - **D1's expected result** is not known: whether simultaneous calls cross a key limit is what it tests. Key usage already includes B6's spend. What it shows holds for a small balance on a new account (`docs/provider-facts.md`).
 - **E1:** the "Also change" part of `grafana/rapidselector-alerts.md` in `production`, raising the backup count from 9 to 11, was held back from C2: the two new jobs have no `backup_last_success_timestamp_seconds` until their first success, so raising it earlier fires "Backup missing".
 - **E2:** Claude writes the restore commands then.
