@@ -17,7 +17,7 @@ Started while phase 0 waits for D6. Decided with the owner, all in `docs/decisio
 Next: settle the open points below with the owner, then write `docs/superpowers/specs/2026-11-0X-tower-part-1-design.md`, run the builder check, and get the owner's approval before any plan or code. Building waits until D6 to D8 are done, unless the owner decides otherwise.
 
 Open points:
-- **OpenRouter's account settings** (zero data retention, allowed providers, data training, auto top-up) have no API. Tower can show them only as recorded by hand, with the date they were last checked. For the owner to decide.
+- **OpenRouter's account settings** are left out of tower, by the owner's decision: no API, and a hand-kept record would go stale.
 - **Open WebUI's settings** are only in `docker-compose.yml`. Claude's proposal: tower reads that file, mounted read-only, and shows `chat`'s non-secret variables.
 - **Kill switch level 1** has to block each virtual key in turn (`/key/block`), as no call blocks them all; tower must also block keys added later. Releasing unblocks exactly those it blocked.
 - **Tower's gateway key:** a key owned by a `proxy_admin` user, narrowed with `allowed_routes`, instead of the master key (question 17). To try at level 1.
