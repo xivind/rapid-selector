@@ -140,6 +140,9 @@ Decided by the owner, who wanted a round number and can change it later in OpenR
 ### 2026-11-05: Step D2, the key limit raised to $35
 Set by the owner on OpenRouter's Keys page. `GET /api/v1/key` with the gateway's key: `limit` 35, `limit_reset` monthly, `limit_remaining` 34.906750225, `usage_monthly` 0.093249775. It cost nothing.
 
+### 2026-11-05: Step D3, spend per model (one model still to answer)
+`tests/check-prices.sh`: `ok` for all 11 entries. `smoke-test.sh --all`: 10 names with 200 and a cost above zero, `qwen3.8-2.4t-a95b@siliconflow` the largest at $0.00023; both probes refused with 403; $0.00026194 in total. `gpt-oss-20b@deepinfra` got 429. The gateway's log shows it came from DeepInfra through OpenRouter: "temporarily rate-limited upstream", `provider_error_code` `engine_overloaded`, `limit_source` `upstream_provider_shared_pool`, passed on with no fallback, as the pin requires, after LiteLLM retried twice. The model is to be called once more.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -185,6 +188,8 @@ Minor, not fixed yet; each to be decided by the owner.
 34. `drain-balance.sh --parallel` with no value exits 1 with no message, from `shift 2` under `set -e`. The other value flags are parsed the same way. Harmless, since no key exists yet.
 35. `api` in `scripts/lib.sh` has no `--max-time`, so a hung gateway can block `drain-balance.sh`'s summary and the deletion of the temporary key `drain-test`.
 36. Gaps in `tests/drain.bats`: no test has a fault and a limit refusal in the same round, or a limit and an in-flight refusal in the same round, and SIGINT is not tested, only TERM (the final review tried INT by hand, and it works).
+37b. *(2026-11-05, seen at D3)* The gateway's log has "You are sending unauthenticated requests to the HF Hub", so LiteLLM fetches something from Hugging Face, probably a tokenizer for counting tokens. No prompt is involved as far as is known, but it is an outside call nobody chose. Find out what it fetches and whether it can be turned off or pinned.
+37c. *(2026-11-05, seen at D3)* LiteLLM retried a 429 twice by itself ("LiteLLM Max Retries: 2"), so one client call can be three calls upstream. A refused call costs nothing, but a retried call that timed out might. The README tells clients to retry at most once, which on top of this makes up to six. Decide whether to set `num_retries`.
 
 ### Settle later
 
