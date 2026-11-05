@@ -110,6 +110,9 @@ On `sandbox`, `smoke-test.sh` got status 200 and a cost above zero for all four 
 ### 2026-11-05: Step C1, Prometheus watches the gateway
 On `home-assistant`, the owner pulled the `production` repository and restarted Prometheus. The target `http://sandbox:4000/metrics/` for job `rapidselector-gateway` is `up`, with no error. It cost nothing.
 
+### 2026-11-05: Step C2, the alert rules
+Created through the Grafana MCP from a separate session in the `production` repository: all 8 rules in folder Alerts, evaluated every 60 seconds, read back as matching the notes, and none firing. Grafana went from 19 to 27 rules. The owner named the group `LLM` instead of `rapid-selector`; the rules keep their `rapid-selector:` names. Three rules are `Normal`, and five are `Normal (NoData)`, as nothing has happened yet for them to measure. The backup count stays at 9 until E1.
+
 ## Open
 
 ### Settle during design or phase 0

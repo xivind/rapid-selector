@@ -31,7 +31,7 @@ We go through this together: Claude walks you through each step, you say what yo
 | # | Do | You should see | Report back | Cost |
 |---|---|---|---|---|
 | C1 | The `production` changes are already merged (#181). Pull them where Prometheus runs, and restart Prometheus | Target `rapidselector-gateway` is `up` in Prometheus | Target status | 0 |
-| C2 | In a local Claude Code session in the `production` repository (with `GRAFANA_MCP_TOKEN` set), create the alert rules from `grafana/rapidselector-alerts.md` through the Grafana MCP | The rules in folder **Alerts**, group **rapid-selector** | That they exist | 0 |
+| C2 | In a local Claude Code session in the `production` repository (with `GRAFANA_MCP_TOKEN` set), create the alert rules from `grafana/rapidselector-alerts.md` through the Grafana MCP | The rules in folder **Alerts**, group **LLM** | That they exist | 0 |
 | C3 | Install the forced-command SSH key for the backup jobs on `sandbox`, as described in `backup-orchestrator/README.md` | | That it is installed | 0 |
 | C4 | Add `--add-host="llm:<sandbox's address>"` to Node-RED (already in the branch), restart Node-RED. Create the alias `llm` → `sandbox` on the router | `ping llm` from a computer answers from sandbox's address | The ping result | 0 |
 | C5 | **Reboot check.** `sudo reboot`. When sandbox is back, wait 10 minutes (chat takes a few minutes to start). Then `ss -tln '( sport = :4000 or sport = :4010 )'` and `./rapidselector.sh ps`, and look at the alert rules | Both ports listen on sandbox's LAN address only, never `0.0.0.0`. All three services `healthy`. "rapid-selector: database failing" has not fired | The `ss` and `ps` output, and the state of that rule | 0 |
