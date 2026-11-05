@@ -59,4 +59,4 @@ D6 will not fire the alerts by itself. The budget rules need under 20% of a team
 | E2 | **Restore rehearsal:** Claude gives you the commands to restore the newest dump into a separate Compose project on `sandbox` and call it with `KEY_NODE_RED` | The call is answered | The result | under $0.001 |
 | E3 | **First real use:** a Node-RED flow with an HTTP request node that calls `classify` at `http://sandbox:4000/v1/chat/completions` with `KEY_NODE_RED` | An answer | That it works | under $0.001 |
 
-When every step is done and recorded, phase 0 is verified.
+When every step is done and recorded, phase 0 is verified. C5 is done last, on `webserver`, after the move (`decisions.md`).

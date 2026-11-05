@@ -122,6 +122,9 @@ On `messagebroker`, with a fresh Node-RED backup first (`ok`), the owner ran `no
 ### 2026-11-05: Clients call the host by name
 Clients reach the gateway at the host's own name, today `http://sandbox:4000`, not through an alias `llm`. Decided by the owner, who has a Google Nest router and doubted it can hold an alias. Reason: it matches how everything else in the home is called, and moving to `webserver` is a one-time change. The cost: every flow and app that calls the gateway must be edited at the move. Node-RED already has `sandbox` in its `--add-host` list.
 
+### 2026-11-05: Step C5, the reboot check, waits for the move to `webserver`
+Decided by the owner. The check still has to pass, so phase 0 is not verified until it has, and finding 31 stays open. It does not protect the budget, so section D goes ahead without it. The cost: until it is run, it is not known that the stack comes back by itself after a reboot on the LAN address. If `sandbox` restarts unexpectedly, check `./rapidselector.sh ps` and `ss -tln`.
+
 ## Open
 
 ### Settle during design or phase 0
