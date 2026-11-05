@@ -107,6 +107,9 @@ Measured on `sandbox` a few minutes after the containers were recreated, idle, w
 ### 2026-11-05: Step B6, the smoke test, and the first real spend
 On `sandbox`, `smoke-test.sh` got status 200 and a cost above zero for all four roles: `chat` $0.00000494, `classify` $0.00000108, `code` $0.00000126, `summarise` $0.00000250, in total $0.00000978. `openai/gpt-4o` and `/openrouter/v1/chat/completions` were both refused with 403, and it ended with `OK`. OpenRouter's activity page shows 4 requests, one each for the four pinned models, at $0.000004, $0.000001, $0.000002 and $0.000001: the gateway's figures cut off at six decimals, so the two agree. The balance and the key's usage were not read this time. The same page also has a table of the four models with figures from $0.0526 to $0.0952, which is not spend (the calls could not have cost that, and the key's $0.05 limit did not trigger); what it measures was not settled. The live `tests/check-prices.sh` passed for all 11 entries the same day.
 
+### 2026-11-05: Step C1, Prometheus watches the gateway
+On `home-assistant`, the owner pulled the `production` repository and restarted Prometheus. The target `http://sandbox:4000/metrics/` for job `rapidselector-gateway` is `up`, with no error. It cost nothing.
+
 ## Open
 
 ### Settle during design or phase 0
