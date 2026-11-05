@@ -1,6 +1,6 @@
 # Tower, part 1a: see, stop and check
 
-A project: the first part of `tower`, the only interface rapid-selector builds. Status: draft, 2026-11-05, written from a design conversation with the owner; through the builder check, the owner's answers written in; awaiting the owner's approval.
+A project: the first part of `tower`, the only interface rapid-selector builds. Status: approved by the owner, 2026-11-05, after the builder check. Next: the implementation plan.
 
 Part 1b (changing models, roles and budgets from tower) gets its own design afterwards. The arena and benchmarks are phase 2.
 

@@ -184,6 +184,9 @@ To check before the design relies on it: that the open-source gateway stores mod
 ### 2026-11-05: Tower's kill switch is released one level at a time
 Decided by the owner from the builder check of the part 1a design: one release button per level, stepping down from level 2 to level 1 to all clear; what was stopped outside tower is shown as such and never released by tower. Also confirmed: Open WebUI's settings are shown as written in `docker-compose.yml`, with a note that they are changed there.
 
+### 2026-11-05: Tower part 1a's design approved
+`superpowers/specs/2026-11-05-tower-part-1a-design.md`, approved by the owner after the builder check.
+
 ## Open
 
 ### Settle during design or phase 0
