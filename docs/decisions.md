@@ -79,6 +79,9 @@ Created by the owner as a workspace API key: `rapidselector-gateway`, credit lim
 ### 2026-11-04: Step A3, the first top-up
 The owner bought $5 of credit and paid $7.25 with Google Pay through Stripe, so OpenRouter holds no card. The balance shows $5.00, auto top-up is still off, and there is no sign of a subscription or recurring fee. The cost ceiling for the procedure is therefore $6 of credit, not counting the regular top-up at D7. The $2.25 on top was higher than the 5.5% fee alone: see open question 37 below.
 
+### 2026-11-05: Step B1, settings and secrets on `sandbox`
+Done by the owner. `sandbox` is on `main`, and `hostname -I` gives `192.168.1.212`, which is set in `.env` with `SECRETS_SOURCE=secrets-service` and the token file. `.env` and the token file are `-rw-------`, and the token file's folder is `drwx------`. The client `rapidselector` was created in secrets-service; its token was accepted (404 before the secret existed). The secret `rapidselector` was stored with all 9 fields and read back from the service, by name and length only: `POSTGRES_PASSWORD` 64, `LITELLM_MASTER_KEY` 51, `LITELLM_SALT_KEY` 64, `LITELLM_UI_PASSWORD` 32, `RAPIDSELECTOR_OPENROUTER_KEY` 73, `WEBUI_SECRET_KEY` 64, `KEY_CHAT` 51, `KEY_NODE_RED` 51, `KEY_SMOKE_TEST` 51. The temporary file was deleted. Nothing was started, and it cost nothing. The one-line `jq` command in the handoff did not survive pasting (`subsh>`, nothing ran), so it was replaced by a tested version with short lines. No value was seen by Claude.
+
 ## Open
 
 ### Settle during design or phase 0

@@ -2,46 +2,9 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: B1
+## Next step: B2
 
-Steps A1, A2, A3 and B1a are done and recorded. **B1 has been handed to the owner, who paused before reporting a result.** Ask how far they got before repeating anything. If the secret `rapidselector` already exists in secrets-service, do not regenerate it: changing `LITELLM_SALT_KEY` is only safe before the first start, and a second run of the commands would replace every secret.
-
-### The B1 instructions as given
-
-All on `sandbox`, in `/home/pi/code/rapid-selector`. Nothing starts yet, and it costs nothing.
-
-1. Get the code and create the settings file:
-   ```bash
-   cd ~/code/rapid-selector && git switch main && git pull
-   hostname -I
-   cp .env.example .env && chmod 600 .env
-   nano .env
-   ```
-   In `.env`, leave the secret lines empty and set:
-   - `RAPIDSELECTOR_LAN_ADDRESS=` sandbox's address, expected `192.168.1.212`
-   - `SECRETS_SOURCE=secrets-service`
-   - `SECRETS_SERVICE_TOKEN_FILE=/home/pi/.config/rapidselector/secrets-service.token`
-2. In secrets-service's admin UI, `http://home-assistant:8002`, create a client named `rapidselector` and copy its token. If a secret `rapidselector` is already listed, stop.
-3. Save the token. `read` waits silently; paste and press Enter:
-   ```bash
-   mkdir -p ~/.config/rapidselector && chmod 700 ~/.config/rapidselector
-   read -rs TOKEN
-   (umask 077; printf '%s\n' "$TOKEN" > ~/.config/rapidselector/secrets-service.token)
-   unset TOKEN
-   ```
-4. Generate and store the secrets. Paste the OpenRouter key from A2 at the silent `read`:
-   ```bash
-   read -rs ORKEY
-   (umask 077; jq -n --arg k1 "$(openssl rand -hex 32)" --arg k2 "sk-$(openssl rand -hex 24)" --arg k3 "$(openssl rand -hex 32)" --arg k4 "$(openssl rand -hex 16)" --arg k5 "$ORKEY" --arg k6 "$(openssl rand -hex 32)" --arg k7 "sk-$(openssl rand -hex 24)" --arg k8 "sk-$(openssl rand -hex 24)" --arg k9 "sk-$(openssl rand -hex 24)" '{blob:{POSTGRES_PASSWORD:$k1,LITELLM_MASTER_KEY:$k2,LITELLM_SALT_KEY:$k3,LITELLM_UI_PASSWORD:$k4,RAPIDSELECTOR_OPENROUTER_KEY:$k5,WEBUI_SECRET_KEY:$k6,KEY_CHAT:$k7,KEY_NODE_RED:$k8,KEY_SMOKE_TEST:$k9}}' > ~/rapidselector-secrets.json)
-   unset ORKEY
-   T=~/.config/rapidselector/secrets-service.token
-   curl -sS -X PUT -H "Authorization: Bearer $(cat $T)" -H 'Content-Type: application/json' --data "@$HOME/rapidselector-secrets.json" http://home-assistant:8002/secrets/rapidselector; echo
-   curl -sS -H "Authorization: Bearer $(cat $T)" http://home-assistant:8002/secrets/rapidselector | jq -r '.blob | keys[]'
-   ```
-   Expected: a `"status":"success"` line, then 9 names and no values.
-5. If all 9 are there, `rm ~/rapidselector-secrets.json`.
-
-Report back: the settings are in place, the `hostname -I` address, the 9 names, and that the file is deleted. Then record B1 and go on to B2.
+Steps A1, A2, A3, B1a and B1 are done and recorded. **The secret `rapidselector` now exists in secrets-service. Do not regenerate it:** `LITELLM_SALT_KEY` must not change after the first start, and B2 is the first start.
 
 ## How we work through the procedure
 
@@ -61,7 +24,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 | What | State |
 |---|---|
 | Balance | $5.00, nothing spent yet. $7.25 paid |
-| Inference key | `rapidselector-gateway`: limit $0.05, monthly reset. The value is with the owner, and goes into secrets-service in B1 |
+| Inference key | `rapidselector-gateway`: limit $0.05, monthly reset. The value is in secrets-service, as `RAPIDSELECTOR_OPENROUTER_KEY` |
 | Management key | None. Only tower needs one, in phase 1 |
 | Auto top-up | Off, and no card on file (Google Pay through Stripe) |
 | Zero data retention | All 5 toggles on, `ZDR only` under "All other models" and "Google" |
@@ -70,7 +33,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on `main` or `drain-test-fixes` depending on how far B1 got. `.env` may not exist yet.
+- Clone at `/home/pi/code/rapid-selector`, on `main`. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
 - `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
 - No real stack started yet. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
 - All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.
