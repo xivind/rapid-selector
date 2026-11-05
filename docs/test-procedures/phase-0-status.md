@@ -2,7 +2,9 @@
 
 A handoff between sessions, written 2026-11-04. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Next step: D1
+## Next step: find out why D1's key limit did not stop the calls
+
+D1 spent $0.0932 with no refusal, past the key's $0.05 limit (`docs/decisions.md`). Nothing from D2 on runs until the cause is known. First check: what OpenRouter reports for the gateway's key (`GET /api/v1/key`, label left out).
 
 All of A and B, and C1 to C4, are done. C5 waits for the move to `webserver`, by the owner's decision, and phase 0 is not verified until it has passed. On 2026-11-05 the owner asked for `./rapidselector.sh up` to be always detached, the memory limits to go, and the README to cover setup. These are on `phase-0-walkthrough`, which `sandbox` is now on, and they work there. `tests/resilience.bats` was edited but has not been run, since it needs Docker and level 1 cannot run beside the real stack: run it at the next level 1 run. Everything is recorded. The real stack is running on `sandbox`, so level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** the first start has happened, and `LITELLM_SALT_KEY` must not change.
 
@@ -23,7 +25,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 | What | State |
 |---|---|
-| Balance | About $5.00: $0.00000978 spent at B6. $7.25 paid |
+| Balance | About $4.91: $0.00000978 spent at B6 and $0.0932 at D1. $7.25 paid |
 | Inference key | `rapidselector-gateway`: limit $0.05, monthly reset. The value is in secrets-service, as `RAPIDSELECTOR_OPENROUTER_KEY` |
 | Management key | None. Only tower needs one, in phase 1 |
 | Auto top-up | Off, and no card on file (Google Pay through Stripe) |

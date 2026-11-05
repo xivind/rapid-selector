@@ -125,6 +125,9 @@ Clients reach the gateway at the host's own name, today `http://sandbox:4000`, n
 ### 2026-11-05: Step C5, the reboot check, waits for the move to `webserver`
 Decided by the owner. The check still has to pass, so phase 0 is not verified until it has, and finding 31 stays open. It does not protect the budget, so section D goes ahead without it. The cost: until it is run, it is not known that the stack comes back by itself after a reboot on the LAN address. If `sandbox` restarts unexpectedly, check `./rapidselector.sh ps` and `ss -tln`.
 
+### 2026-11-05: Step D1, the key limit did not stop the calls (being investigated)
+`drain-balance.sh --max-usd 0.10 --max-tokens 1024 --parallel 5` on `qwen3.8-2.4t-a95b@siliconflow`: three rounds of 5 calls, all 200, $0.031080 each, $0.093240 in total, recorded by the gateway as $0.09324, and `stopped: max-usd`: the script's own ceiling stopped it before a fourth round, not OpenRouter. No call was refused, though the key `rapidselector-gateway` had a limit of $0.05 (A2) and round 3 started at $0.062 spent. OpenRouter's activity page shows $0.0932 for that model, matching the gateway. Spend stayed within the step's stated cost. Not yet known why the limit did not apply; D2 onwards waits until it is. The temporary key `drain-test` was deleted by the script.
+
 ## Open
 
 ### Settle during design or phase 0
