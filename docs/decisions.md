@@ -85,6 +85,9 @@ Done by the owner. `sandbox` is on `main`, and `hostname -I` gives `192.168.1.21
 ### 2026-11-05: Step B2, first start on `sandbox`
 `./rapidselector.sh up -d` created the network, both volumes and the three containers, with no leftovers from B1a. After about 3 minutes `rapidselector-db`, `rapidselector-gateway` and `rapidselector-chat` were all `healthy`. Ports are published on `192.168.1.212` only (gateway 4000, chat 4010), and Postgres shows `5432/tcp` with no host address, so it is not published. Docker warned `Limitation discarded` for all three, as expected from the memory decision above. `free -h` before the start: 1.0 GiB used, 6.8 GiB available, of 7.9 GiB, swap unused. About a minute after the start, with chat not yet healthy: 2.3 GiB used, 5.5 GiB available. B5 compares properly. It cost nothing.
 
+### 2026-11-05: Step B3, teams and keys registered
+`setup-keys.sh` printed the expected table: team `permanent` $8 and 4 names; team `experiments` $24 and 11 names; `node-red` in `permanent`, $4, 4 names, 30 calls a minute; `chat` in `experiments`, using the team's budget, 11 names; `smoke-test` in `experiments`, $1, 11 names. Budgets show the `30d` window. Whether they reset on the 1st, as LiteLLM's docs say, cannot be seen until a month has turned. It cost nothing.
+
 ## Open
 
 ### Settle during design or phase 0
