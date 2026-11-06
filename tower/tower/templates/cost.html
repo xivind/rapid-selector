@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros/bars.html" import bar %}
+{% from "macros/marks.html" import change_mark %}
 {% block main %}
 {% macro gone(what) %}<p class="warn blank">{{ what }} cannot be read.</p>{% endmacro %}
 {% if s is none %}
@@ -25,12 +26,31 @@
   </div>
 </section>
 
-<ul class="figures">
-  <li>today {{ s.spend_day_usd|usd }}</li>
-  <li>this week {{ s.spend_week_usd|usd }}</li>
-  <li>balance {{ s.balance_usd|usd }}</li>
-  <li>forecast {{ s.forecast_usd|usd }} <span class="note">(an estimate: this month's pace, carried to its end)</span></li>
-</ul>
+<section class="cards" aria-label="Spend at a glance">
+  <div class="card">
+    <h3 class="label">TODAY</h3>
+    <p class="figure">{{ s.spend_day_usd|usd }}</p>
+    {% if s.spend_yesterday_usd is not none %}<p class="sub">yesterday {{ s.spend_yesterday_usd|usd }}</p>{% endif %}
+  </div>
+  <div class="card">
+    <h3 class="label">THIS WEEK</h3>
+    <p class="figure">{{ s.spend_week_usd|usd }}</p>
+    {% if s.week_change is not none %}<p class="sub">{{ change_mark(s.week_change) }} against the same days last week</p>{% endif %}
+  </div>
+  <div class="card">
+    <h3 class="label">BALANCE</h3>
+    <p class="figure">{{ s.balance_usd|usd }}</p>
+    {% if s.balance_usd is not none %}
+    {% if s.balance_usd < balance_low_usd %}<p class="threshold danger">below the {{ balance_low_usd|usd(true) }} threshold</p>
+    {% else %}<p class="threshold go">above the {{ balance_low_usd|usd(true) }} threshold</p>{% endif %}
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3 class="label">FORECAST</h3>
+    <p class="figure">{{ s.forecast_usd|usd }}</p>
+    <p class="sub">an estimate: this month's pace, carried to its end</p>
+  </div>
+</section>
 <p class="resets">resets {{ s.next_reset|when }}
   {% if s.resets_agree %}(gateway and key: in step)
   {% elif s.resets_agree is none %}<span class="warn">(key: {{ s.key_reset or "unknown" }}, gateway: {{ s.gateway_window or "unknown" }})</span>

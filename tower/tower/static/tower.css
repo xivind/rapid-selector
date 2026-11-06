@@ -322,10 +322,19 @@ input:focus { border-color: var(--amber); }
 .badge.plain { color: var(--dim); }
 
 /* Change against the previous period: more in amber, less in grey; never green or red. */
-.up, .down, .same, .new { font: .85rem var(--mono); white-space: nowrap; color: var(--dim); }
+.up, .down, .same, .new, .yday { font: .85rem var(--mono); white-space: nowrap; color: var(--dim); }
 .up::before { content: "\25B2  "; color: var(--amber); }
 .down::before { content: "\25BC  "; }
 .cmp { display: block; }
+
+/* Cost: four boxes in a row, plain text, no badges. */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; margin-top: 1.75rem; }
+.card { border: 1px solid var(--rule); padding: .8rem 1rem; }
+.card .label { margin-bottom: .2rem; }
+.card .figure { margin: 0; font-size: 1.9rem; line-height: 1.1; }
+.card .sub, .card .threshold { margin: .3rem 0 0; font: .85rem var(--mono); color: var(--dim); }
+.card .threshold.go { color: var(--go); }
+.card .threshold.danger { color: var(--danger); }
 
 /* ---- Phone width ----------------------------------------------------------------------------- */
 

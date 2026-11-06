@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% from "macros/marks.html" import change_mark %}
 {% block main %}
 <h2 class="page-title">Usage</h2>
-<p class="lede">Calls, tokens and spend from the gateway, per role, per experiment name and per key. Today from {{ since.day|when }}, this week from {{ since.week|when }}, this month from {{ since.month|when }}.</p>
+<p class="lede">Calls, tokens and spend from the gateway, per role, per experiment name and per key. Today from {{ since.day|when }}, this week from {{ since.week|when }}, this month from {{ since.month|when }}. Under today: yesterday's figure. Under the week and the month: the change against the same days of the period before, ▲ more, ▼ less.</p>
 
 {% macro table(lines, empty) %}
 {% if not lines %}
@@ -12,8 +13,11 @@
     <thead><tr><th>name</th><th>period</th><th class="num">spend</th><th class="num">calls</th><th class="num">tokens in</th><th class="num">tokens out</th></tr></thead>
     {% for line in lines %}
     <tbody>
-      {% for period, t in (("today", line.day), ("week", line.week), ("month", line.month)) %}
-      <tr>{% if loop.first %}<th rowspan="3" scope="rowgroup">{{ line.label }}</th>{% endif %}<td class="period">{{ period }}</td><td class="num">{{ t.spend_usd|usd }}</td><td class="num">{{ t.calls }}</td><td class="num">{{ "{:,}".format(t.tokens_in) }}</td><td class="num">{{ "{:,}".format(t.tokens_out) }}</td></tr>
+      {% for period, t, b in (("today", line.day, line.yesterday), ("week", line.week, line.week_before), ("month", line.month, line.month_before)) %}
+      <tr>{% if loop.first %}<th rowspan="3" scope="rowgroup">{{ line.label }}</th>{% endif %}<td class="period">{{ period }}</td>
+        {%- for now, then, fmt in ((t.spend_usd, b.spend_usd, "usd"), (t.calls, b.calls, "int"), (t.tokens_in, b.tokens_in, "int"), (t.tokens_out, b.tokens_out, "int")) %}
+        <td class="num">{{ now|usd if fmt == "usd" else "{:,}".format(now) }}<span class="cmp">{% if period == "today" %}<span class="yday">yday {{ then|usd if fmt == "usd" else "{:,}".format(then) }}</span>{% else %}{{ change_mark(change(now, then)) }}{% endif %}</span></td>
+        {%- endfor %}</tr>
       {% endfor %}
     </tbody>
     {% endfor %}

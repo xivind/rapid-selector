@@ -141,7 +141,8 @@ def test_cost_page_shows_figures(db, config_dir):
     text = r.text
     assert "$7.40" in text
     assert "key limit $35" in text
-    assert "balance $12.60" in text
+    balance = text.split(">BALANCE<")[1].split("</div>")[0]
+    assert "$12.60" in balance
     assert "forecast" in text and "estimate" in text[text.index("forecast"):][:200]
     assert "classify" in text and "mistralai/mistral-small-3.2-24b-instruct@deepinfra" in text
     assert "in step" in text  # monthly key reset against the gateway's 30d window
@@ -390,3 +391,50 @@ def test_css_has_no_label_below_085rem():
             continue
         small += [v for v in re.findall(r"(?<![\d.])(\d*\.?\d+)rem", decl) if float(v) < 0.85]
     assert not small, small
+
+
+def _compare_rows():
+    t = today()
+    return [UsageRow(t, "classify", "node-red", 10, 1, 1, 1.85),
+            UsageRow(t - timedelta(days=1), "classify", "node-red", 4, 1, 1, 0.25),
+            UsageRow(t - timedelta(days=7), "classify", "node-red", 20, 1, 1, 2.40)]
+
+
+def _cards(text):
+    return text.split('class="cards"')[1].split("</section>")[0] if 'class="cards"' in text else ""
+
+
+def test_cost_page_shows_yesterday_and_week_change(db, config_dir):
+    text = browser(config_dir, FakeGateway(_compare_rows())).get("/").text
+    cards = _cards(text)
+    assert "yesterday $0.25" in cards
+    assert 'class="down"' in cards  # this week 2.10 (1.85 on a Monday) against 2.40
+
+
+class LowBalance(FakeOpenRouter):
+    def credits(self):
+        return {"total_credits": 20.0, "total_usage": 18.6}
+
+
+def test_cost_page_balance_line_colour(db, config_dir):
+    assert "above the $2 threshold" in _cards(browser(config_dir).get("/").text)
+    cards = _cards(browser(config_dir, orc=LowBalance()).get("/").text)
+    assert "$1.40" in cards
+    assert 'class="threshold danger">below the $2 threshold' in cards
+
+
+def test_cost_page_without_gateway_comparison(db, config_dir):
+    r = browser(config_dir, gw=Down("gateway")).get("/")
+    assert r.status_code == 200
+    cards = _cards(r.text)
+    assert "$0.31" in cards  # today's figure is OpenRouter's
+    assert "yesterday" not in cards
+    assert 'class="down"' not in cards and 'class="up"' not in cards and 'class="new"' not in cards
+
+
+def test_usage_page_shows_yday_and_changes(db, config_dir):
+    text = browser(config_dir, FakeGateway(_compare_rows())).get("/usage").text
+    classify = text.split("classify")[1].split("</tbody>")[0]
+    assert "yday $0.25" in classify
+    assert 'class="new"' in classify  # nothing in the same days of last month
+    assert 'class="down"' in classify or 'class="up"' in classify  # the week against last week
