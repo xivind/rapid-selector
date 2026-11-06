@@ -165,3 +165,14 @@ wait_for_key_spend_above() {
   echo "spend for the key stayed at $spend (needed more than $2)" >&2
   return 1
 }
+
+# openrouter_state <json>: reset the fake OpenRouter's management state to its defaults plus
+# these fields (keys, credits, activity, zdr, fail: "keys"|"key"|"credits"|"activity"|"zdr"|"patch").
+openrouter_state() {
+  curl -sS -X POST "$FAKE_UPSTREAM_URL/_openrouter" -d "$1" >/dev/null
+}
+
+# openrouter_requests: the management calls the fake OpenRouter received (method, path, authorised).
+openrouter_requests() {
+  curl -sS "$FAKE_UPSTREAM_URL/_openrouter/requests"
+}

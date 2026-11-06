@@ -45,6 +45,8 @@ Sources: https://openrouter.ai/docs/guides/overview/auth/management-api-keys, ht
 - **Usage per model:** `GET /api/v1/activity`, management key only: one row per day, model and endpoint, with `provider_name`, `requests`, tokens and `usage` in USD, for the last 30 completed UTC days, so not today. Filter with `api_key_hash`.
 - **Account settings:** no endpoint for zero data retention, allowed providers, data training or auto top-up. `/api/v1/organization/settings` exists, but has only a model-catalog filter and returns 404 for a personal account.
 - **Expiry:** fixed at creation and cannot be changed; afterwards every request gets `401` "API key expired". A non-management key on these routes gets 403 "Only management keys can perform this operation".
+- **Disabled keys in the list, checked in the docs 2026-11-06** (https://openrouter.ai/docs/api/api-reference/api-keys/list-api-keys.md): `GET /api/v1/keys` takes `include_disabled` and `include_expired`. Expired keys are "excluded by default"; for disabled keys no default is written, but the example value is `false`, so a disabled key is assumed to be left out unless `include_disabled=true` is sent. The level 1 fake does the same. The list has no pagination metadata (`offset` only).
+- **A disabled key on a chat call, checked in the docs 2026-11-06** (https://openrouter.ai/docs/api-reference/errors): "401: Invalid credentials (OAuth session expired, disabled/invalid API key)". The exact body for a disabled key is not documented; the level 1 fake answers `{"error": {"code": 401, "message": "Invalid credentials"}}`.
 
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
