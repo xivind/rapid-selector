@@ -262,7 +262,9 @@ Changed by the owner's decision after D6: principle 1 now reads "maximum possibl
 The owner topped up $35 of credit. The balance afterwards: $34.81, so the top-up first covered D6's −$0.19. The amount paid, with fee and VAT, was not recorded here.
 
 ### 2026-11-06: Step D8, the budget lowered for the alerts
-`experiments`' spend in the admin UI: $5.10 (D6's drain). `BUDGET_TEAM_EXPERIMENTS=5.36 ./rapidselector.sh run-script scripts/setup-keys.sh` at 14:51: the table shows `team:experiments` at 5.36, the rest unchanged. The smoke test at 14:55: 4 roles with 200 and a cost above zero, both probes refused with 403, $0.00000978 in total, `OK`. About $0.26 of $5.36 is left (under 5%), so both budget rules should fire. Waiting for the emails.
+`experiments`' spend in the admin UI: $5.10 (D6's drain). `BUDGET_TEAM_EXPERIMENTS=5.36 ./rapidselector.sh run-script scripts/setup-keys.sh` at 14:51: the table shows `team:experiments` at 5.36, the rest unchanged. The smoke test at 14:55: 4 roles with 200 and a cost above zero, both probes refused with 403, $0.00000978 in total, `OK`. About $0.26 of $5.36 is left (under 5%), so both budget rules should fire.
+
+Within the 30 minutes both rules fired in Grafana ("team budget below 20%" and "below 10%"), but no email arrived. The rules have no labels and follow the default notification policy to the contact point "Grafana Email Dispatcher" (`grafana/rapidselector-alerts.md` in `production`); the cause is being looked for.
 
 ## Open
 
