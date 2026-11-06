@@ -444,3 +444,78 @@ def test_log_detail_has_no_secrets(db):
     text = "\n".join(pages + [e.summary + e.detail for e in entries])
     for secret in load_settings(ENV).secret_values():
         assert secret not in text
+
+
+# level 1 held by tower's flag (final review I-1, I-3, M6)
+
+def level1_flag():
+    return store.Flag.get_or_none(store.Flag.name == "level1_by_tower") is not None
+
+
+def test_level2_with_gateway_down_then_release_keeps_level1(db):
+    """Engaged while the gateway was down: once it is back, level 1 is enforced, and releasing
+    level 2 does not go from everything stopped to everything running."""
+    gw, orc = FakeGateway(["chat", "node-red"]), FakeOpenRouter()
+    real = gw.keys
+    gw.keys = lambda: (_ for _ in ()).throw(Unavailable("gateway", "ConnectError"))
+    engage(2, gw, orc, "owner")
+    assert level1_flag() and level2_flag() and recorded() == set()
+    gw.keys = real  # the gateway is back
+    assert sorted(enforce(gw)) == ["chat", "node-red"]
+    s = release(2, gw, orc, "owner")
+    assert not orc.disabled
+    assert s.level == 1 and all(k.blocked for h, k in gw.state.items() if h != OWN)
+    s = release(1, gw, orc, "owner")
+    assert s.level == 0 and not level1_flag()
+
+
+def test_level1_flag_counts_as_engaged_before_any_key_is_blocked(db):
+    gw, orc = FakeGateway(["a"]), FakeOpenRouter()
+    gw.fail = {"a"}
+    s = engage(1, gw, orc, "owner")
+    assert level1_flag() and recorded() == set()
+    assert s.level == 1 and not s.level1_complete
+    assert any("level 1 incomplete" in p for p in s.problems)
+    gw.fail = set()
+    assert enforce(gw) == ["a"]
+
+
+def test_release_level2_blocks_open_keys_while_level1_held(db):
+    gw, orc = FakeGateway(["a"]), FakeOpenRouter()
+    engage(2, gw, orc, "owner")
+    gw.add("new")  # added after engaging, before the loop's next check
+    s = release(2, gw, orc, "owner")
+    assert gw.state["new"].blocked and "new" in recorded()
+    assert s.level == 1
+
+
+def test_failed_release_level1_keeps_the_flag(db):
+    gw, orc = FakeGateway(["a", "b"]), FakeOpenRouter()
+    engage(1, gw, orc, "owner")
+    gw.fail = {"b"}
+    s = release(1, gw, orc, "owner")
+    assert level1_flag() and recorded() == {"b"}
+    assert s.level == 1 and any("could not unblock b" in p for p in s.problems)
+    gw.fail = set()
+    release(1, gw, orc, "owner")
+    assert not level1_flag() and recorded() == set()
+
+
+def test_engage_level2_disables_openrouter_before_blocking(db):
+    gw, orc = FakeGateway(["a", "b"]), FakeOpenRouter()
+    order = []
+    gw.block = lambda h: (order.append("block"), (_ for _ in ()).throw(Unavailable("gateway", "ReadTimeout")))
+    real = orc.set_disabled
+    orc.set_disabled = lambda h, d: (order.append("disable"), real(h, d))
+    s = engage(2, gw, orc, "owner")
+    assert order[0] == "disable" and order.count("block") == 2
+    assert orc.disabled and level2_flag() and s.level == 2
+
+
+def test_engage_level2_log_says_key_was_disabled_outside_tower(db):
+    gw, orc = FakeGateway(["a"]), FakeOpenRouter(disabled=True)
+    engage(2, gw, orc, "owner")
+    assert "already disabled outside tower" in store.latest("kill_switch").summary
+    store.Flag.replace(name="level2_by_tower", value="true").execute()
+    engage(2, gw, orc, "owner")
+    assert "already disabled by tower" in store.latest("kill_switch").summary

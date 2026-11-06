@@ -1,9 +1,11 @@
 """Two-level kill switch.
 
 Level 1 blocks every gateway key except tower's own; level 2 also disables the
-OpenRouter inference key. Tower releases only what it engaged: the keys in
-BlockedKey and the OpenRouter key when the level2_by_tower flag is set. The state
-shown is always read back from the sources, and unknown when they cannot be read.
+OpenRouter inference key. Every engage sets the level1_by_tower flag: while it is set,
+tower keeps every other key blocked, even one it could not reach when engaging, and
+only a successful release of level 1 clears it. Tower releases only what it engaged:
+the keys in BlockedKey and the OpenRouter key when the level2_by_tower flag is set.
+The state shown is always read back from the sources, and unknown when they cannot be read.
 """
 
 import threading
@@ -16,6 +18,7 @@ from fastapi.responses import HTMLResponse
 from tower import store
 from tower.clients import Unavailable
 
+LEVEL1_FLAG = "level1_by_tower"
 LEVEL2_FLAG = "level2_by_tower"
 _lock = threading.Lock()  # a loop tick and a click must not interleave their changes
 
@@ -52,7 +55,7 @@ def _fresh(client):
         cache.clear()
 
 
-def read_state(keys, or_key, tower_blocked, level2_by_tower, own_hash) -> SwitchState:
+def read_state(keys, or_key, tower_blocked, level2_by_tower, own_hash, level1_by_tower=False) -> SwitchState:
     problems, by_tower, outside, complete = [], [], [], False
     if isinstance(keys, Unavailable):
         problems.append(str(keys))
@@ -63,7 +66,7 @@ def read_state(keys, or_key, tower_blocked, level2_by_tower, own_hash) -> Switch
                 (by_tower if k.token_hash in tower_blocked else outside).append(_name(k.alias, k.token_hash))
         open_keys = [_name(k.alias, k.token_hash) for k in others if not k.blocked]
         complete = not open_keys
-        if open_keys and (by_tower or outside):
+        if open_keys and (by_tower or outside or level1_by_tower):
             problems.append(f"level 1 incomplete, not blocked: {', '.join(open_keys)}")
     if isinstance(or_key, Unavailable):
         problems.append(str(or_key))
@@ -77,7 +80,7 @@ def read_state(keys, or_key, tower_blocked, level2_by_tower, own_hash) -> Switch
     elif disabled is None or isinstance(keys, Unavailable):
         level = None
     else:
-        level = 1 if by_tower or outside else 0
+        level = 1 if by_tower or outside or level1_by_tower else 0
     return SwitchState(
         level=level,
         outside_tower=bool(outside) or (disabled is True and not level2_by_tower),
@@ -89,20 +92,33 @@ def read_state(keys, or_key, tower_blocked, level2_by_tower, own_hash) -> Switch
     )
 
 
+def _flag(name) -> bool:
+    return store.Flag.get_or_none(store.Flag.name == name) is not None
+
+
 def _level2_by_tower() -> bool:
-    return store.Flag.get_or_none(store.Flag.name == LEVEL2_FLAG) is not None
+    return _flag(LEVEL2_FLAG)
 
 
-def current_state(gw, orc, fresh=False) -> SwitchState:
+def current_state(gw, orc, fresh=False, end=None) -> SwitchState:
+    """end: a deadline (time.monotonic()) for both reads together, as the pages use."""
     if fresh:
         _fresh(gw)
         _fresh(orc)
+    if end is None:
+        keys, or_key = _try("gateway", gw.keys), _try("openrouter", orc.inference_key)
+    else:
+        from tower import setup_view  # imported here: setup_view imports this module
+
+        got = setup_view.gather({"keys": ("gateway", gw.keys), "or_key": ("openrouter", orc.inference_key)}, end)
+        keys, or_key = got["keys"], got["or_key"]
     return read_state(
-        _try("gateway", gw.keys),
-        _try("openrouter", orc.inference_key),
+        keys,
+        or_key,
         {b.token_hash for b in store.BlockedKey.select()},
         _level2_by_tower(),
         gw.own_hash(),
+        _flag(LEVEL1_FLAG),
     )
 
 
@@ -124,20 +140,32 @@ def _block_open_keys(gw, keys, problems) -> list[str]:
     return done
 
 
-def _disable_openrouter(orc, problems) -> bool:
+def _block_all(gw, problems) -> list[str] | Unavailable:
+    """Reads the keys afresh and blocks each open one; Unavailable when the gateway cannot be read."""
+    _fresh(gw)
+    keys = _try("gateway", gw.keys)
+    if isinstance(keys, Unavailable):
+        return keys
+    return _block_open_keys(gw, keys, problems)
+
+
+def _disable_openrouter(orc, problems) -> tuple[bool, str | None]:
+    """(whether tower disabled the key now, a note for the log summary)."""
     _fresh(orc)
     key = _try("openrouter", orc.inference_key)
     if isinstance(key, Unavailable):
         problems.append(f"level 2 not engaged: {key}")
-        return False
+        return False, None
     if key.get("disabled"):
-        return False  # already disabled: by tower (flag set) or outside tower (not tower's to release)
+        # Already disabled: by tower (flag set) or outside tower (not tower's to release).
+        by = "by tower" if _level2_by_tower() else "outside tower, so not tower's to release"
+        return False, f"OpenRouter key already disabled {by}"
     error = _try("openrouter", lambda: orc.set_disabled(key["hash"], True))
     if isinstance(error, Unavailable):
         problems.append(f"level 2 not engaged: {error}")
-        return False
+        return False, None
     store.Flag.replace(name=LEVEL2_FLAG, value="true").execute()
-    return True
+    return True, "OpenRouter key disabled"
 
 
 def _finish(action, level, gw, orc, actor, problems, detail, summary) -> SwitchState:
@@ -151,17 +179,18 @@ def _finish(action, level, gw, orc, actor, problems, detail, summary) -> SwitchS
 def engage(level, gw, orc, actor) -> SwitchState:
     if level not in (1, 2):
         raise ValueError("level must be 1 or 2")
-    problems, blocked, disabled = [], [], False
+    problems, disabled, note = [], False, None
     with _lock:
-        _fresh(gw)
-        keys = _try("gateway", gw.keys)
-        if isinstance(keys, Unavailable):
-            problems.append(f"level 1 not engaged: {keys}")
-        else:
-            blocked = _block_open_keys(gw, keys, problems)
+        # Held from now on, even if no key can be blocked yet: the loop blocks them once it can.
+        store.Flag.replace(name=LEVEL1_FLAG, value="true").execute()
         if level == 2:
-            disabled = _disable_openrouter(orc, problems)
-        summary = f"blocked {len(blocked)} key(s)" + ("; OpenRouter key disabled" if disabled else "")
+            # First: blocking each key on a slow gateway must not hold back the stop that does not need it.
+            disabled, note = _disable_openrouter(orc, problems)
+        blocked = _block_all(gw, problems)
+        if isinstance(blocked, Unavailable):
+            problems.append(f"level 1 not yet engaged: {blocked}; tower blocks the keys once it can read them")
+            blocked = []
+        summary = f"blocked {len(blocked)} key(s)" + (f"; {note}" if note else "")
         if problems:
             summary += f"; {len(problems)} problem(s)"
         return _finish("engage", level, gw, orc, actor, problems,
@@ -201,7 +230,7 @@ def _release_level1(gw, orc, problems) -> list[str]:
     _fresh(gw)
     keys = _try("gateway", gw.keys)
     present = None if isinstance(keys, Unavailable) else {k.token_hash for k in keys}
-    done = []
+    done, failed = [], False
     for row in store.BlockedKey.select():
         name = _name(row.alias, row.token_hash)
         if present is not None and row.token_hash not in present:
@@ -210,9 +239,12 @@ def _release_level1(gw, orc, problems) -> list[str]:
         error = _try("gateway", lambda: gw.unblock(row.token_hash))
         if isinstance(error, Unavailable):
             problems.append(f"could not unblock {name}: {error}")
+            failed = True
             continue
         row.delete_instance()
         done.append(name)
+    if not failed:  # level 1 stays held (and enforced) until every key tower blocked is unblocked
+        store.Flag.delete().where(store.Flag.name == LEVEL1_FLAG).execute()
     return done
 
 
@@ -222,6 +254,8 @@ def release(level, gw, orc, actor) -> SwitchState:
     problems = []
     with _lock:
         if level == 2:
+            if _level2_by_tower() and _flag(LEVEL1_FLAG):
+                _block_all(gw, problems)  # level 1 stays engaged: block what the loop has not yet
             enabled = _release_level2(orc, problems)
             detail = {"openrouter_enabled": enabled}
             summary = "OpenRouter key enabled" if enabled else "OpenRouter key not changed"
@@ -235,16 +269,15 @@ def release(level, gw, orc, actor) -> SwitchState:
 
 
 def enforce(gw) -> list[str]:
-    """While tower holds level 1, blocks keys added (or unblocked elsewhere) since."""
+    """While tower holds level 1, blocks every open key but its own: added, unblocked elsewhere
+    since, or not reachable when level 1 was engaged."""
     with _lock:
-        if not store.BlockedKey.select().exists():
+        if not _flag(LEVEL1_FLAG):
             return []
-        _fresh(gw)
-        keys = _try("gateway", gw.keys)
-        if isinstance(keys, Unavailable):
-            return []  # the state panel shows the gateway as unavailable
         problems = []
-        blocked = _block_open_keys(gw, keys, problems)
+        blocked = _block_all(gw, problems)
+        if isinstance(blocked, Unavailable):
+            return []  # the state panel shows the gateway as unavailable
         if blocked or problems:
             summary = f"blocked {len(blocked)} key(s)" + (f"; {len(problems)} problem(s)" if problems else "")
             store.log("kill_switch", "loop", not problems, f"enforce level 1: {summary}",
@@ -259,7 +292,7 @@ def register(router, app):
             "state": state,
             "confirm": confirm,
             "error": error,
-            "tower_level1": store.BlockedKey.select().exists(),
+            "tower_level1": _flag(LEVEL1_FLAG),
             "tower_level2": _level2_by_tower(),
         }
         return app.state.templates.TemplateResponse(
