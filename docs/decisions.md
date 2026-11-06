@@ -243,6 +243,9 @@ Decided by the owner (Claude's proposal; the owner first thought it was not need
 ### 2026-11-06: Step D6, before the drain
 `tests/check-prices.sh` on `sandbox`: `ok` for all 11. The balance on OpenRouter's Credits page: $4.91, so `--max-usd 5.91` (balance + 1) and `--max-calls 2000`. Cost agreed by the owner: the rest of the balance, and up to about $0.25 below zero.
 
+### 2026-11-06: Step D6, the drain stopped on a rate limit, not on the balance
+`drain-balance.sh --max-usd 5.91 --max-calls 2000` on `sandbox`: 66 rounds, 330 calls sent, 156 answered; cost of the answered calls $5.086614 (the gateway recorded $5.080326), against a balance of $4.91 at the start, so about $0.18 more than the balance, if OpenRouter charged the same. From round 44 on, most calls got 402 `in_flight_budget_exhausted` (`limit_source` `openrouter_in_flight_budget`, `Retry-After` 120), with a few still answered at 2048, 1024 and 512 tokens. Round 66 got a 429 from OpenRouter, "new accounts are limited to 20 requests per minute for this model" (`limit_source` `openrouter_new_account`), which the script counts as a fault: `stopped: error`, so the test did not end with `stopped: refused`. No 402 with `openrouter_credits` appears in the last refusals shown. The balance in OpenRouter's dashboard is to be read.
+
 ## Open
 
 ### Settle during design or phase 0
