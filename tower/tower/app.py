@@ -2,18 +2,20 @@ import hmac
 import os
 import time
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.middleware.sessions import SessionMiddleware
 
-from tower import checks, killswitch, setup_view, store
+from tower import checks, killswitch, metrics, setup_view, store
 from tower.clients import GatewayClient, OpenRouterClient, Unavailable
 from tower.settings import Settings, load_settings
 from tower.summary import cost_summary, period_bounds, reconcile_days, usage_tables
@@ -104,7 +106,19 @@ def require_login(request: Request) -> None:
 
 
 def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop: bool = True) -> FastAPI:
-    app = FastAPI(title="rapidselector tower", docs_url=None, redoc_url=None, openapi_url=None)
+    @asynccontextmanager
+    async def lifespan(_app):
+        stop = None
+        if start_loop:
+            from tower import loop  # imported here: loop imports this module
+
+            stop = loop.start_loop(app)
+        yield
+        if stop:
+            stop()
+
+    app = FastAPI(title="rapidselector tower", docs_url=None, redoc_url=None, openapi_url=None,
+                  lifespan=lifespan)
     app.state.settings = settings
     http = httpx.Client()  # shared by the default clients; tests pass their own
     if gateway is None:
@@ -136,6 +150,10 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    @app.get("/metrics")
+    def metrics_page():
+        return Response(generate_latest(metrics.REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
     def login_page(request: Request, message: str | None = None, status_code: int = 200):
         return app.state.templates.TemplateResponse(
