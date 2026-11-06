@@ -33,6 +33,9 @@ ALL_NAMES="$(jq -c '[.data[].model_name] | unique' <<<"$model_info")"
 ROLES="$(jq -c '[.data[] | select(.model_info.rapidselector_kind == "role") | .model_name] | unique' <<<"$model_info")"
 [ "$(jq length <<<"$ROLES")" -gt 0 ] || die 1 "no entry of kind role in gateway/config.yaml"
 
+# key_hash <key value>: the hash LiteLLM stores for a key, so the value is never in a URL.
+key_hash() { printf '%s' "$1" | sha256sum | cut -d' ' -f1; }
+
 # ensure_team <team_id> <max_budget> <models json>
 ensure_team() {
   local payload
@@ -49,10 +52,11 @@ ensure_team() {
 ensure_key() {
   local duration=null payload
   [ "$4" != "null" ] && duration="\"$BUDGET_DURATION\""
-  payload="$(jq -nc --arg a "$1" --arg k "$2" --arg t "$3" --argjson b "$4" --argjson m "$5" \
+  # The key value reaches jq through its environment, not argv.
+  payload="$(K="$2" jq -nc --arg a "$1" --arg t "$3" --argjson b "$4" --argjson m "$5" \
     --argjson r "$6" --argjson tpm "$7" --argjson d "$duration" --argjson routes "$ALLOWED_ROUTES" \
-    '{key:$k, key_alias:$a, team_id:$t, models:$m, max_budget:$b, budget_duration:$d, rpm_limit:$r, tpm_limit:$tpm, allowed_routes:$routes}')"
-  if api GET "/key/info?key=$2" >/dev/null 2>&1; then
+    '{key:env.K, key_alias:$a, team_id:$t, models:$m, max_budget:$b, budget_duration:$d, rpm_limit:$r, tpm_limit:$tpm, allowed_routes:$routes}')"
+  if api GET "/key/info?key=$(key_hash "$2")" >/dev/null 2>&1; then
     api POST /key/update "$payload" >/dev/null || die 1 "could not update key $1"
   else
     api POST /key/generate "$payload" >/dev/null || die 1 "could not create key $1"
@@ -69,9 +73,9 @@ ensure_tower() {
     # auto_create_key false: /user/new would otherwise create a second, unrestricted admin key.
     api POST /user/new "$(jq -c '. + {auto_create_key:false}' <<<"$user")" >/dev/null || die 1 "could not create user tower"
   fi
-  key="$(jq -nc --arg k "$TOWER_GATEWAY_KEY" --argjson routes "$TOWER_ROUTES" \
-    '{key:$k, key_alias:"tower", user_id:"tower", team_id:null, max_budget:null, budget_duration:null, allowed_routes:$routes}')"
-  if api GET "/key/info?key=$TOWER_GATEWAY_KEY" >/dev/null 2>&1; then
+  key="$(K="$TOWER_GATEWAY_KEY" jq -nc --argjson routes "$TOWER_ROUTES" \
+    '{key:env.K, key_alias:"tower", user_id:"tower", team_id:null, max_budget:null, budget_duration:null, allowed_routes:$routes}')"
+  if api GET "/key/info?key=$(key_hash "$TOWER_GATEWAY_KEY")" >/dev/null 2>&1; then
     api POST /key/update "$key" >/dev/null || die 1 "could not update key tower"
   else
     api POST /key/generate "$key" >/dev/null || die 1 "could not create key tower"
@@ -90,5 +94,5 @@ for team in permanent experiments; do
   api GET "/team/info?team_id=$team" | jq -r '.team_info | [.team_alias, "-", (.max_budget // "none"), (.budget_duration // "-"), (.models | length), "-"] | @tsv'
 done | while IFS=$'\t' read -r a t b d n r; do printf '%-12s %-12s %-10s %-8s %-6s %s\n' "team:$a" "$t" "$b" "$d" "$n" "$r"; done
 for key in "$KEY_NODE_RED" "$KEY_CHAT" "$KEY_SMOKE_TEST" "$TOWER_GATEWAY_KEY"; do
-  api GET "/key/info?key=$key" | jq -r '.info | [.key_alias, (.team_id // "-"), (.max_budget // (if .team_id then "team" else "none" end)), (.budget_duration // "-"), (.models | length), (.rpm_limit // "-")] | @tsv'
+  api GET "/key/info?key=$(key_hash "$key")" | jq -r '.info | [.key_alias, (.team_id // "-"), (.max_budget // (if .team_id then "team" else "none" end)), (.budget_duration // "-"), (.models | length), (.rpm_limit // "-")] | @tsv'
 done | while IFS=$'\t' read -r a t b d n r; do printf '%-12s %-12s %-10s %-8s %-6s %s\n' "$a" "$t" "$b" "$d" "$n" "$r"; done
