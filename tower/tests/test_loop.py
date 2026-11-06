@@ -100,3 +100,11 @@ def test_lifespan_starts_and_stops_the_loop(db, monkeypatch):
         assert ticks.wait(5)
         assert any(t.name == "tower-loop" and t.is_alive() for t in threading.enumerate())
     assert not any(t.name == "tower-loop" for t in threading.enumerate())
+
+
+def test_tick_calls_enforce_with_the_gateway(db, price_runs, monkeypatch):
+    calls = []
+    monkeypatch.setattr(killswitch, "enforce", lambda gw: calls.append(gw) or [])
+    gw = FakeGateway()
+    loop.tick(at(7, 0), gw, FakeOpenRouter(), load_settings(ENV))
+    assert calls == [gw]
