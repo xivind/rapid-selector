@@ -231,38 +231,54 @@ p.missing { max-width: none; margin: 0 0 .5rem; }
 tr.danger td, tr.danger th { color: var(--danger); }
 p.danger { border-left: 3px solid var(--danger); padding-left: .75rem; }
 
-/* ---- Kill switch (partials/killswitch.html) ------------------------------------------------ */
+/* ---- Status panel and kill switch (partials/killswitch.html) -------------------------------- */
 
-.killswitch, #killswitch {
-  display: flex;
-  flex-wrap: wrap;
+.status-panel {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: flex-end;
-  gap: .5rem .75rem;
-  max-width: 40rem;
-  font: .85rem var(--mono);
-}
-.ks-state {
-  font-weight: 400;
-  letter-spacing: .08em;
-  padding: .3rem .6rem;
+  gap: 1rem 2rem;
+  margin: 1.25rem 0 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--raised);
   border: 1px solid var(--rule);
-  color: var(--dim);
 }
-.ks-state.clear { color: var(--amber); border-color: var(--amber); }
-.ks-state.danger { color: var(--danger-ink); background: var(--danger); border-color: var(--danger); }
-/* STATE UNKNOWN: an alarm, but not "engaged": red outline on a hatched ground. */
-.ks-state.warn {
-  color: var(--danger);
-  border: 1px dashed var(--danger);
-  background: repeating-linear-gradient(135deg, rgb(239 79 79 / .12) 0 5px, transparent 5px 10px);
+.status-panel.engaged { border-color: var(--danger); }
+.verdict .ks-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .7rem;
+  font: 400 1.5rem var(--serif);
+  letter-spacing: .06em;
+  color: var(--ink);
+  border: 0;
+  padding: 0;
+  background: none;
 }
-.ks-detail { color: var(--dim); }
-.killswitch > ul, .killswitch > p, .killswitch > form { flex-basis: 100%; margin: 0; text-align: left; }
-.killswitch ul { padding-left: 1.2rem; }
-.ks-confirm, .ks-release { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: flex-end; }
-.ks-confirm span { flex-basis: 100%; color: var(--ink); text-align: right; }
+.verdict .ks-state.danger { color: var(--danger); }
+.verdict .ks-state.warn { color: var(--caution); }
+.lights {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  gap: .35rem 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: .9rem var(--mono);
+}
+.lights li { display: flex; align-items: center; gap: .55rem; }
+.lights .what { color: var(--dim); }
+.actions { display: flex; flex-direction: column; gap: .5rem; }
+.actions .head { font: .85rem var(--mono); letter-spacing: .14em; color: var(--dim); text-align: center; }
+.panel-wide { grid-column: 1 / -1; font: .9rem var(--mono); }
+.panel-wide:empty { display: none; }
+.status-panel > .ks-failed { grid-column: 1 / -1; margin: 0; }
+.panel-wide > * { margin: .5rem 0 0; }
+.panel-wide ul { padding-left: 1.2rem; }
+.ks-confirm, .ks-release { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.ks-confirm span { flex-basis: 100%; color: var(--ink); }
 .ks-note { color: var(--dim); }
+.ks-fine p { margin: .35rem 0 0; }
 
 /* ---- Controls -------------------------------------------------------------------------------- */
 
@@ -278,6 +294,8 @@ button {
 button:hover { border-color: var(--amber); background: rgb(224 163 58 / .08); }
 button.danger { color: var(--danger-ink); background: var(--danger); border-color: var(--danger); }
 button.danger:hover { filter: brightness(1.1); }
+button.stop { color: var(--danger); border-color: var(--danger); }
+button.stop:hover { color: var(--danger-ink); background: var(--danger); }
 button.quiet { border-color: transparent; color: var(--dim); padding: .2rem 0; }
 button.quiet:hover { color: var(--ink); background: none; }
 
@@ -342,9 +360,10 @@ input:focus { border-color: var(--amber); }
   body { font-size: 1.0625rem; }
   .mast-top { flex-direction: column; align-items: stretch; }
   .wordmark { font-size: 1.1rem; letter-spacing: .22em; }
-  .killswitch, #killswitch { justify-content: flex-start; max-width: none; }
-  .ks-confirm, .ks-release { justify-content: flex-start; }
-  .ks-confirm span { text-align: left; }
+  .status-panel { grid-template-columns: 1fr; }
+  .lights { grid-template-columns: 1fr; }
+  .actions { flex-direction: row; flex-wrap: wrap; }
+  .actions .head { width: 100%; text-align: left; }
   .hero { grid-template-columns: 1fr; }
   .ranks li { grid-template-columns: 1fr auto auto; }
   .ranks .name { grid-column: 1 / -1; }

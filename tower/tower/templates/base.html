@@ -13,9 +13,6 @@
   <header class="masthead">
     <div class="mast-top">
       <h1 class="wordmark"><a href="/">RAPID SELECTOR</a></h1>
-      {% block killswitch %}<div id="killswitch" class="killswitch" hx-get="/partials/killswitch" hx-trigger="load" hx-target="this" hx-swap="outerHTML"><span class="ks-state">reading the kill switch…</span>
-        <button type="button" hx-get="/partials/killswitch?confirm=1">STOP &middot; level 1</button>
-        <button type="button" hx-get="/partials/killswitch?confirm=2">STOP &middot; level 2</button></div>{% endblock %}
     </div>
     {% block nav %}
     <nav class="tabs">
@@ -27,6 +24,12 @@
     </nav>
     {% endblock %}
   </header>
+  {% block killswitch %}<div id="killswitch" class="killswitch status-panel" hx-get="/partials/killswitch" hx-trigger="load" hx-target="this" hx-swap="outerHTML">
+    <div class="verdict"><span class="ks-state"><span class="dot off big" aria-hidden="true"></span>reading the kill switch…</span></div>
+    <ul class="lights"></ul>
+    <div class="actions"><span class="head">KILL SWITCH</span>
+      <button type="button" class="stop" hx-get="/partials/killswitch?confirm=1">STOP &middot; level 1</button>
+      <button type="button" class="stop" hx-get="/partials/killswitch?confirm=2">STOP &middot; level 2</button></div></div>{% endblock %}
   <main>
     {% for source in missing|default([]) %}
     <p class="warn missing" role="status">{{ "The gateway" if source == "gateway" else "OpenRouter" }} cannot be read, so its figures are missing below. Reload to try again.</p>

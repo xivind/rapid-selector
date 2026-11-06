@@ -343,7 +343,7 @@ def test_failed_readback_shows_unknown_not_engaged(db):
 def test_partial_states(db):
     gw, orc = FakeGateway(["a", "b"]), FakeOpenRouter()
     c = browser(gw, orc)
-    assert "● ALL CLEAR" in c.get("/partials/killswitch").text
+    assert 'class="dot go big" aria-hidden="true"></span>ALL CLEAR' in c.get("/partials/killswitch").text
     gw.fail = {"b"}
     r = c.post("/kill/engage/1", data={"confirm": "yes"})
     assert "LEVEL 1 · PARTIAL" in r.text and "ALL CLEAR" not in r.text
@@ -519,3 +519,15 @@ def test_engage_level2_log_says_key_was_disabled_outside_tower(db):
     store.Flag.replace(name="level2_by_tower", value="true").execute()
     engage(2, gw, orc, "owner")
     assert "already disabled by tower" in store.latest("kill_switch").summary
+
+
+def test_panel_engaged_shows_release_and_problems(db):
+    gw, orc = FakeGateway(["a", "b"]), FakeOpenRouter()
+    gw.add("x", blocked=True)
+    gw.fail = {"b"}
+    text = browser(gw, orc).post("/kill/engage/1", data={"confirm": "yes"}).text
+    assert "LEVEL 1 · PARTIAL" in text and "status-panel engaged" in text
+    assert 'hx-post="/kill/release/1"' in text
+    folded = text.split("<details")[1].split("</details>")[0]
+    for shown in ("could not block b", "Blocked outside tower: x", "is blocked again within a minute"):
+        assert shown in text and shown not in folded, shown

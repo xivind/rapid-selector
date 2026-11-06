@@ -308,7 +308,7 @@ def test_no_secret_in_any_page(db, config_dir):
 
 def test_killswitch_placeholder_has_both_stop_buttons(db, config_dir):
     text = browser(config_dir).get("/").text
-    ks = text.split('id="killswitch"')[1].split("</div>")[0]
+    ks = text.split('id="killswitch"')[1].split("<main")[0]
     assert 'hx-get="/partials/killswitch?confirm=1"' in ks
     assert 'hx-get="/partials/killswitch?confirm=2"' in ks
 
@@ -438,3 +438,14 @@ def test_usage_page_shows_yday_and_changes(db, config_dir):
     assert "yday $0.25" in classify
     assert 'class="new"' in classify  # nothing in the same days of last month
     assert 'class="down"' in classify or 'class="up"' in classify  # the week against last week
+
+
+def test_panel_all_clear(db, config_dir):
+    text = browser(config_dir).get("/partials/killswitch").text
+    assert 'class="killswitch status-panel"' in text and "engaged" not in text
+    assert 'class="dot go big"' in text and "ALL CLEAR" in text
+    for word in ("gateway keys", "OpenRouter key", "price check", "reconciliation", "KILL SWITCH"):
+        assert word in text, word
+    assert 'hx-get="/partials/killswitch?confirm=1"' in text and 'hx-get="/partials/killswitch?confirm=2"' in text
+    fixed = text.split("<details")[1].split("</details>")[0]
+    assert "What the levels do" in fixed and "master key" in fixed

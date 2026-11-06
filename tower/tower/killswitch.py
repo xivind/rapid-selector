@@ -32,6 +32,7 @@ class SwitchState:
     blocked_outside: list[str]
     openrouter_disabled: bool | None
     problems: list[str]
+    gateway_read: bool = True
 
 
 def _name(alias, token_hash):
@@ -89,6 +90,7 @@ def read_state(keys, or_key, tower_blocked, level2_by_tower, own_hash, level1_by
         blocked_outside=outside,
         openrouter_disabled=disabled,
         problems=problems,
+        gateway_read=not isinstance(keys, Unavailable),
     )
 
 
@@ -286,16 +288,31 @@ def enforce(gw) -> list[str]:
 
 
 def register(router, app):
-    from tower import setup_view  # imported here: setup_view imports this module
+    from tower import setup_view, status  # imported here: setup_view imports this module
 
     # A refusal answers 200, like checks: htmx 2 does not swap 4xx answers, so it would not be seen.
-    def render(request, state, confirm=None, error=None):
+    # One deadline per request covers the state and the lights together.
+    def render(request, state, end, confirm=None, error=None):
+        now = datetime.now(UTC)
+        try:
+            latest = store.latest("price_check")
+        except Exception:  # an unreadable store must not break the kill switch
+            latest = None
+        lights = status.panel_lights(state, latest, status.reconciliation_now(*clients(), now, end), now)
+        if state.level in (1, 2):
+            verdict = "stop"
+        elif state.level == 0 and not state.problems:
+            verdict = "go"
+        else:
+            verdict = "caution"
         context = {
             "state": state,
             "confirm": confirm,
             "error": error,
             "tower_level1": _flag(LEVEL1_FLAG),
             "tower_level2": _level2_by_tower(),
+            "lights": lights,
+            "verdict_colour": verdict,
         }
         return app.state.templates.TemplateResponse(
             request, "partials/killswitch.html", context)
@@ -303,9 +320,9 @@ def register(router, app):
     def clients():
         return app.state.gateway, app.state.openrouter
 
-    def state():
+    def state(end):
         # Bound by the page deadline, so a hanging source never leaves the switch unrendered.
-        return current_state(*clients(), end=setup_view.deadline())
+        return current_state(*clients(), end=end)
 
     def check(level):
         if level not in (1, 2):
@@ -313,19 +330,22 @@ def register(router, app):
 
     @router.get("/partials/killswitch", response_class=HTMLResponse)
     def partial(request: Request, confirm: int | None = None):
-        return render(request, state(), confirm if confirm in (1, 2) else None)
+        end = setup_view.deadline()
+        return render(request, state(end), end, confirm if confirm in (1, 2) else None)
 
     @router.post("/kill/engage/{level}", response_class=HTMLResponse)
     def engage_route(request: Request, level: int, confirm: str = Form("")):
         check(level)
+        end = setup_view.deadline()
         if confirm != "yes":
-            return render(request, state(), error="Nothing changed: confirm first.")
-        return render(request, engage(level, *clients(), "owner"))
+            return render(request, state(end), end, error="Nothing changed: confirm first.")
+        return render(request, engage(level, *clients(), "owner"), end)
 
     @router.post("/kill/release/{level}", response_class=HTMLResponse)
     def release_route(request: Request, level: int, word: str = Form("")):
         check(level)
+        end = setup_view.deadline()
         if word != "release":
-            return render(request, state(),
+            return render(request, state(end), end,
                           error='Nothing changed: type the word "release".')
-        return render(request, release(level, *clients(), "owner"))
+        return render(request, release(level, *clients(), "owner"), end)
