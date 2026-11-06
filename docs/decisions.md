@@ -205,6 +205,9 @@ Decided by the owner from the builder check (option B of 2; A kept removing and 
 ### 2026-11-05: Tower part 1b's design approved
 `superpowers/specs/2026-11-05-tower-part-1b-design.md`, approved by the owner after the builder check.
 
+### 2026-11-06: Step E1, the first nightly backups ran
+On `home-assistant`, from `node_exporter` at 07:24: `backup_last_status` 1 for both `rapidselector-postgres` (1 second, 644,994 bytes, `rapidselector-postgres-2026-11-06.sql`) and `rapidselector-chat` (30 seconds, 1,118,646,784 bytes, `rapidselector-chat-2026-11-06.tar`), both written at 06:00. 1.1 GB for an Open WebUI that has hardly been used is suspect: the C3 note saw `cache/embedding/models/` in it, though local embedding is off. So `min_bytes` waits until the tar's largest entries are known, and the backup count (9 to 11) is raised in `production` after that. Both files are `-rwxr-xr-x`, readable by every user on `home-assistant`, as `backup-orchestrator` writes them; that is `production`'s business. It cost nothing.
+
 ## Open
 
 ### Settle during design or phase 0
