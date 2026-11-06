@@ -16,7 +16,7 @@ Each phase gets its own spec, plan and build, follows the overall design (`super
    - **First, with the owner:** the level of visual ambition and the stack.
    - Login, cost summary, OpenRouter balance and key limit, reconciliation, kill switch at both levels, `/metrics`.
    - In the `production` repository: a backup job for tower's SQLite, the Grafana dashboard, and the remaining alerts.
-   - **Move to `webserver`:** a separate step following the move procedure, when things are stable. Suggested after phase 1; the owner decides when.
+   - ~~**Move to `webserver`.**~~ Dropped 2026-11-06: rapid-selector stays on `sandbox` (`decisions.md`).
 2. **Arena and benchmarks:** first evaluate Open WebUI's built-in arena and promptfoo, and build in tower only what they do not cover (likely per-host speed and cost comparison, and the visualisation).
    - **Owner's wish, 2026-11-05:** switch on Open WebUI's arena and try promptfoo, put on hold while tower part 1 is designed. To settle first, against current docs: how Open WebUI's arena picks models and what each rating costs (`ENABLE_EVALUATION_ARENA_MODELS` is off today). promptfoo is a separate tool, not part of Open WebUI, and counts as an automated client: its own key in team `experiments` with a low cap, a limit on calls per run and on input size, and every run's cost flagged first.
 3. **Programmatic use cases:** real uses through the gateway's HTTP API, starting with log analysis. Each use follows the rules in `requirements.md` (programmatic access) and decides for itself whether it needs an asynchronous layer.

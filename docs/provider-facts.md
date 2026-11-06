@@ -156,8 +156,17 @@ From `tests/chat.bats` against the gateway and the fake upstream.
 - The model list shown is exactly the gateway's 11 names.
 - Title, tags, follow-up, autocomplete and query generation are separate API calls (`/api/v1/tasks/<name>/completions`) made by the browser. With our settings, only the title call reaches the gateway, and it uses `TASK_MODEL_EXTERNAL` (`llama-3.1-8b-instruct@deepinfra`) whatever model the chat uses. With `ENABLE_FOLLOW_UP_GENERATION=True`, a follow-up call reaches the gateway (checked).
 - With `ENABLE_PERSISTENT_CONFIG=False`, a setting changed through the admin API (`ENABLE_SIGNUP`) takes effect until restart, then returns to the environment's value.
-- With `BYPASS_EMBEDDING_AND_RETRIEVAL=True`, it downloads no embedding model at start, and uses about 634 MiB of memory after start (amd64, cloud sandbox).
+- With `BYPASS_EMBEDDING_AND_RETRIEVAL=True`, it downloads no embedding model at start, and uses about 634 MiB of memory after start (amd64, cloud sandbox). **Wrong, see 2026-11-06 below:** the standard image loads its bundled embedding model at every start, and may update it from Hugging Face.
 - The image has `curl`, used for its healthcheck (`/health`).
+
+### Checked in the source, v0.13.0, 2026-11-06
+Sources: `Dockerfile`, `backend/open_webui/main.py`, `env.py`, `config.py`, `retrieval/utils.py`, `routers/retrieval.py`, `routers/audio/__init__.py` and `routers/evaluations.py` at tag `v0.13.0` on GitHub; image indexes on `ghcr.io`.
+- The standard image bundles models in `/app/backend/data/cache`, at build time: the embedding model (`sentence-transformers/all-MiniLM-L6-v2`), `TaylorAI/bge-micro-v2` (the arena leaderboard's), Whisper `base` and a tiktoken encoding. A named volume mounted there gets a copy of them when it is first created. Seen on `sandbox`: 1.1 GB of `cache/` in the first chat backup.
+- At every start, `main.py` calls `get_ef`, which loads the embedding model whenever the embedding engine is the default (empty), whatever `BYPASS_EMBEDDING_AND_RETRIEVAL` says. `RAG_EMBEDDING_MODEL_AUTO_UPDATE` defaults to `True`, so `snapshot_download` checks Hugging Face and fetches the model's whole repository.
+- Whisper is loaded on the first speech-to-text request, not at start. If it is not in the cache, it is downloaded even when auto-update is off.
+- `OFFLINE_MODE=True` sets `HF_HUB_OFFLINE=1` and turns off all three auto-updates. A missing model then gives an error in the log, and start-up carries on.
+- **The slim image** (`v0.13.0-slim`, built with `USE_SLIM=true`, which sets `USE_SLIM_DOCKER=true`) bundles no models, installs `requirements-slim.txt` without torch, and leaves out `git`, `pandoc`, `ffmpeg` and the build tools, but keeps `curl` and `jq`. In its code, `USE_SLIM` skips the local embedding model, the leaderboard's model and local Whisper (speech-to-text needs an outside engine, so a 503). tiktoken is not bundled; it is used to split documents in retrieval, and would be fetched into `cache/tiktoken` the first time.
+- `ghcr.io/open-webui/open-webui:v0.13.0-slim` is published for `linux/arm64` (and amd64).
 
 ## OpenRouter catalogue
 

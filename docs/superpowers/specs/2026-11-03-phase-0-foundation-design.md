@@ -136,7 +136,7 @@ Common: Compose project `rapidselector`; restart policy `unless-stopped`; loggin
 | | `db` | `gateway` | `chat` |
 |---|---|---|---|
 | Container | `rapidselector-db` | `rapidselector-gateway` | `rapidselector-chat` |
-| Image | `postgres:17.11-alpine` | `ghcr.io/berriai/litellm-database:v1.106.6` | `ghcr.io/open-webui/open-webui:v0.13.0` |
+| Image | `postgres:17.11-alpine` | `ghcr.io/berriai/litellm-database:v1.106.6` | `ghcr.io/open-webui/open-webui:v0.13.0-slim` |
 | Port | None | `LAN:4000 → 4000` | `LAN:4010 → 8080` |
 | Storage | Volume `rapidselector_pgdata` | `./gateway/config.yaml`, read-only | Volume `rapidselector_chatdata` |
 | Memory limit (initial) | 512 MB | 1.5 GB | 1.5 GB |

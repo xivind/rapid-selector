@@ -56,7 +56,8 @@ services:
       retries: 6
 
   chat:
-    image: ghcr.io/open-webui/open-webui:v0.13.0
+    # Slim: no bundled embedding or Whisper model, and no local model loaded or downloaded.
+    image: ghcr.io/open-webui/open-webui:v0.13.0-slim
     container_name: rapidselector-chat
     restart: unless-stopped
     environment:
@@ -82,7 +83,7 @@ services:
       ENABLE_WEB_SEARCH: "False"
       ENABLE_IMAGE_GENERATION: "False"
       ENABLE_EVALUATION_ARENA_MODELS: "False"
-      # No local embedding model (memory, downloads).
+      # No embedding or retrieval for files in chats.
       BYPASS_EMBEDDING_AND_RETRIEVAL: "True"
     volumes:
       - chatdata:/app/backend/data
