@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.middleware.sessions import SessionMiddleware
 
-from tower import checks, killswitch, metrics, setup_view, store
+from tower import checks, killswitch, metrics, setup_view, status, store
 from tower.clients import GatewayClient, OpenRouterClient, Unavailable
 from tower.settings import Settings, load_settings
 from tower.summary import change, cost_summary, period_bounds, reconcile_days, usage_tables
@@ -241,9 +241,11 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
         })
 
     @protected.get("/setup", response_class=HTMLResponse)
-    def setup(request: Request):
+    def setup(request: Request,
+              tab: Literal["models", "teams", "openrouter", "gateway", "webui", "secrets"] = "models"):
         view = setup_view.build(app.state.gateway, app.state.openrouter, app.state.settings)
-        return page(request, "setup.html", {"v": view, "missing": view["missing"],
+        return page(request, "setup.html", {"v": view, "missing": view["missing"], "tab": tab,
+                                             "tab_lights": status.tab_lights(view, datetime.now(UTC)),
                                              "price_checked": setup_view.latest_price_check()[0]})
 
     @protected.get("/log", response_class=HTMLResponse)

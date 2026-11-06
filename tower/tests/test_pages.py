@@ -207,7 +207,7 @@ def test_pages_render_within_deadline_when_sources_hang(db, config_dir, monkeypa
     release = threading.Event()
     try:
         c = browser(config_dir, gw=Hanging("gateway", release), orc=Hanging("openrouter", release))
-        for path in ("/", "/usage", "/setup"):
+        for path in ("/", "/usage", "/setup", "/setup?tab=teams", "/setup?tab=openrouter"):
             start = time.monotonic()
             r = c.get(path)
             assert r.status_code == 200
@@ -238,20 +238,28 @@ def test_usage_renders_with_gateway_down(db, config_dir):
     assert r.status_code == 200 and "The gateway cannot be read" in r.text
 
 
+SETUP_TABS = ("models", "teams", "openrouter", "gateway", "webui", "secrets")
+
+
 def test_setup_page_renders(db, config_dir):
-    r = browser(config_dir).get("/setup")
-    assert r.status_code == 200
-    for text in ("deepinfra", "fp8", "TASK_MODEL_EXTERNAL", "secret, from .env",
-                 "config.yaml", "experiments", "sk-or-v1-abc...xyz", "TOWER_GATEWAY_KEY",
-                 "./rapidselector.sh up"):
-        assert text in r.text, text
+    c = browser(config_dir)
+    for tab, texts in (("models", ("deepinfra", "fp8")), ("webui", ("TASK_MODEL_EXTERNAL", "secret, from .env",
+                                                                    "./rapidselector.sh up")),
+                       ("gateway", ("config.yaml",)), ("teams", ("experiments",)),
+                       ("openrouter", ("sk-or-v1-abc...xyz",)), ("secrets", ("TOWER_GATEWAY_KEY",))):
+        r = c.get(f"/setup?tab={tab}")
+        assert r.status_code == 200
+        for text in texts:
+            assert text in r.text, (tab, text)
 
 
 def test_setup_page_with_both_down(db, config_dir):
-    r = browser(config_dir, gw=Down("gateway"), orc=Down("openrouter")).get("/setup")
-    assert r.status_code == 200
-    assert "The gateway cannot be read" in r.text and "OpenRouter cannot be read" in r.text
-    assert "TASK_MODEL_EXTERNAL" in r.text  # from the file, not a source
+    c = browser(config_dir, gw=Down("gateway"), orc=Down("openrouter"))
+    for tab in SETUP_TABS:
+        r = c.get(f"/setup?tab={tab}")
+        assert r.status_code == 200, tab
+        assert "The gateway cannot be read" in r.text and "OpenRouter cannot be read" in r.text, tab
+    assert "TASK_MODEL_EXTERNAL" in c.get("/setup?tab=webui").text  # from the file, not a source
 
 
 def test_log_newest_first(db, config_dir):
@@ -292,13 +300,13 @@ def test_no_secret_in_any_page(db, config_dir):
     env = {name: f"MARKER-{i}-{name}" for i, name in enumerate(ENV)}
     store.log("kill_switch", "owner", True, "engage level 1: blocked 1 key(s)", {})
     c = browser(config_dir, env=env)
-    bodies = [c.get(p).text for p in ("/", "/?period=day", "/?period=week", "/usage", "/setup",
-                                       "/log", "/partials/killswitch", "/partials/checks",
+    bodies = [c.get(p).text for p in ("/", "/?period=day", "/?period=week", "/usage",
+                                       *(f"/setup?tab={t}" for t in SETUP_TABS), "/log", "/partials/killswitch", "/partials/checks",
                                        "/partials/killswitch?confirm=2", "/static/tower.css")]
     bodies.append(TestClient(c.app).get("/login").text)
     for down in (dict(gw=Down("gateway")), dict(orc=Down("openrouter"))):
         d = browser(config_dir, env=env, **down)
-        bodies += [d.get(p).text for p in ("/", "/usage", "/setup", "/log")]
+        bodies += [d.get(p).text for p in ("/", "/usage", *(f"/setup?tab={t}" for t in SETUP_TABS), "/log")]
     for body in bodies:
         for value in env.values():
             assert value not in body
@@ -352,7 +360,7 @@ def test_killswitch_says_level1_leaves_the_master_key(db, config_dir):
 
 def test_setup_warns_about_a_malformed_expiry(db, config_dir):
     c = browser(config_dir, env={**ENV, "OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT": "next-year-x"})
-    text = c.get("/setup").text
+    text = c.get("/setup?tab=openrouter").text
     assert "<code>OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT</code> is not a date (YYYY-MM-DD)" in text
     assert "next-year-x" not in text
 
@@ -449,3 +457,28 @@ def test_panel_all_clear(db, config_dir):
     assert 'hx-get="/partials/killswitch?confirm=1"' in text and 'hx-get="/partials/killswitch?confirm=2"' in text
     fixed = text.split("<details")[1].split("</details>")[0]
     assert "What the levels do" in fixed and "master key" in fixed
+
+
+def test_setup_tabs_default_models(db, config_dir):
+    text = browser(config_dir).get("/setup").text
+    assert 'class="data models"' in text and "/team/info" not in text
+    for tab in SETUP_TABS:
+        assert f'href="/setup?tab={tab}"' in text, tab
+    assert 'href="/setup?tab=models" aria-current="page"' in text
+    nav = text.split('class="subtabs"')[1].split("</nav>")[0]
+    assert nav.count('class="dot ') == 4  # Models, Teams and keys, OpenRouter, Secrets
+
+
+def test_setup_tab_openrouter_has_both_keys(db, config_dir):
+    text = browser(config_dir).get("/setup?tab=openrouter").text
+    assert "sk-or-v1-abc...xyz" in text and "Management key" in text
+    assert 'class="data models"' not in text
+
+
+def test_setup_unknown_tab_422(db, config_dir):
+    assert browser(config_dir).get("/setup?tab=everything").status_code == 422
+
+
+def test_setup_models_badges(db, config_dir):
+    text = browser(config_dir).get("/setup").text
+    assert 'class="badge go">ZDR</span>' in text and 'class="badge plain">no fallback</span>' in text

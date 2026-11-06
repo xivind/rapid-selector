@@ -81,3 +81,62 @@ def reconciliation_now(gw, orc, now: datetime, end: float) -> Reconciliation | U
         return reconcile(spent, float(got["key"]["usage_monthly"]))
     except Exception as e:  # a malformed answer shows as no figures
         return Unavailable("gateway", type(e).__name__)
+
+
+TEAM_CAUTION, TEAM_STOP = 0.20, 0.10  # share of a team's budget left, as the budget alerts
+KEY_EXPIRY_CAUTION_DAYS = 30
+
+
+def _models_tab(models) -> Light:
+    results = [m.get("price_check") for m in models or []]
+    if not any(results):
+        return Light("off", "not checked")
+    if any(r and r != "ok" for r in results):
+        return Light("stop", "a price check failed")
+    return Light("go", "prices ok")
+
+
+def _teams_tab(teams) -> Light:
+    if teams is None:
+        return Light("off", "cannot be read")
+    worst = Light("go", "budgets ok")
+    for t in teams:
+        if t.get("blocked") or any(k.get("blocked") for k in t.get("keys") or []):
+            return Light("stop", "a key is blocked")
+        budget, spend = t.get("budget"), t.get("spend")
+        if t.get("id") and budget and spend is not None:
+            left = (budget - spend) / budget
+            if left < TEAM_STOP:
+                return Light("stop", f"{t.get('alias')} under 10% left")
+            if left < TEAM_CAUTION:
+                worst = Light("caution", f"{t.get('alias')} under 20% left")
+    return worst
+
+
+def _openrouter_tab(key, management) -> Light:
+    if key is None:
+        return Light("off", "cannot be read")
+    days = (management or {}).get("days_left")
+    if key.get("disabled"):
+        return Light("stop", "inference key disabled")
+    if days is not None and days < 0:
+        return Light("stop", "management key expired")
+    if days is None:
+        return Light("caution", "management key expiry unknown")
+    if days < KEY_EXPIRY_CAUTION_DAYS:
+        return Light("caution", f"management key: {days} days left")
+    return Light("go", "keys ok")
+
+
+def tab_lights(view: dict, now: datetime) -> dict[str, Light | None]:
+    """Setup's tabs: one light each where there is a status to sum up; None for the others."""
+    secrets = view.get("secrets") or []
+    return {
+        "models": _models_tab(view.get("models")),
+        "teams_and_keys": _teams_tab(view.get("teams_and_keys")),
+        "openrouter": _openrouter_tab(view.get("openrouter_key"), view.get("management_key")),
+        "gateway": None,
+        "open_webui": None,
+        "secrets": Light("stop", "a secret is not set") if any(s != "set" for _, s in secrets)
+        else Light("go", "all set"),
+    }

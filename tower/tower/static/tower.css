@@ -354,6 +354,18 @@ input:focus { border-color: var(--amber); }
 .card .threshold.go { color: var(--go); }
 .card .threshold.danger { color: var(--danger); }
 
+/* Setup's tabs: plain links, one section shown at a time. */
+.subtabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0 .75rem; }
+.subtabs a {
+  display: inline-flex; align-items: center; gap: .45rem;
+  font: .9rem var(--mono); text-decoration: none; color: var(--dim);
+  border: 1px solid var(--rule); padding: .35rem .85rem;
+}
+.subtabs a:hover { color: var(--ink); border-color: var(--amber-low); }
+.subtabs a[aria-current="page"] { color: var(--ground); background: var(--amber); border-color: var(--amber); }
+.tab-status { margin: 0 0 .5rem; font: .9rem var(--mono); color: var(--dim); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
 /* ---- Phone width ----------------------------------------------------------------------------- */
 
 @media (max-width: 40rem) {

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/marks.html" import badge %}
 {% block main %}
 {% macro gone(what) %}<p class="warn blank">{{ what }} cannot be read.</p>{% endmacro %}
 {% macro opt(value) %}{{ "—" if value is none else value }}{% endmacro %}
@@ -6,21 +7,35 @@
 <h2 class="page-title">Setup</h2>
 <p class="lede">Every setting tower can read. Read-only: each is changed where it is set, which is named beside it.</p>
 
+<nav class="subtabs" aria-label="Setup sections">
+  {% for key, name, light_key in (("models", "Models", "models"), ("teams", "Teams and keys", "teams_and_keys"),
+                                  ("openrouter", "OpenRouter", "openrouter"), ("gateway", "Gateway", "gateway"),
+                                  ("webui", "Open WebUI", "open_webui"), ("secrets", "Secrets", "secrets")) %}
+  {% set l = tab_lights[light_key] %}
+  <a href="/setup?tab={{ key }}"{% if tab == key %} aria-current="page"{% endif %}>{{ name }}{% if l %} <span class="dot {{ l.colour }}" aria-hidden="true"></span><span class="visually-hidden">{{ l.word }}</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+{% if tab_lights[{"teams": "teams_and_keys", "webui": "open_webui"}.get(tab, tab)] %}
+{% set l = tab_lights[{"teams": "teams_and_keys", "webui": "open_webui"}.get(tab, tab)] %}
+<p class="tab-status"><span class="lit"><span class="dot {{ l.colour }}" aria-hidden="true"></span>{{ l.word }}</span></p>
+{% endif %}
+
+{% if tab == "models" %}
 <section aria-labelledby="models-title">
   <h3 class="section-title" id="models-title">Models</h3>
   <p class="note">Each role and experiment name, from the gateway's <code>/model/info</code>. Prices in USD per million tokens. Price check: {{ price_checked|when if price_checked else "not run yet" }}.</p>
   {% if v.models is none %}{{ gone("The gateway") }}{% else %}
   <div class="scroll">
     <table class="data models">
-      <thead><tr><th>name</th><th>kind</th><th>model</th><th>host</th><th>quant.</th><th>fallbacks</th><th>ZDR</th><th class="num">in</th><th class="num">out</th><th class="num">max_tokens</th><th>price check</th></tr></thead>
+      <thead><tr><th>name</th><th>kind</th><th>model</th><th>host</th><th>quant.</th><th>fallbacks</th><th>data</th><th class="num">in</th><th class="num">out</th><th class="num">max_tokens</th><th>price check</th></tr></thead>
       <tbody>
         {% for m in v.models %}
         <tr>
           <th scope="row">{{ m.name }}</th><td>{{ m.kind }}</td><td>{{ m.model }}</td><td>{{ m.host }}</td><td>{{ opt(m.quantisation) }}</td>
-          <td{% if m.fallbacks == "on" %} class="danger"{% endif %}>{{ m.fallbacks }}</td>
-          <td{% if not m.zdr %} class="danger"{% endif %}>{{ "yes" if m.zdr else "no" }}</td>
+          <td>{{ badge("fallbacks on", "stop") if m.fallbacks == "on" else badge("no fallback", "plain") }}</td>
+          <td>{{ badge("ZDR", "go") if m.zdr else badge("no ZDR", "stop") }}</td>
           <td class="num">{{ opt(m.price_in) }}</td><td class="num">{{ opt(m.price_out) }}</td><td class="num">{{ opt(m.max_tokens) }}</td>
-          <td{% if m.price_check and m.price_check != "ok" %} class="danger"{% endif %}>{{ m.price_check or "not checked" }}</td>
+          <td>{% if not m.price_check %}{{ badge("not checked", "plain") }}{% elif m.price_check == "ok" %}{{ badge("price ok", "go", true) }}{% else %}{{ badge(m.price_check, "stop", true) }}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -29,6 +44,7 @@
   {% endif %}
 </section>
 
+{% elif tab == "teams" %}
 <section aria-labelledby="teams-title">
   <h3 class="section-title" id="teams-title">Teams and keys</h3>
   <p class="note">From the gateway's <code>/team/info</code> and <code>/key/info</code>.</p>
@@ -64,8 +80,9 @@
   {% endif %}
 </section>
 
+{% elif tab == "openrouter" %}
 <section aria-labelledby="or-title">
-  <h3 class="section-title" id="or-title">OpenRouter key</h3>
+  <h3 class="section-title" id="or-title">Inference key</h3>
   <p class="note">The gateway's inference key, from OpenRouter's management API. Tower does not hold this key.</p>
   {% set k = v.openrouter_key %}
   {% if k is none %}{{ gone("OpenRouter") }}{% else %}
@@ -90,6 +107,7 @@
   {% endif %}
 </section>
 
+{% elif tab == "gateway" %}
 <section aria-labelledby="gw-title">
   <h3 class="section-title" id="gw-title">Gateway settings</h3>
   <p class="note"><code>api</code>: what the running gateway reports. <code>config.yaml</code>: what <code>gateway/config.yaml</code> says, mounted read-only into tower.</p>
@@ -100,6 +118,7 @@
   </dl>
 </section>
 
+{% elif tab == "webui" %}
 <section aria-labelledby="webui-title">
   <h3 class="section-title" id="webui-title">Open WebUI</h3>
   <p class="note">As in <code>docker-compose.yml</code>: what the running container has, unless the file was changed without recreating it. Change these in <code>docker-compose.yml</code>, then run <code>./rapidselector.sh up</code>.</p>
@@ -112,6 +131,7 @@
   {% endif %}
 </section>
 
+{% elif tab == "secrets" %}
 <section aria-labelledby="secrets-title">
   <h3 class="section-title" id="secrets-title">Secrets</h3>
   <p class="note">Tower's own secrets, by name only. Tower is not given the others: Compose refuses to start the stack unless every secret in <code>.env.example</code> is set.</p>
@@ -119,4 +139,5 @@
     {% for name, state in v.secrets %}<dt>{{ name }}</dt><dd{% if state != "set" %} class="danger"{% endif %}>{{ state }}</dd>{% endfor %}
   </dl>
 </section>
+{% endif %}
 {% endblock %}

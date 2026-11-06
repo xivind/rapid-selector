@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from tower.clients import GatewayKey, Unavailable
 from tower.killswitch import SwitchState, read_state
-from tower.status import panel_lights
+from tower.status import panel_lights, tab_lights
 from tower.summary import reconcile
 
 NOW = datetime(2026, 11, 7, 12, 0, tzinfo=UTC)
@@ -71,3 +71,63 @@ def test_reconciliation_light_none_flagged_in_step_apart():
     assert lights(state(), recon=reconcile(7.40, 6.00))["reconciliation"] == ("stop", "$1.40 apart")
     assert lights(state(), recon=reconcile(7.405, 7.40))["reconciliation"] == ("go", "in step")
     assert lights(state(), recon=reconcile(7.44, 7.40))["reconciliation"] == ("go", "$0.04 apart")
+
+
+def view(models=None, teams=None, or_key=None, days_left=200, secrets=None):
+    return {
+        "models": models if models is not None else [{"name": "chat", "price_check": "ok"}],
+        "teams_and_keys": teams if teams is not None else [
+            {"id": "t1", "alias": "experiments", "budget": 24.0, "spend": 5.0, "blocked": False,
+             "keys": [{"alias": "chat", "blocked": False}]}],
+        "openrouter_key": or_key if or_key is not None else {"disabled": False},
+        "management_key": {"days_left": days_left},
+        "secrets": secrets if secrets is not None else [("TOWER_PASSWORD", "set")],
+    }
+
+
+def colours(v):
+    return {k: (x.colour if x else None) for k, x in tab_lights(v, NOW).items()}
+
+
+def test_tab_lights_all_green_and_no_light_for_gateway_and_webui():
+    assert colours(view()) == {"models": "go", "teams_and_keys": "go", "openrouter": "go",
+                               "secrets": "go", "gateway": None, "open_webui": None}
+
+
+def test_tab_lights_models():
+    assert colours(view(models=[{"name": "a", "price_check": None}]))["models"] == "off"
+    bad = [{"name": "a", "price_check": "ok"}, {"name": "b", "price_check": "price differs"}]
+    assert colours(view(models=bad))["models"] == "stop"
+    v = view()
+    v["models"] = None
+    assert colours(v)["models"] == "off"
+
+
+def test_tab_lights_teams():
+    def team(spend, blocked=False, key_blocked=False):
+        return [{"id": "t", "alias": "x", "budget": 10.0, "spend": spend, "blocked": blocked,
+                 "keys": [{"alias": "k", "blocked": key_blocked}]}]
+    assert colours(view(teams=team(8.5)))["teams_and_keys"] == "caution"  # 15% left
+    assert colours(view(teams=team(9.5)))["teams_and_keys"] == "stop"  # 5% left
+    assert colours(view(teams=team(1.0, blocked=True)))["teams_and_keys"] == "stop"
+    assert colours(view(teams=team(1.0, key_blocked=True)))["teams_and_keys"] == "stop"
+    no_team = [{"id": None, "alias": "no team", "budget": None, "spend": None, "blocked": False,
+                "keys": [{"alias": "k", "blocked": False}]}]
+    assert colours(view(teams=no_team))["teams_and_keys"] == "go"
+    v = view()
+    v["teams_and_keys"] = None
+    assert colours(v)["teams_and_keys"] == "off"
+
+
+def test_tab_lights_openrouter():
+    assert colours(view(or_key={"disabled": True}))["openrouter"] == "stop"
+    assert colours(view(days_left=-1))["openrouter"] == "stop"
+    assert colours(view(days_left=None))["openrouter"] == "caution"
+    assert colours(view(days_left=29))["openrouter"] == "caution"
+    v = view()
+    v["openrouter_key"] = None
+    assert colours(v)["openrouter"] == "off"
+
+
+def test_tab_lights_secrets():
+    assert colours(view(secrets=[("A", "set"), ("B", "not set")]))["secrets"] == "stop"
