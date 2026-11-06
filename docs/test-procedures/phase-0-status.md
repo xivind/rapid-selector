@@ -1,20 +1,24 @@
 # Phase 0: where the walkthrough stands
 
-A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+A handoff between sessions, written 2026-11-04 and last updated at the end of 2026-11-06. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Where we are (2026-11-06)
+## Where we are (end of 2026-11-06)
 
-- **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1, D2, D4, D5 and E1 are done and recorded in `docs/decisions.md`. D3 and D4 passed for all 11 names (the last on 2026-11-06). **rapid-selector stays on `sandbox`** (owner, 2026-11-06).
-- **E1 (2026-11-06):** chat now runs Open WebUI's slim image (about 510 MiB less memory), the old model cache is deleted from its volume, and the chat backup leaves out `cache/` (1.08 MB, not 1.1 GB). `min_bytes` and the backup count of 11 are set in `production`.
-- **Tower:** the designs for part 1a (see, stop and check) and part 1b (full editing of models, roles, allowed names and budgets) are **approved**: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md` and `…-tower-part-1b-design.md`. Every decision behind them is in `docs/decisions.md` (2026-11-05 entries). No plan or code yet.
+- **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1–D7 and E1 are done and recorded in `docs/decisions.md`. **rapid-selector stays on `sandbox`** (owner). E2 moves to after tower part 1b. E3 (first real use from Node-RED) is open.
+- **D6:** the balance is not a hard stop: it went to −$0.19 across two drain runs; `CLAUDE.md` principle 1 now says "plus a small overshoot". The owner may also want principle 1's layer 1 ("Hard, at the provider: the prepaid balance") reworded; asked, not answered.
+- **D7:** $35 topped up; balance $34.81.
+- **D8 in progress:** `experiments`' budget was lowered to **$5.36** at 14:51 (spend $5.10); both budget rules **fire** in Grafana, but **no email arrived**: the owner found a Mailgun problem and is fixing it. When it works: confirm both emails, then restore with `./rapidselector.sh run-script scripts/setup-keys.sh` (table shows experiments 24), run `scripts/smoke-test.sh` once, and check the rules clear within about 20 minutes. If the budget is restored before Mailgun works, D8's email check is repeated later with the same steps.
+- **Tower part 1a is built** on branch **`tower-part-1a`** (pushed; worktree `.worktrees/tower-part-1a` on this machine), subagent-driven: all 13 tasks reviewed, the final whole-branch review's fixes done and re-reviewed. 160 unit tests pass (`cd tower && uv run pytest`). The ledger is `.worktrees/tower-part-1a/.superpowers/sdd/2026-11-06-tower-part-1a/progress.md` (not in git). In `production`, branch **`rapidselector-tower`** (local only, not pushed) holds tower's backup job, Prometheus target and alert note: merge it only when tower runs on `sandbox`, since its `jobs.conf` line fails the nightly run until the export word is installed there.
 - **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
 
 ## Next, in order (the owner picks)
 
-1. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
-2. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
-3. **Tower part 1a's plan** is written (`docs/superpowers/plans/2026-11-06-tower-part-1a.md`), reviewed and accepted by the owner, to be built subagent-driven; part 1b's plan after 1a is built. Building waits until D6–D8 are done, unless the owner decides otherwise.
-4. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
+1. **Finish D8** (above).
+2. **A third Docker run for tower** in a claude.ai/code session (this Chromebook has no Docker): the final fixes changed `tests/tower.bats` and `scripts/lib.sh`'s `api()`, which every script uses. Prompt: "Repository xivind/rapid-selector, branch `tower-part-1a`; pull, stay on it, read CLAUDE.md. Run the whole level 1 suite `tests/run.sh` and `cd tower && uv run pytest`. The last commits changed tests/tower.bats (level 1 stays held after level 2 is released with the gateway down), scripts/lib.sh `api()` (body on stdin, master key from a header file), scripts/setup-keys.sh and rapidselector.sh `update` (pull --ignore-buildable, then up -d --build). If a test fails, fix the cause in the smallest way with a test, and say what and why. Nothing spends money; never a real secret. Commit with the attribution lines from your system reminder, `git pull --rebase`, push to `tower-part-1a`; no merge, no PR. Report: results, changes, commits."
+3. **Show the owner tower's look** (mockup B; sign-off pending), then **tower's test procedure on `sandbox`**: `docs/test-procedures/tower-1a.md` (on the tower branch), one step at a time. First check `docker compose version` is v2.15 or later (`update` uses `--ignore-buildable`). It needs the four new secrets added with `scripts/add-tower-secrets.sh`, a management key created with a one-year expiry, and spends under $0.01 plus a few calls under $0.001.
+4. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
+5. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is on `phase-0-walkthrough` and gets tower when the owner switches it to the tower branch for the test procedure.
+6. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
 
 ## Things to remember
 
@@ -23,7 +27,7 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 - **Config changes:** the gateway reads `gateway/config.yaml` from a mounted file, so after changing it run `./rapidselector.sh restart gateway`; `up` does not reload it.
 - **`tests/resilience.bats`** was edited (memory limits gone) but not run: run it at the next level 1 run.
 - **Findings 38 and 39** (Hugging Face fetch, LiteLLM's own retries) are new and open in `docs/decisions.md`.
-- **Tower, to try first when building:** usage per role from `/user/daily/activity` or `/spend/logs`; a `proxy_admin` key with `allowed_routes` (question 17); whether the management key is listed with its expiry; for 1b, that database models resolve `os.environ/RAPIDSELECTOR_OPENROUTER_KEY` and accept the pin, prices and `max_tokens` (if not, stop and ask the owner), and that the `/openrouter` pass-through stays refused.
+- **Tower 1a facts found:** usage per name from `/user/daily/activity`; tower's own `proxy_admin` key with `allowed_routes` works (question 17); OpenRouter's key list needs `include_disabled=true`; level 1 does not block LiteLLM's master key or the admin UI's own session key (owner accepted). **For 1b, to try first:** database models resolve `os.environ/RAPIDSELECTOR_OPENROUTER_KEY` and accept the pin, prices and `max_tokens` (if not, stop and ask the owner), and that the `/openrouter` pass-through stays refused.
 - **Mockups** from the design talk are in `.superpowers/brainstorm/` (not committed); the visual companion is stopped.
 
 ## How we work through the procedure
