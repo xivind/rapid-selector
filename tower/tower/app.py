@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from tower import killswitch, store
+from tower import checks, killswitch, store
 from tower.clients import GatewayClient, OpenRouterClient
 from tower.settings import Settings, load_settings
 
@@ -21,7 +21,7 @@ THROTTLE_TRIES = 5
 THROTTLE_WINDOW = 60.0
 
 
-REGISTRARS: list[Callable[[APIRouter, FastAPI], None]] = [killswitch.register]
+REGISTRARS: list[Callable[[APIRouter, FastAPI], None]] = [killswitch.register, checks.register]
 
 
 def require_login(request: Request) -> None:

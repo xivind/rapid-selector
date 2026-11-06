@@ -1,0 +1,42 @@
+{# Price check and smoke test. A refusal or a failure is a normal result, so these answer 200. #}
+<div id="checks" class="checks" hx-target="this" hx-swap="outerHTML">
+  <button type="button" hx-post="/checks/price">Check prices (free)</button>
+  <button type="button" hx-get="/checks/smoke?scope=roles">Smoke test: roles</button>
+  <button type="button" hx-get="/checks/smoke?scope=all">Smoke test: all names</button>
+  {% if error %}<p class="warn" role="alert">{{ error }}</p>{% endif %}
+
+  {% if price is not none %}
+  <table class="price-results">
+    {% for r in price %}
+    <tr class="{{ 'clear' if r.ok else 'warn' }}"><td>{{ r.name }}</td><td>{{ r.slug }}</td><td>{{ 'ok' if r.ok else 'FAIL: ' ~ r.reason }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if plan and not smoke %}
+  <form class="smoke-confirm" hx-post="/checks/smoke">
+    <input type="hidden" name="scope" value="{{ scope }}">
+    <input type="hidden" name="confirm" value="yes">
+    <p>This spends real money: one tiny call per name with the smoke-test key. Worst case ${{ '%.6f'|format(plan.worst_case_usd) }}.</p>
+    <ul>{% for name, reasoning in plan.names %}<li>{{ name }}{% if reasoning %} (reasoning: low effort){% endif %}</li>{% endfor %}</ul>
+    <button type="submit" class="danger">Run smoke test</button>
+    <button type="button" hx-get="/partials/checks">Cancel</button>
+  </form>
+  {% endif %}
+
+  {% if smoke %}
+  {% if smoke.refused_reason %}
+  <p class="warn" role="alert">{{ smoke.refused_reason }}</p>
+  {% else %}
+  <p class="{{ 'clear' if smoke.ok else 'warn' }}"><strong>{{ 'OK' if smoke.ok else 'FAILED' }}</strong> &middot; total ${{ '%.8f'|format(smoke.total_usd) }}</p>
+  <table class="smoke-results">
+    {% for name, status, cost in smoke.rows %}
+    <tr class="{{ 'clear' if status == 200 and cost > 0 else 'warn' }}"><td>{{ name }}</td><td>HTTP {{ status }}</td><td>${{ '%.8f'|format(cost) }}{% if status == 200 and cost <= 0 %} (cost is zero){% endif %}</td></tr>
+    {% endfor %}
+    {% for name, status in smoke.refusals %}
+    <tr class="{{ 'clear' if probe_ok(name, status) else 'warn' }}"><td>{{ name }}</td><td>HTTP {{ status }}</td><td>{{ 'refused' if probe_ok(name, status) else 'was NOT refused' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% endif %}
+</div>
