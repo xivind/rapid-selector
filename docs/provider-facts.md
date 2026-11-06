@@ -228,3 +228,7 @@ Each is the newest release at least two weeks old on PyPI (cut-off 2026-10-23); 
 - Images: `python:3.14.7-alpine3.24` and `ghcr.io/astral-sh/uv:0.13.5` (0.13.6 is from 2026-10-27, too new). Both have a `linux/arm64` manifest (Docker Hub and ghcr.io registry APIs, 2026-11-06).
 - Python 3.14, not 3.15: PyYAML 6.0.3 publishes musl wheels for cp314 only, and the slim Alpine image has no compiler. pydantic-core and MarkupSafe have cp315 musl aarch64 wheels, so only PyYAML blocks 3.15. Revisit when PyYAML ships cp315 wheels.
 - `fastapi.testclient` warns that `httpx` with Starlette's test client is deprecated and suggests `httpx2`. Not acted on; tests pass.
+
+### htmx, vendored 2026-11-06
+- htmx 2.0.11 (released on npm 2026-09-22; the newest 2.0.x, and the newest release at least two weeks old; `latest` on npm is 2.0.11, `next` is 4.0.1). `dist/htmx.min.js` from the npm tarball https://registry.npmjs.org/htmx.org/-/htmx.org-2.0.11.tgz, whose sha512 matched npm's `dist.integrity`; byte for byte the same as https://unpkg.com/htmx.org@2.0.11/dist/htmx.min.js. Vendored as `tower/tower/static/htmx.min.js`, version in a comment at the top.
+- htmx 2 does not swap 4xx or 5xx answers by default (`responseHandling`), so tower answers refusals in its partials ("Nothing changed: …") with 200.

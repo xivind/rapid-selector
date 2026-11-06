@@ -1,0 +1,14 @@
+{# A horizontal bar as plain SVG: value against max, with an optional marker line (e.g. the gateway's budget). #}
+{% macro bar(value, max, marker=None) -%}
+{%- set v = value|float -%}
+{%- set m = max|float -%}
+{%- set pct = [[v / m * 100, 100.0]|min, 0.0]|max|round(1) if m > 0 else 0.0 -%}
+<svg class="bar{% if m > 0 and v > m %} over{% endif %}" viewBox="0 0 100 10" preserveAspectRatio="none" role="img" aria-label="{{ v|round(2) }} of {{ m|round(2) }}">
+<rect class="track" x="0" y="2" width="100" height="6"/>
+<rect class="fill" x="0" y="2" width="{{ pct }}" height="6"/>
+{%- if marker is not none and m > 0 %}
+{%- set x = [[marker|float / m * 100, 100.0]|min, 0.0]|max|round(1) %}
+<line class="marker" x1="{{ x }}" x2="{{ x }}" y1="0" y2="10" vector-effect="non-scaling-stroke"/>
+{%- endif %}
+</svg>
+{%- endmacro %}

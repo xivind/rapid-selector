@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block main %}
+<h2 class="page-title">Log</h2>
+<p class="lede">Kill switch changes, price checks, smoke tests and balance snapshots, newest first. Times are UTC.</p>
+{% if entries is none %}
+<p class="warn blank">Tower's own log cannot be read.</p>
+{% elif not entries %}
+<p class="note">Nothing logged yet.</p>
+{% else %}
+<div class="scroll">
+  <table class="data log">
+    <thead><tr><th>when</th><th>what</th><th>who</th><th>result</th><th>summary</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+      <tr{% if e.ok == false %} class="danger"{% endif %}><td class="when">{{ e.at|stamp }}</td><td>{{ kinds.get(e.kind, e.kind) }}</td><td>{{ e.actor }}</td><td>{{ "ok" if e.ok else ("failed" if e.ok == false else "—") }}</td><td>{{ e.summary }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

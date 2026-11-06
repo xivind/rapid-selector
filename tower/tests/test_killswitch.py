@@ -313,7 +313,7 @@ def test_release_requires_typed_word(db):
     assert c.post("/kill/engage/1", data={"confirm": "yes"}).status_code == 200
     gw.calls.clear()
     r = c.post("/kill/release/1", data={"word": "Release"})
-    assert r.status_code == 400
+    assert r.status_code == 200 and "Nothing changed" in r.text  # 200: htmx 2 does not swap 4xx
     assert gw.calls == [] and recorded() == {"a"}
     assert c.post("/kill/release/1", data={"word": "release"}).status_code == 200
     assert recorded() == set()
@@ -325,7 +325,8 @@ def test_engage_requires_confirmation(db):
     first = c.get("/partials/killswitch?confirm=1")
     assert 'name="confirm" value="yes"' in first.text
     assert gw.calls == []
-    assert c.post("/kill/engage/1", data={}).status_code == 400
+    r = c.post("/kill/engage/1", data={})
+    assert r.status_code == 200 and "Nothing changed" in r.text  # 200: htmx 2 does not swap 4xx
     assert gw.calls == [] and recorded() == set()
 
 

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block main %}
+<h2 class="page-title">Usage</h2>
+<p class="lede">Calls, tokens and spend from the gateway, per role, per experiment name and per key. Today from {{ since.day|when }}, this week from {{ since.week|when }}, this month from {{ since.month|when }}.</p>
+
+{% macro table(lines, empty) %}
+{% if not lines %}
+<p class="note">{{ empty }}</p>
+{% else %}
+<div class="scroll">
+  <table class="data usage">
+    <thead><tr><th>name</th><th>period</th><th class="num">spend</th><th class="num">calls</th><th class="num">tokens in</th><th class="num">tokens out</th></tr></thead>
+    {% for line in lines %}
+    <tbody>
+      {% for period, t in (("today", line.day), ("week", line.week), ("month", line.month)) %}
+      <tr>{% if loop.first %}<th rowspan="3" scope="rowgroup">{{ line.label }}</th>{% endif %}<td class="period">{{ period }}</td><td class="num">{{ t.spend_usd|usd }}</td><td class="num">{{ t.calls }}</td><td class="num">{{ "{:,}".format(t.tokens_in) }}</td><td class="num">{{ "{:,}".format(t.tokens_out) }}</td></tr>
+      {% endfor %}
+    </tbody>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% for title, attr, empty in (("Roles", "roles", "No calls to a role this month."),
+                              ("Experiment names", "experiments", "No calls to an experiment name this month."),
+                              ("Keys", "keys", "No calls this month.")) %}
+<section aria-label="{{ title }}">
+  <h3 class="section-title">{{ title }}</h3>
+  {% if t is none %}
+  <p class="warn blank">The gateway cannot be read.</p>
+  {% else %}
+  {{ table(t[attr], empty) }}
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

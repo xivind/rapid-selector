@@ -253,7 +253,8 @@ def enforce(gw) -> list[str]:
 
 
 def register(router, app):
-    def render(request, state, confirm=None, error=None, status_code=200):
+    # A refusal answers 200, like checks: htmx 2 does not swap 4xx answers, so it would not be seen.
+    def render(request, state, confirm=None, error=None):
         context = {
             "state": state,
             "confirm": confirm,
@@ -262,8 +263,7 @@ def register(router, app):
             "tower_level2": _level2_by_tower(),
         }
         return app.state.templates.TemplateResponse(
-            request, "partials/killswitch.html", context, status_code=status_code
-        )
+            request, "partials/killswitch.html", context)
 
     def clients():
         return app.state.gateway, app.state.openrouter
@@ -280,8 +280,7 @@ def register(router, app):
     def engage_route(request: Request, level: int, confirm: str = Form("")):
         check(level)
         if confirm != "yes":
-            return render(request, current_state(*clients()), error="Nothing changed: confirm first.",
-                          status_code=400)
+            return render(request, current_state(*clients()), error="Nothing changed: confirm first.")
         return render(request, engage(level, *clients(), "owner"))
 
     @router.post("/kill/release/{level}", response_class=HTMLResponse)
@@ -289,5 +288,5 @@ def register(router, app):
         check(level)
         if word != "release":
             return render(request, current_state(*clients()),
-                          error='Nothing changed: type the word "release".', status_code=400)
+                          error='Nothing changed: type the word "release".')
         return render(request, release(level, *clients(), "owner"))

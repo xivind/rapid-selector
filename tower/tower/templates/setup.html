@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block main %}
+{% macro gone(what) %}<p class="warn blank">{{ what }} cannot be read.</p>{% endmacro %}
+{% macro opt(value) %}{{ "—" if value is none else value }}{% endmacro %}
+{% macro limits(x) %}{% set parts = [] %}{% for name, value in (("rpm", x.rpm), ("tpm", x.tpm), ("parallel", x.parallel)) %}{% if value is not none %}{% set _ = parts.append(name ~ " " ~ value) %}{% endif %}{% endfor %}{{ parts|join(" · ") or "none" }}{% endmacro %}
+<h2 class="page-title">Setup</h2>
+<p class="lede">Every setting tower can read. Read-only: each is changed where it is set, which is named beside it.</p>
+
+<section aria-labelledby="models-title">
+  <h3 class="section-title" id="models-title">Models</h3>
+  <p class="note">Each role and experiment name, from the gateway's <code>/model/info</code>. Prices in USD per million tokens. Price check: {{ price_checked|when if price_checked else "not run yet" }}.</p>
+  {% if v.models is none %}{{ gone("The gateway") }}{% else %}
+  <div class="scroll">
+    <table class="data models">
+      <thead><tr><th>name</th><th>kind</th><th>model</th><th>host</th><th>quant.</th><th>fallbacks</th><th>ZDR</th><th class="num">in</th><th class="num">out</th><th class="num">max_tokens</th><th>price check</th></tr></thead>
+      <tbody>
+        {% for m in v.models %}
+        <tr>
+          <th scope="row">{{ m.name }}</th><td>{{ m.kind }}</td><td>{{ m.model }}</td><td>{{ m.host }}</td><td>{{ opt(m.quantisation) }}</td>
+          <td{% if m.fallbacks == "on" %} class="danger"{% endif %}>{{ m.fallbacks }}</td>
+          <td{% if not m.zdr %} class="danger"{% endif %}>{{ "yes" if m.zdr else "no" }}</td>
+          <td class="num">{{ opt(m.price_in) }}</td><td class="num">{{ opt(m.price_out) }}</td><td class="num">{{ opt(m.max_tokens) }}</td>
+          <td{% if m.price_check and m.price_check != "ok" %} class="danger"{% endif %}>{{ m.price_check or "not checked" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<section aria-labelledby="teams-title">
+  <h3 class="section-title" id="teams-title">Teams and keys</h3>
+  <p class="note">From the gateway's <code>/team/info</code> and <code>/key/info</code>.</p>
+  {% if v.teams_and_keys is none %}{{ gone("The gateway") }}{% else %}
+  {% for t in v.teams_and_keys %}
+  <article class="team">
+    <h4>{{ t.alias }}</h4>
+    {% if t.id %}
+    <ul class="figures small">
+      <li>budget {{ t.budget|usd(true) }}</li><li>spent {{ t.spend|usd }}</li><li>window {{ opt(t.window) }}</li><li>resets {{ t.reset|when }}</li>
+      <li>rate limits {{ limits(t) }}</li>{% if t.blocked %}<li class="danger">blocked</li>{% endif %}
+    </ul>
+    <p class="names"><span class="label">ALLOWED</span> {{ t.models|join(", ") or "—" }}</p>
+    {% endif %}
+    <div class="scroll">
+      <table class="data">
+        <thead><tr><th>key</th><th class="num">budget</th><th class="num">spent</th><th>window</th><th>resets</th><th>rate limits</th><th>allowed names</th><th>state</th></tr></thead>
+        <tbody>
+          {% for k in t["keys"] %}
+          <tr{% if k.blocked %} class="danger"{% endif %}>
+            <th scope="row">{{ k.alias or "no alias" }}</th><td class="num">{{ k.budget|usd(true) }}</td><td class="num">{{ k.spend|usd }}</td>
+            <td>{{ opt(k.window) }}</td><td class="nowrap">{{ k.reset|when }}</td>
+            <td class="nowrap">{{ limits(k) }}</td>
+            <td>{% if k.unread %}—{% elif not k.models %}all the team's{% elif t.id and k.models == t.models %}the same as the team{% else %}{{ k.models|join(", ") }}{% endif %}</td>
+            <td>{% if k.unread %}<span class="warn">not read</span>{% else %}{{ "blocked" if k.blocked else "active" }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+  {% endfor %}
+  {% endif %}
+</section>
+
+<section aria-labelledby="or-title">
+  <h3 class="section-title" id="or-title">OpenRouter key</h3>
+  <p class="note">The gateway's inference key, from OpenRouter's management API. Tower does not hold this key.</p>
+  {% set k = v.openrouter_key %}
+  {% if k is none %}{{ gone("OpenRouter") }}{% else %}
+  <dl class="pairs">
+    <dt>label</dt><dd>{{ opt(k.label) }}</dd>
+    <dt>limit</dt><dd>{{ k.limit|usd(true) }}, {{ k.limit_remaining|usd }} left</dd>
+    <dt>reset</dt><dd>{{ opt(k.limit_reset) }}</dd>
+    <dt>usage</dt><dd>{{ k.usage_monthly|usd }} this month, {{ k.usage|usd }} in all</dd>
+    <dt>state</dt><dd{% if k.disabled %} class="danger"{% endif %}>{{ "disabled" if k.disabled else "enabled" }}</dd>
+  </dl>
+  {% endif %}
+</section>
+
+<section aria-labelledby="mk-title">
+  <h3 class="section-title" id="mk-title">Management key</h3>
+  {% set mk = v.management_key %}
+  {% if mk.days_left is none %}
+  <p class="warn">Expiry unknown: set <code>OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT</code> in <code>.env</code> to the date shown in OpenRouter's dashboard.</p>
+  {% else %}
+  <p class="{{ 'danger' if mk.days_left < 30 else '' }}"><span class="big-inline">{{ mk.days_left }}</span> days left, until {{ mk.expires_at|stamp }} UTC. Create a new one before then; requests with an expired key are refused.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="gw-title">
+  <h3 class="section-title" id="gw-title">Gateway settings</h3>
+  <p class="note"><code>api</code>: what the running gateway reports. <code>config.yaml</code>: what <code>gateway/config.yaml</code> says, mounted read-only into tower.</p>
+  <dl class="pairs">
+    {% for g in v.gateway_settings %}
+    <dt>{{ g.name }}</dt><dd>{% if g.value is none %}<span class="warn">unknown</span>{% else %}{{ g.value|usd(true) if g.name == "global budget" else g.value }} <span class="tag">{{ g.source }}</span>{% endif %}</dd>
+    {% endfor %}
+  </dl>
+</section>
+
+<section aria-labelledby="webui-title">
+  <h3 class="section-title" id="webui-title">Open WebUI</h3>
+  <p class="note">As in <code>docker-compose.yml</code>: what the running container has, unless the file was changed without recreating it. Change these in <code>docker-compose.yml</code>, then run <code>./rapidselector.sh up</code>.</p>
+  {% if v.open_webui is none %}
+  <p class="warn blank"><code>docker-compose.yml</code> cannot be read.</p>
+  {% else %}
+  <dl class="pairs">
+    {% for name, value in v.open_webui %}<dt>{{ name }}</dt><dd{% if value == "secret, from .env" %} class="note"{% endif %}>{{ value }}</dd>{% endfor %}
+  </dl>
+  {% endif %}
+</section>
+
+<section aria-labelledby="secrets-title">
+  <h3 class="section-title" id="secrets-title">Secrets</h3>
+  <p class="note">Tower's own secrets, by name only. Tower is not given the others: Compose refuses to start the stack unless every secret in <code>.env.example</code> is set.</p>
+  <dl class="pairs">
+    {% for name, state in v.secrets %}<dt>{{ name }}</dt><dd{% if state != "set" %} class="danger"{% endif %}>{{ state }}</dd>{% endfor %}
+  </dl>
+</section>
+{% endblock %}
