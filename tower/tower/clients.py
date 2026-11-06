@@ -174,7 +174,8 @@ class OpenRouterClient(_Base):
         self._name = inference_key_name
 
     def inference_key(self) -> dict:
-        for entry in self._get("/keys").get("data", []):
+        # The list leaves disabled keys out unless asked, and level 2 disables this one.
+        for entry in self._get("/keys", {"include_disabled": "true"}).get("data", []):
             if entry.get("name") == self._name:
                 detail = self._get(f"/keys/{entry['hash']}").get("data", {})
                 return {**detail, "hash": entry["hash"]}

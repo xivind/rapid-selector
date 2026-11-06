@@ -234,6 +234,20 @@ def test_inference_key_found_by_name():
     assert k == {"limit": 10, "hash": "abc"}
 
 
+def test_inference_key_found_while_disabled():
+    # OpenRouter's key list leaves disabled keys out unless include_disabled=true is sent, so
+    # without it level 2 could not be read back or released (tests/tower.bats).
+    listed = [{"name": "rapidselector-gateway", "hash": "abc", "disabled": True}]
+
+    def handler(req):
+        if req.url.path == "/api/v1/keys":
+            shown = listed if req.url.params.get("include_disabled") == "true" else []
+            return httpx.Response(200, json={"data": shown})
+        return httpx.Response(200, json={"data": {"disabled": True}})
+
+    assert openrouter(handler).inference_key() == {"disabled": True, "hash": "abc"}
+
+
 def test_inference_key_missing():
     with pytest.raises(Unavailable) as e:
         openrouter(keys_handler([{"name": "other", "hash": "zzz"}])).inference_key()
