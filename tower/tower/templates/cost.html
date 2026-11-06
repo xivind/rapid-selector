@@ -2,6 +2,9 @@
 {% from "macros/bars.html" import bar %}
 {% block main %}
 {% macro gone(what) %}<p class="warn blank">{{ what }} cannot be read.</p>{% endmacro %}
+{% if s is none %}
+<p class="warn" role="status">The cost summary cannot be built. Reload to try again; the kill switch above still works.</p>
+{% else %}
 
 <section class="hero" aria-labelledby="spent">
   <div class="hero-figure">
@@ -86,6 +89,8 @@
     </div>
     <p class="note">OpenRouter counts spend a little late, and rounds costs below a millionth of a dollar in some views. A gap that lasts past a day is the one that matters.</p>
   </details>
+  {% elif days_unbuilt %}
+  <p class="warn">The per-day lines cannot be built (OpenRouter's activity shape was not as expected).</p>
   {% elif r is not none and activity_missing %}
   <p class="warn">OpenRouter's per-day activity cannot be read.</p>
   {% endif %}
@@ -104,4 +109,5 @@
   </ul>
   {% include "partials/checks.html" %}
 </section>
+{% endif %}
 {% endblock %}

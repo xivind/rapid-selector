@@ -354,3 +354,26 @@ def test_setup_warns_about_a_malformed_expiry(db, config_dir):
     text = c.get("/setup").text
     assert "<code>OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT</code> is not a date (YYYY-MM-DD)" in text
     assert "next-year-x" not in text
+
+
+def test_cost_page_says_when_per_day_lines_cannot_be_built(db, config_dir):
+    class OtherShape(FakeOpenRouter):
+        def activity(self, key_hash):
+            return [{"day": "2026-11-01", "model_permaslug": "x", "usage": 0.1}]
+
+    text = browser(config_dir, orc=OtherShape()).get("/").text
+    assert "The per-day lines cannot be built (OpenRouter's activity shape was not as expected)" in text
+    assert "per-day lines cannot be built" not in browser(config_dir).get("/").text
+
+
+def test_cost_page_renders_when_the_summary_cannot_be_built(db, config_dir, monkeypatch):
+    from tower import app as app_module
+
+    def broken(**kw):
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(app_module, "cost_summary", broken)
+    r = browser(config_dir).get("/")
+    assert r.status_code == 200
+    assert "The cost summary cannot be built" in r.text
+    assert 'hx-get="/partials/killswitch?confirm=2"' in r.text

@@ -78,6 +78,7 @@ def _summary(got, activity, window, now, period):
     sources = {"inference_key": "openrouter", "credits": "openrouter", "usage": "gateway",
                "models": "gateway", "global_budget": "gateway"}
     latest = {kind: _store(lambda kind=kind: store.latest(kind), None) for kind in ("price_check", "smoke_test")}
+    summary = None
     for drop in ((), ("openrouter",), ("gateway",), ("openrouter", "gateway")):
         values = {name: Unavailable(src, "unreadable answer") if src in drop else got[name]
                   for name, src in sources.items()}
@@ -87,6 +88,8 @@ def _summary(got, activity, window, now, period):
             break
         except Exception:
             continue
+    if summary is None:  # not even without both sources: shown as such, never an unbound name
+        return None, None
     days = None
     if not setup_view.missing(got["usage"], got["models"], got["inference_key"], activity):
         try:
@@ -203,9 +206,12 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
         activity = key if isinstance(key, Unavailable) else setup_view.gather(
             {"activity": ("openrouter", lambda: orc.activity(key["hash"]))}, end)["activity"]
         summary, days = _summary(got, activity, setup_view.gateway_window(app.state.settings), now, period)
+        sources_read = not setup_view.missing(got["usage"], got["models"], got["inference_key"], activity)
         return page(request, "cost.html", {
             "s": summary, "days": days, "activity_missing": isinstance(activity, Unavailable),
-            "period": period, "month": now.strftime("%B").upper(), "missing": summary.missing,
+            "days_unbuilt": summary is not None and days is None and sources_read,
+            "period": period, "month": now.strftime("%B").upper(),
+            "missing": summary.missing if summary is not None else [],
             # the checks partial's own context
             "price": None, "plan": None, "scope": None, "smoke": None, "error": None,
             "probe_ok": checks.probe_ok,

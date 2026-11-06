@@ -366,3 +366,26 @@ def test_smoke_post_runs_and_logs(db, monkeypatch):
     assert detail["refused_reason"] is None
     assert_no_secret(entry)
     assert SMOKE_KEY not in r.text
+
+
+class Broken(FakeGateway):
+    def model_info(self):
+        raise KeyError("data")  # a malformed answer, not Unavailable
+
+
+def test_check_routes_render_any_source_error(db):
+    c = browser(Broken())
+    for method, path, data in (("get", "/checks/smoke?scope=roles", None),
+                               ("post", "/checks/smoke", {"scope": "roles", "confirm": "yes"}),
+                               ("post", "/checks/price", None)):
+        r = getattr(c, method)(path, data=data) if data else getattr(c, method)(path)
+        assert r.status_code == 200, path
+        assert ("price check failed: KeyError" if path == "/checks/price" else "gateway unavailable: KeyError") in r.text, path
+    assert store.latest("price_check").ok is False
+
+
+def test_smoke_post_refused_when_key_read_raises_anything(db):
+    c = browser(FakeGateway(key_error=ValueError("odd answer")))
+    r = c.post("/checks/smoke", data={"scope": "roles", "confirm": "yes"})
+    assert r.status_code == 200 and "Refused, nothing spent" in r.text
+    assert json.loads(store.latest("smoke_test").detail)["rows"] == []

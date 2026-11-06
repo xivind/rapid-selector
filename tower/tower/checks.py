@@ -175,6 +175,11 @@ def _smoke_summary(r: SmokeResult) -> str:
     return f"{'ok' if r.ok else 'FAILED'}: {len(r.rows)} call(s), ${r.total_usd:.6f}"
 
 
+def _reason(source, e) -> str:
+    """An error as shown and logged: its source and class only, never its message."""
+    return str(e if isinstance(e, Unavailable) else Unavailable(source, type(e).__name__))
+
+
 def register(router, app):
     def render(request, **context):
         context = {"price": None, "plan": None, "scope": None, "smoke": None, "error": None,
@@ -184,9 +189,10 @@ def register(router, app):
     def price_context(actor):
         try:
             return {"price": run_price_check(app.state.gateway, app.state.openrouter, actor)}
-        except Unavailable as e:
-            store.log("price_check", actor, False, str(e), {"results": {}, "error": str(e)})
-            return {"error": str(e)}
+        except Exception as e:  # a malformed answer is a failed check, not a broken page
+            error = str(e) if isinstance(e, Unavailable) else f"price check failed: {type(e).__name__}"
+            store.log("price_check", actor, False, error, {"results": {}, "error": error})
+            return {"error": error}
 
     @router.get("/partials/checks", response_class=HTMLResponse)
     def partial(request: Request):
@@ -200,8 +206,8 @@ def register(router, app):
     def smoke_confirm(request: Request, scope: Literal["roles", "all"] = Query("roles")):
         try:
             plan = plan_smoke(app.state.gateway.model_info(), scope)
-        except Unavailable as e:
-            return render(request, error=str(e))
+        except Exception as e:
+            return render(request, error=_reason("gateway", e))
         return render(request, plan=plan, scope=scope)
 
     @router.post("/checks/smoke", response_class=HTMLResponse)
@@ -210,8 +216,8 @@ def register(router, app):
         gw, orc = app.state.gateway, app.state.openrouter
         try:
             plan = plan_smoke(gw.model_info(), scope)
-        except Unavailable as e:
-            return render(request, error=str(e))
+        except Exception as e:
+            return render(request, error=_reason("gateway", e))
         if confirm != "yes":
             return render(request, plan=plan, scope=scope, error="Nothing was called: confirm first.")
         switch = current_state(gw, orc, fresh=True)
@@ -221,9 +227,9 @@ def register(router, app):
             max_budget = info.get("max_budget")
             left = None if max_budget is None else float(max_budget) - float(info.get("spend") or 0)
             result = None
-        except Unavailable as e:
-            left, result = None, SmokeResult([], [], 0.0, False,
-                                             f"Refused, nothing spent: the smoke-test key cannot be read ({e})")
+        except Exception as e:
+            left, result = None, SmokeResult([], [], 0.0, False, "Refused, nothing spent: the smoke-test key "
+                                             f"cannot be read ({_reason('gateway', e)})")
         if result is None:
             with httpx.Client() as http:
                 result = run_smoke(plan, switch, left, app.state.settings.gateway_url,
