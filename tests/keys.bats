@@ -132,3 +132,17 @@ all_state() {
   [ "$output" = "got-secrets arg1" ]
   [ ! -e "$BATS_TEST_TMPDIR/docker-called" ]
 }
+
+@test "tower's key exists with only its routes" {
+  state="$(key_info "$(test_env TOWER_GATEWAY_KEY)" | jq -c '.info')"
+  [ "$(jq -r '.key_alias' <<<"$state")" = "tower" ]
+  [ "$(jq -r '.user_id' <<<"$state")" = "tower" ]
+  [ "$(jq '.team_id == null and .max_budget == null' <<<"$state")" = "true" ]
+  [ "$(jq -c '.allowed_routes' <<<"$state")" = '["/model/info","/key/list","/key/block","/key/unblock","/key/info","/team/info","/user/daily/activity","/global/spend","/config/field/info"]' ]
+  user="$(curl -sS -G -H "Authorization: Bearer $(test_env LITELLM_MASTER_KEY)" \
+    --data-urlencode "user_id=tower" "$GATEWAY_URL/user/info")"
+  [ "$(jq -r '.user_info.user_role' <<<"$user")" = "proxy_admin" ]
+  # After several runs, the user tower still owns exactly one key: no key created by /user/new.
+  [ "$(jq '.keys | length' <<<"$user")" = "1" ]
+  [[ "$(cat "$ARTIFACTS/setup-keys-first.txt")" != *"$(test_env TOWER_GATEWAY_KEY)"* ]]
+}

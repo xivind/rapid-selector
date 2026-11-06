@@ -21,8 +21,12 @@ NODE_RED_RPM=30
 NODE_RED_TPM=100000
 # Virtual keys may only call chat completions and list models: no pass-through or admin routes.
 ALLOWED_ROUTES='["/v1/chat/completions","/chat/completions","/v1/models","/models"]'
+# Tower's key (user tower, role proxy_admin) may only read models, keys, teams and spend, and
+# block or unblock keys. LiteLLM also lets a key call routes under these (prefix match, e.g.
+# /global/spend/reset), which it refuses separately as master-key-only (docs/provider-facts.md).
+TOWER_ROUTES='["/model/info","/key/list","/key/block","/key/unblock","/key/info","/team/info","/user/daily/activity","/global/spend","/config/field/info"]'
 
-require_env LITELLM_MASTER_KEY RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST
+require_env LITELLM_MASTER_KEY RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST TOWER_GATEWAY_KEY
 
 model_info="$(api GET /model/info)" || die 1 "cannot read /model/info from the gateway"
 ALL_NAMES="$(jq -c '[.data[].model_name] | unique' <<<"$model_info")"
@@ -55,16 +59,36 @@ ensure_key() {
   fi
 }
 
+# ensure_tower: the user tower (proxy_admin) and its key, with no team, no budget and TOWER_ROUTES.
+ensure_tower() {
+  local user key
+  user="$(jq -nc '{user_id:"tower", user_alias:"tower", user_role:"proxy_admin"}')"
+  if api GET "/user/info?user_id=tower" >/dev/null 2>&1; then
+    api POST /user/update "$user" >/dev/null || die 1 "could not update user tower"
+  else
+    # auto_create_key false: /user/new would otherwise create a second, unrestricted admin key.
+    api POST /user/new "$(jq -c '. + {auto_create_key:false}' <<<"$user")" >/dev/null || die 1 "could not create user tower"
+  fi
+  key="$(jq -nc --arg k "$TOWER_GATEWAY_KEY" --argjson routes "$TOWER_ROUTES" \
+    '{key:$k, key_alias:"tower", user_id:"tower", team_id:null, max_budget:null, budget_duration:null, allowed_routes:$routes}')"
+  if api GET "/key/info?key=$TOWER_GATEWAY_KEY" >/dev/null 2>&1; then
+    api POST /key/update "$key" >/dev/null || die 1 "could not update key tower"
+  else
+    api POST /key/generate "$key" >/dev/null || die 1 "could not create key tower"
+  fi
+}
+
 ensure_team permanent "$BUDGET_TEAM_PERMANENT" "$ROLES"
 ensure_team experiments "$BUDGET_TEAM_EXPERIMENTS" "$ALL_NAMES"
 ensure_key node-red "$KEY_NODE_RED" permanent "$BUDGET_KEY_NODE_RED" "$ROLES" "$NODE_RED_RPM" "$NODE_RED_TPM"
 ensure_key chat "$KEY_CHAT" experiments null "$ALL_NAMES" null null
 ensure_key smoke-test "$KEY_SMOKE_TEST" experiments "$BUDGET_KEY_SMOKE_TEST" "$ALL_NAMES" null null
+ensure_tower
 
 printf '%-12s %-12s %-10s %-8s %-6s %s\n' ALIAS TEAM BUDGET_USD RESETS NAMES RPM
 for team in permanent experiments; do
   api GET "/team/info?team_id=$team" | jq -r '.team_info | [.team_alias, "-", (.max_budget // "none"), (.budget_duration // "-"), (.models | length), "-"] | @tsv'
 done | while IFS=$'\t' read -r a t b d n r; do printf '%-12s %-12s %-10s %-8s %-6s %s\n' "team:$a" "$t" "$b" "$d" "$n" "$r"; done
-for key in "$KEY_NODE_RED" "$KEY_CHAT" "$KEY_SMOKE_TEST"; do
-  api GET "/key/info?key=$key" | jq -r '.info | [.key_alias, .team_id, (.max_budget // "team"), (.budget_duration // "-"), (.models | length), (.rpm_limit // "-")] | @tsv'
+for key in "$KEY_NODE_RED" "$KEY_CHAT" "$KEY_SMOKE_TEST" "$TOWER_GATEWAY_KEY"; do
+  api GET "/key/info?key=$key" | jq -r '.info | [.key_alias, (.team_id // "-"), (.max_budget // (if .team_id then "team" else "none" end)), (.budget_duration // "-"), (.models | length), (.rpm_limit // "-")] | @tsv'
 done | while IFS=$'\t' read -r a t b d n r; do printf '%-12s %-12s %-10s %-8s %-6s %s\n' "$a" "$t" "$b" "$d" "$n" "$r"; done
