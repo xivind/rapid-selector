@@ -47,6 +47,7 @@ Sources: https://openrouter.ai/docs/guides/overview/auth/management-api-keys, ht
 - **Expiry:** fixed at creation and cannot be changed; afterwards every request gets `401` "API key expired". A non-management key on these routes gets 403 "Only management keys can perform this operation".
 - **Disabled keys in the list, checked in the docs 2026-11-06** (https://openrouter.ai/docs/api/api-reference/api-keys/list-api-keys.md): `GET /api/v1/keys` takes `include_disabled` and `include_expired`. Expired keys are "excluded by default"; for disabled keys no default is written, but the example value is `false`, so a disabled key is assumed to be left out unless `include_disabled=true` is sent. The level 1 fake does the same. The list has no pagination metadata (`offset` only).
 - **A disabled key on a chat call, checked in the docs 2026-11-06** (https://openrouter.ai/docs/api-reference/errors): "401: Invalid credentials (OAuth session expired, disabled/invalid API key)". The exact body for a disabled key is not documented; the level 1 fake answers `{"error": {"code": 401, "message": "Invalid credentials"}}`.
+- **After level 2, the gateway cools down, tried at level 1 on LiteLLM v1.106.6, 2026-11-06** (`tests/tower.bats`, fake upstream): a call that gets the upstream's 401 puts the model group in LiteLLM's cooldown. For about 5 seconds after the key is enabled again, calls get `429` "No deployments available for selected model ... All deployments for selected model are in cooldown", then `200`. No cooldown setting is in `gateway/config.yaml`, so this is LiteLLM's default.
 
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
@@ -134,6 +135,11 @@ Sources: https://docs.litellm.ai/docs/proxy/cost_tracking, .../virtual_keys, ...
 - **Enterprise:** `/global/spend/report`. Team-admin roles and delegated permissions, including `/team/daily/activity` for team members, are "Premium".
 - **Blocking:** `POST /key/block` and `/key/unblock` with `{"key": ...}`, one key at a time, not labelled Enterprise. No call blocks a team or all keys at once on these pages.
 - **Admin rights without the master key:** a key owned by a user with role `proxy_admin` can call admin routes, and `allowed_routes` can narrow it; `proxy_admin_viewer` sees all keys and spend but "cannot … make any changes", so presumably not block. Not labelled Enterprise. Bears on question 17.
+
+### The admin UI's session key, tried at level 1 on LiteLLM v1.106.6, 2026-11-06
+Source: `tests/tower.bats` ("LiteLLM's admin UI while level 1 is engaged"), fake upstream, nothing spent.
+- Logging in to `/ui` as `admin` (`POST /login`) creates a virtual key with no alias, `user_id` `default_user_id`, `team_id` `litellm-dashboard`, `max_budget` 1.0, no model list (all models), expiring after 24 hours. The `token` cookie is a JWT that carries the key.
+- That key is **not** returned by `/key/list`, neither to the master key nor to tower's key, so tower never sees it and level 1 does not block it. After 70 seconds at level 1 it is still unblocked, the UI's own calls with it answer 200, and a model call with it reaches the upstream (200 from the fake). Level 2 still stops it, since every call goes through the one OpenRouter key. For the owner to decide.
 
 ### Models through the API, checked in the docs 2026-11-05
 Sources: https://docs.litellm.ai/docs/proxy/model_management, .../configs, .../prod. Not yet tried on v1.106.6; nothing on these pages is marked Enterprise.
