@@ -234,6 +234,12 @@ The `production` session's range query, 09:05–09:35 at 30-second steps: `sum(i
 ### 2026-11-06: rapid-selector stays on `sandbox`
 Decided by the owner. rapid-selector will not move to `webserver`: much else already runs there, and `sandbox` has the better fan. This replaces "Hosts" above: `sandbox` is the permanent host. So step C5, the reboot check, runs on `sandbox` and no longer waits, the move step in the roadmap is dropped, and clients keep calling `http://sandbox:4000` with no edit to come. The cost: the stack has 8 GB, not 16 GB, so memory is to watch as tower and later services are added. The `webserver` notes in the overall design and in `production`'s backup files are left as they were; `RAPIDSELECTOR_BACKUP_HOST` stays as an override.
 
+### 2026-11-06: Tower part 1a's plan, its libraries and how it is built
+`superpowers/plans/2026-11-06-tower-part-1a.md`, reviewed by the owner. The owner accepts the supporting libraries the chosen stack needs: `uvicorn`, `httpx`, `prometheus_client`, `PyYAML`, `python-multipart`, `itsdangerous`, and `uv` for the lock file. It is built subagent-driven: a fresh subagent per task and a reviewer after each, then a review of the whole branch (Claude's recommendation: 13 tasks with interfaces that depend on each other, and a kill switch where a mistake is costly). Part 1b's plan is written after 1a is built, since it reuses 1a's code and its first level 1 trial can stop the build.
+
+### 2026-11-06: Step E2, the restore rehearsal, moves to after part 1b
+Decided by the owner (Claude's proposal; the owner first thought it was not needed). Today the database holds keys, budgets and spend, and nothing in it depends on `LITELLM_SALT_KEY`. Once part 1b moves the 11 models into the database, their stored settings are encrypted with it, and an untested restore becomes a real risk. So E2 is done after part 1b is deployed, when it tests more. Until then phase 0 is verified without E2.
+
 ## Open
 
 ### Settle during design or phase 0

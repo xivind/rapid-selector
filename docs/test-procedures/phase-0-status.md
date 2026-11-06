@@ -13,7 +13,7 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 
 1. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
 2. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
-3. **Tower part 1a's plan** is written (`docs/superpowers/plans/2026-11-06-tower-part-1a.md`), for the owner to review; part 1b's plan after 1a is built. Building waits until D6–D8 are done, unless the owner decides otherwise.
+3. **Tower part 1a's plan** is written (`docs/superpowers/plans/2026-11-06-tower-part-1a.md`), reviewed and accepted by the owner, to be built subagent-driven; part 1b's plan after 1a is built. Building waits until D6–D8 are done, unless the owner decides otherwise.
 4. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
 
 ## Things to remember
@@ -67,7 +67,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ## To do before particular steps
 
-- **E2:** Claude writes the restore commands then. The backup has no `cache/`, and the slim image needs none.
+- **E2:** moved to after tower part 1b is deployed (owner, 2026-11-06). Claude writes the restore commands then. The backup has no `cache/`, and the slim image needs none.
 
 ## Deferred, for the owner to decide
 
