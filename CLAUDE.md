@@ -29,9 +29,9 @@ Facts about providers and tools go in `docs/provider-facts.md` with a date and a
 
 ## Non-negotiable principles
 
-### 1. Cost: maximum possible loss = prepaid balance
+### 1. Cost: maximum possible loss = prepaid balance, plus a small overshoot
 - The only cloud provider is **OpenRouter**, with a prepaid balance and **auto top-up disabled**. OpenRouter is a broker, so requests are served by upstream hosts.
-- The maximum possible loss is the prepaid balance, so **keep the balance small**. Unspent credit carries over, so the top-up is not a monthly cap. The monthly budget is recorded in `docs/decisions.md`.
+- The maximum possible loss is the prepaid balance, plus a small overshoot below zero (D6 in `docs/decisions.md`: about $0.19), so **keep the balance small**. Unspent credit carries over, so the top-up is not a monthly cap. The monthly budget is recorded in `docs/decisions.md`.
 - Limits in three layers, in order of priority:
   1. **Hard, at the provider:** the prepaid OpenRouter balance.
   2. **Hard, at the provider:** a credit limit with a monthly reset on the OpenRouter key used by the gateway. This is the actual monthly cap.
