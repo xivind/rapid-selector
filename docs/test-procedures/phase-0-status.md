@@ -5,7 +5,7 @@ A handoff between sessions, written 2026-11-04 and last updated at the end of 20
 ## Where we are (2026-11-06)
 
 - **Phase 0:** A1–A3, B1a, B1–B6, C1–C4, D1, D2, D4 and D5 are done and recorded in `docs/decisions.md`. D3 passed for 10 of 11 names. **rapid-selector stays on `sandbox`** (owner, 2026-11-06), so C5 runs there whenever the owner chooses.
-- **E1 in progress:** both backups ran (status 1), but the chat backup was 1.1 GB of bundled models in `cache/`. Decided: the slim Open WebUI image, and `cache/` left out of the backup (`production` branch `backup-rapidselector-chat-cache`, committed, not pushed). To do on `sandbox`: pull, the arm64 check, `up`, delete the old cache from the volume, install the new export script. Then, after the next night's backup, set `min_bytes` and raise the backup count to 11.
+- **E1 in progress:** both backups ran (status 1), but the chat backup was 1.1 GB of bundled models in `cache/`. Decided: the slim Open WebUI image, and `cache/` left out of the backup (`production` `main`, `eeb7f54`, pushed with the owner's permission). To do on `sandbox`: pull, the arm64 check, `up`, delete the old cache from the volume, install the new export script. Then, after the next night's backup, set `min_bytes` and raise the backup count to 11.
 - **Tower:** the designs for part 1a (see, stop and check) and part 1b (full editing of models, roles, allowed names and budgets) are **approved**: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md` and `…-tower-part-1b-design.md`. Every decision behind them is in `docs/decisions.md` (2026-11-05 entries). No plan or code yet.
 - **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
 
