@@ -264,7 +264,10 @@ The owner topped up $35 of credit. The balance afterwards: $34.81, so the top-up
 ### 2026-11-06: Step D8, the budget lowered for the alerts
 `experiments`' spend in the admin UI: $5.10 (D6's drain). `BUDGET_TEAM_EXPERIMENTS=5.36 ./rapidselector.sh run-script scripts/setup-keys.sh` at 14:51: the table shows `team:experiments` at 5.36, the rest unchanged. The smoke test at 14:55: 4 roles with 200 and a cost above zero, both probes refused with 403, $0.00000978 in total, `OK`. About $0.26 of $5.36 is left (under 5%), so both budget rules should fire.
 
-Within the 30 minutes both rules fired in Grafana ("team budget below 20%" and "below 10%"), but no email arrived. The rules have no labels and follow the default notification policy to the contact point "Grafana Email Dispatcher" (`grafana/rapidselector-alerts.md` in `production`); the cause is being looked for.
+Within the 30 minutes both rules fired in Grafana ("team budget below 20%" and "below 10%"), but no email arrived. The rules have no labels and follow the default notification policy to the contact point "Grafana Email Dispatcher" (`grafana/rapidselector-alerts.md` in `production`); the cause is being looked for. The owner found a problem with Mailgun, which sends the emails, and is working on it.
+
+### 2026-11-06: Tower's level 1 leaves the admin UI's own session key alone
+Decided by the owner (option 1 of 2, Claude's recommendation). At level 1 (tower part 1a, level 1 tests in a cloud session), logging in to LiteLLM's admin UI creates a session key (no alias, user `default_user_id`, team `litellm-dashboard`, $1 budget, 24 hours, all models) that LiteLLM leaves out of `/key/list`, so tower never sees or blocks it, and it can still make calls during level 1; level 2 stops it, as it stops everything. Accepted: it is the owner's own admin session, not a client, capped at $1 a day, and the admin UI is where anything blocked outside tower is released, so blocking it would lock the owner out when it is needed. The README and the kill switch page say that level 1 does not stop LiteLLM's master key or the admin UI's session, and level 2 does. Rejected: having tower block the `litellm-dashboard` team's keys.
 
 ## Open
 
