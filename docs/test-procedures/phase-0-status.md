@@ -12,12 +12,7 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 ## Next, in order (the owner picks)
 
 1. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
-2. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once, on `sandbox` in `~/code/rapid-selector` (prints only the status and the recorded cost):
-   ```bash
-   ./rapidselector.sh run-script bash -c 'printf "Authorization: Bearer %s\n" "$KEY_SMOKE_TEST" | curl -sS --max-time 120 -H @- -H "Content-Type: application/json" -D - -o /dev/null -d "{\"model\":\"gpt-oss-20b@deepinfra\",\"max_tokens\":256,\"reasoning_effort\":\"low\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word ok.\"}]}" "http://$RAPIDSELECTOR_LAN_ADDRESS:$GATEWAY_PORT/v1/chat/completions" | grep -i -E "^HTTP|x-litellm-response-cost"'
-   ```
-
-   If it answers, its host on OpenRouter's Logs page should be DeepInfra. If it keeps failing over days, the owner decides whether to re-pin it.
+2. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once, on `sandbox` in `~/code/rapid-selector`: `./rapidselector.sh run-script scripts/smoke-test.sh --name gpt-oss-20b@deepinfra`. If it answers, its host on OpenRouter's Logs page should be DeepInfra. If it keeps failing over days, the owner decides whether to re-pin it.
 3. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
 4. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
 5. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Smoke test: one tiny call per role (or per name with --all) with the smoke-test key.
-# Each call must be answered and recorded with a cost above zero; a model outside the
-# allowlist and the /openrouter pass-through must be refused. Costs a little real money
-# against OpenRouter (well under $0.01 for the roles).
-# Run with the secrets loaded:   ./rapidselector.sh run-script scripts/smoke-test.sh [--all]
+# Smoke test: one tiny call per role (per name with --all, or one name with --name) with
+# the smoke-test key. Each call must be answered and recorded with a cost above zero; a model
+# outside the allowlist and the /openrouter pass-through must be refused. Costs a little real
+# money against OpenRouter (well under $0.01 for the roles).
+# Run with the secrets loaded:
+#   ./rapidselector.sh run-script scripts/smoke-test.sh [--all | --name <name>]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,13 +14,21 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 require_env LITELLM_MASTER_KEY KEY_SMOKE_TEST RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
 GATEWAY="http://${RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT}"
 
+only=""
+case "${1:-}" in
+  "") filter='.data[] | select(.model_info.rapidselector_kind == "role")' ;;
+  --all) filter='.data[]' ;;
+  --name)
+    only="${2:-}"
+    [ -n "$only" ] || die 1 "--name needs a name, e.g. --name gpt-oss-20b@deepinfra"
+    filter='.data[] | select(.model_name == $only)'
+    ;;
+  *) die 1 "unknown option: $1 (use --all or --name <name>)" ;;
+esac
+
 model_info="$(api GET /model/info)" || die 1 "cannot read /model/info from the gateway"
-if [ "${1:-}" = "--all" ]; then
-  filter='.data[]'
-else
-  filter='.data[] | select(.model_info.rapidselector_kind == "role")'
-fi
-mapfile -t entries < <(jq -r "[$filter | {n: .model_name, r: (.model_info.reasoning == true)}] | unique_by(.n) | .[] | \"\(.n) \(.r)\"" <<<"$model_info")
+mapfile -t entries < <(jq -r --arg only "$only" "[$filter | {n: .model_name, r: (.model_info.reasoning == true)}] | unique_by(.n) | .[] | \"\(.n) \(.r)\"" <<<"$model_info")
+[ -z "$only" ] || [ "${#entries[@]}" -gt 0 ] || die 1 "the gateway has no name $only"
 
 failures=()
 total=0

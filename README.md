@@ -186,6 +186,8 @@ This calls real models, and costs well under $0.01:
 ./rapidselector.sh run-script scripts/smoke-test.sh
 ```
 
+It calls each role once. Add `--all` to call every name, or `--name <name>` to call one, such as `--name gpt-oss-20b@deepinfra`.
+
 ## Everyday commands
 
 Always go through `./rapidselector.sh`: it loads the settings and secrets, then runs `docker compose` with whatever you give it.
