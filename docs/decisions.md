@@ -261,6 +261,9 @@ Changed by the owner's decision after D6: principle 1 now reads "maximum possibl
 ### 2026-11-06: Step D7, the regular top-up
 The owner topped up $35 of credit. The balance afterwards: $34.81, so the top-up first covered D6's −$0.19. The amount paid, with fee and VAT, was not recorded here.
 
+### 2026-11-06: Step D8, the budget lowered for the alerts
+`experiments`' spend in the admin UI: $5.10 (D6's drain). `BUDGET_TEAM_EXPERIMENTS=5.36 ./rapidselector.sh run-script scripts/setup-keys.sh` at 14:51: the table shows `team:experiments` at 5.36, the rest unchanged. The smoke test at 14:55: 4 roles with 200 and a cost above zero, both probes refused with 403, $0.00000978 in total, `OK`. About $0.26 of $5.36 is left (under 5%), so both budget rules should fire. Waiting for the emails.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -308,6 +311,7 @@ Minor, not fixed yet; each to be decided by the owner.
 36. Gaps in `tests/drain.bats`: no test has a fault and a limit refusal in the same round, or a limit and an in-flight refusal in the same round, and SIGINT is not tested, only TERM (the final review tried INT by hand, and it works).
 38. *(2026-11-05, seen at D3)* The gateway's log has "You are sending unauthenticated requests to the HF Hub", so LiteLLM fetches something from Hugging Face, probably a tokenizer for counting tokens. No prompt is involved as far as is known, but it is an outside call nobody chose. Find out what it fetches and whether it can be turned off or pinned.
 39. *(2026-11-05, seen at D3)* LiteLLM retries 403, 429 and 503 twice by itself, as level 1 already showed (`provider-facts.md`), and the gateway's log confirmed it for a real 429. One client call can be three calls upstream, and with the README's one client retry, six. A refused call costs nothing; a retried call that timed out might. Decide whether to set `num_retries`.
+41. *(2026-11-06, seen at D8)* LiteLLM's admin UI warns at login: "Environment-credential login is enabled. Anyone with UI_USERNAME/UI_PASSWORD (or the master key, when UI_PASSWORD is unset) can sign in as a proxy admin with a shared static secret. First create a regular admin account with its own password, then set general_settings.disable_env_credential_login: true." The risk is low here (LAN only, one owner, a random 32-character `LITELLM_UI_PASSWORD` from secrets-service), but it is a shared static secret. To decide later: a personal admin account and `disable_env_credential_login: true`, checking first how that affects the README's manual ways to stop spending and the admin UI that tower's kill switch page points to.
 40. *(2026-11-06, seen at C5)* "rapid-selector: database failing" misses the first failures. `litellm_postgres_failed_requests_total` appears only when a query first fails, and `increase()` does not count a series that is already above 0 on its first sample, so it fires only on failures after the series exists. Failures that keep coming are still caught, and a database that is fully down also shows as 503s to clients. The rule has never seen this series, so it is untested. Could be widened to also fire when the series is new.
 
 ### Settle later
