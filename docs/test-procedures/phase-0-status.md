@@ -4,7 +4,7 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 
 ## Where we are (2026-11-06)
 
-- **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1, D2, D4, D5 and E1 are done and recorded in `docs/decisions.md`. D3 passed for all 11 names (the last on 2026-11-06). **rapid-selector stays on `sandbox`** (owner, 2026-11-06).
+- **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1, D2, D4, D5 and E1 are done and recorded in `docs/decisions.md`. D3 and D4 passed for all 11 names (the last on 2026-11-06). **rapid-selector stays on `sandbox`** (owner, 2026-11-06).
 - **E1 (2026-11-06):** chat now runs Open WebUI's slim image (about 510 MiB less memory), the old model cache is deleted from its volume, and the chat backup leaves out `cache/` (1.08 MB, not 1.1 GB). `min_bytes` and the backup count of 11 are set in `production`.
 - **Tower:** the designs for part 1a (see, stop and check) and part 1b (full editing of models, roles, allowed names and budgets) are **approved**: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md` and `…-tower-part-1b-design.md`. Every decision behind them is in `docs/decisions.md` (2026-11-05 entries). No plan or code yet.
 - **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
@@ -12,10 +12,9 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 ## Next, in order (the owner picks)
 
 1. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
-2. **D3's last name** answered on 2026-11-06 (200, $0.00000446): check its host on OpenRouter's Logs page (DeepInfra).
-3. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
-4. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
-5. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
+2. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
+3. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
+4. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
 
 ## Things to remember
 
