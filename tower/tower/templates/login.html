@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block main %}
+<form method="post" action="/login">
+  {% if message %}<p role="alert">{{ message }}</p>{% endif %}
+  <label>Password <input type="password" name="password" autofocus required></label>
+  <button type="submit">Log in</button>
+</form>
+{% endblock %}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}RAPID SELECTOR{% endblock %}</title>
+  <link rel="stylesheet" href="/static/tower.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>RAPID SELECTOR</h1>
+    <div id="killswitch"></div>
+    <nav>
+      <a href="/">Cost</a> &middot;
+      <a href="/usage">Usage</a> &middot;
+      <a href="/setup">Setup</a> &middot;
+      <a href="/log">Log</a>
+    </nav>
+    <form method="post" action="/logout"><button type="submit">Log out</button></form>
+  </header>
+  <main>{% block main %}{% endblock %}</main>
+</body>
+</html>
