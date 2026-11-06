@@ -296,7 +296,14 @@ release() {
     [ "$SECONDS" -lt "$deadline" ] || { echo "gateway not healthy again"; false; }
     sleep 3
   done
-  tower_until /partials/killswitch "ALL CLEAR" 60
+  # Level 2 engaged level 1 too: once the gateway is back, tower blocks the keys it could not
+  # reach, and releasing level 2 never went from everything stopped to everything running.
+  tower_until /partials/killswitch "LEVEL 1</strong>" 100  # complete, not "LEVEL 1 · PARTIAL"
+  [ "$(key_blocked "$(test_env KEY_CHAT)")" = "true" ]
+  [ "$(key_blocked "$(test_env KEY_NODE_RED)")" = "true" ]
+  release 1
+  [[ "$output" == *"ALL CLEAR"* ]] || { echo "$output"; false; }
+  [ "$(key_blocked "$(test_env KEY_CHAT)")" = "false" ]
 }
 
 @test "no secret value in any page, /metrics or tower's container log" {
