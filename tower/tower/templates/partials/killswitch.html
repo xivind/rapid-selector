@@ -41,6 +41,7 @@
 
   {% if tower_level2 or tower_level1 %}
   {% set release_level = 2 if tower_level2 else 1 %}
+  {% if tower_level1 %}<p class="ks-note">While tower holds level 1, a key unblocked in the gateway's admin UI is blocked again within a minute. Release level 1 here to unblock.</p>{% endif %}
   <form class="ks-release" hx-post="/kill/release/{{ release_level }}">
     <label>Type <code>release</code> <input name="word" required pattern="release" autocomplete="off"></label>
     <button type="submit">Release level {{ release_level }}</button>

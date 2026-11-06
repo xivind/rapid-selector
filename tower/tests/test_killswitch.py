@@ -241,11 +241,24 @@ def test_release_level1_refused_while_level2(db):
     assert gw.calls == [] and recorded() == {"a"}
     assert s.level == 2 and s.problems
     assert store.latest("kill_switch").ok is False
-    # Also refused when the key was disabled outside tower, or cannot be read.
+    # Refused while tower's flag is set even if OpenRouter cannot be read.
+    orc.down = True
+    assert release(1, gw, orc, "owner").problems and gw.calls == []
+    # Also refused when the key reads back disabled outside tower.
+    orc.down = False
     store.Flag.delete().execute()
     assert release(1, gw, orc, "owner").problems and gw.calls == []
-    orc.disabled, orc.down = False, True
-    assert release(1, gw, orc, "owner").problems and gw.calls == []
+
+
+def test_release_level1_when_openrouter_unreadable(db):
+    """An expired management key or OpenRouter outage must not lock level 1 in place."""
+    gw, orc = FakeGateway(["a", "b"]), FakeOpenRouter()
+    engage(1, gw, orc, "owner")
+    orc.down = True
+    s = release(1, gw, orc, "owner")
+    assert recorded() == set()
+    assert not gw.state["a"].blocked and not gw.state["b"].blocked
+    assert any("OpenRouter" in p and "cannot be read" in p for p in s.problems)
 
 
 def test_release_level2_leaves_level1(db):
@@ -333,6 +346,7 @@ def test_partial_states(db):
     gw.fail = {"b"}
     r = c.post("/kill/engage/1", data={"confirm": "yes"})
     assert "LEVEL 1 · PARTIAL" in r.text and "ALL CLEAR" not in r.text
+    assert "is blocked again within a minute" in r.text
     gw.fail = set()
     r = c.post("/kill/engage/2", data={"confirm": "yes"})
     assert "LEVEL 2" in r.text and 'hx-post="/kill/release/2"' in r.text

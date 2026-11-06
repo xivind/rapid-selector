@@ -191,9 +191,10 @@ def _release_level1(gw, orc, problems) -> list[str]:
     _fresh(orc)
     key = _try("openrouter", orc.inference_key)
     if isinstance(key, Unavailable):
-        problems.append(f"level 1 not released while the OpenRouter key cannot be read: {key}")
-        return []
-    if key.get("disabled"):
+        # Tower did not disable the key, so releasing level 1 starts nothing tower stopped at
+        # level 2; refusing would lock level 1 in place while the management key is unusable.
+        problems.append(f"the OpenRouter key cannot be read ({key}); level 1 released anyway")
+    elif key.get("disabled"):
         problems.append("level 1 not released while the OpenRouter key is disabled "
                         "outside tower; release that in OpenRouter's dashboard first")
         return []
