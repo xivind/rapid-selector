@@ -14,7 +14,7 @@ A handoff between sessions, written 2026-11-04 and last updated late on 2026-11-
 ## Next, in order (the owner picks)
 
 1. **Show the owner tower's look** (mockup B; sign-off pending), then **tower's test procedure on `sandbox`**: `docs/test-procedures/tower-1a.md` (on the tower branch), one step at a time. First check `docker compose version` is v2.15 or later (`update` uses `--ignore-buildable`). It needs the four new secrets added with `scripts/add-tower-secrets.sh`, a management key created with a one-year expiry, and spends under $0.01 plus a few calls under $0.001.
-2. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
+2. ~~Check the 06:00 backup of 2026-11-07~~: dropped by the owner. It is the first nightly run with the new export and `min_bytes`, but "Backup failed" (fire-tested, now that Mailgun works) emails if either job fails, so no email means it passed.
 3. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is on `phase-0-walkthrough` and gets tower when the owner switches it to the tower branch for the test procedure.
 4. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
 
