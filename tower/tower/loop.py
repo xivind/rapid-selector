@@ -69,6 +69,7 @@ def tick(now, gw, orc, settings) -> None:
     _step("enforce", lambda: killswitch.enforce(gw))
     _step("balance", lambda: _snapshot_balance(now, orc))
     _step("price_check", lambda: _price_check(now, gw, orc))
+    metrics.mark_tick(now)
 
 
 def start_loop(app):

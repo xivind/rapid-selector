@@ -108,3 +108,10 @@ def test_tick_calls_enforce_with_the_gateway(db, price_runs, monkeypatch):
     gw = FakeGateway()
     loop.tick(at(7, 0), gw, FakeOpenRouter(), load_settings(ENV))
     assert calls == [gw]
+
+
+def test_tick_sets_the_heartbeat_even_when_steps_fail(db, price_runs):
+    loop.tick(at(7, 0), Down(), Down(), load_settings(ENV))
+    assert metrics.REGISTRY.get_sample_value("rapidselector_loop_last_tick_timestamp_seconds") == at(7, 0).timestamp()
+    loop.tick(at(7, 1), FakeGateway(), FakeOpenRouter(), load_settings(ENV))
+    assert metrics.REGISTRY.get_sample_value("rapidselector_loop_last_tick_timestamp_seconds") == at(7, 1).timestamp()

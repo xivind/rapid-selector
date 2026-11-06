@@ -21,6 +21,7 @@ HELP = {
     "smoke_test_ok": "1 when the latest smoke test passed",
     "management_key_expires_timestamp_seconds": "When the OpenRouter management key expires",
     "upstream_ok": "1 when the source answered",
+    "loop_last_tick_timestamp_seconds": "When the background loop last finished a tick",
 }
 LABELS = {"key_usage_usd": "period", "upstream_ok": "source"}
 
@@ -29,14 +30,21 @@ class _Collector:
     def __init__(self):
         self._lock = threading.Lock()
         self._values: dict[str, dict] = {}  # name -> {label value or None: float}
+        self._tick: float | None = None  # kept apart: a failed metrics step must not hide the heartbeat
 
     def replace(self, values: dict[str, dict]) -> None:
         with self._lock:
             self._values = values
 
+    def tick(self, timestamp: float) -> None:
+        with self._lock:
+            self._tick = timestamp
+
     def collect(self):
         with self._lock:
             values = {name: dict(v) for name, v in self._values.items()}
+            if self._tick is not None:
+                values["loop_last_tick_timestamp_seconds"] = {None: self._tick}
         for name, series in values.items():
             label = LABELS.get(name)
             family = GaugeMetricFamily(PREFIX + name, HELP[name], labels=[label] if label else [])
@@ -52,6 +60,10 @@ REGISTRY.register(_collector)
 
 def _flag(value) -> float | None:
     return None if value is None else (1.0 if value else 0.0)
+
+
+def mark_tick(now: datetime) -> None:
+    _collector.tick(now.timestamp())
 
 
 def update_metrics(summary, switch, latest_price, latest_smoke, expiry: datetime | None) -> None:
