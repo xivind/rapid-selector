@@ -11,7 +11,7 @@ Everything goes through one gateway ([LiteLLM](https://docs.litellm.ai/)): only 
 | `gateway` | `rapidselector-gateway` | `http://<host>:4000` | OpenAI-compatible API for every client. Admin UI at `http://<host>:4000/ui`, user `admin`, password `LITELLM_UI_PASSWORD` |
 | `chat` | `rapidselector-chat` | `http://<host>:4010` | Open WebUI |
 | `db` | `rapidselector-db` | none (internal only) | Postgres for the gateway's keys, budgets and spend |
-| `tower` | | `http://<host>:4020` | Reserved for the control tower (phase 1) |
+| `tower` | `rapidselector-tower` | `http://<host>:4020` | Control tower: cost, usage, checks and the kill switch. Login with `TOWER_PASSWORD`. `/metrics` and `/health` need no login |
 
 Ports bind only to the host's LAN address (`RAPIDSELECTOR_LAN_ADDRESS`), never to every interface. Give the host a fixed address with a DHCP reservation on the router, or the stack will not start after an address change.
 
@@ -34,7 +34,8 @@ In OpenRouter's dashboard:
 1. Turn **auto top-up off**.
 2. Turn off prompt logging and every opt-in to data collection, and require zero data retention for the account.
 3. Create an API key for the gateway with a **monthly credit limit**. $35 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). The key is shown only once, so keep it at hand for step 3.
-4. Buy credits. The whole balance is the most you can lose, so keep it small.
+4. Create a **management key** for tower, with an expiry of **one year**, and write down the expiry date. The key is shown only once, so keep it at hand for step 3. It cannot make model calls, but it can create, change and delete keys, so it is the most sensitive secret in the system and only tower holds it. When it is close to expiring (tower warns 30 days ahead), create a new one, replace `OPENROUTER_MANAGEMENT_KEY` where the secrets live, set the new date in `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` in `.env` if tower shows the expiry as unknown, run `./rapidselector.sh up`, and delete the old key in OpenRouter's dashboard.
+5. Buy credits. The whole balance is the most you can lose, so keep it small.
 
 ### 2. Get the code and create the settings file
 
@@ -66,10 +67,13 @@ set_secret WEBUI_SECRET_KEY "$(openssl rand -hex 32)"
 set_secret KEY_CHAT "sk-$(openssl rand -hex 24)"
 set_secret KEY_NODE_RED "sk-$(openssl rand -hex 24)"
 set_secret KEY_SMOKE_TEST "sk-$(openssl rand -hex 24)"
+set_secret TOWER_PASSWORD "$(openssl rand -hex 16)"
+set_secret TOWER_SESSION_SECRET "$(openssl rand -hex 32)"
+set_secret TOWER_GATEWAY_KEY "sk-$(openssl rand -hex 24)"
 unset -f set_secret
 ```
 
-Then add the OpenRouter key by hand, after `RAPIDSELECTOR_OPENROUTER_KEY=`:
+Then add the OpenRouter inference key by hand, after `RAPIDSELECTOR_OPENROUTER_KEY=`, and the management key after `OPENROUTER_MANAGEMENT_KEY=`. If you want to set the management key's expiry date yourself, put it after `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=` as `2027-11-06`. This setting is not a secret and may stay empty:
 
 ```bash
 nano .env
@@ -81,7 +85,7 @@ Check the result. This prints each name and the length of its value, never the v
 awk -F= '/^[A-Z_]+=/ {print $1, length($2)}' .env
 ```
 
-The 9 secrets must all have a length above 0: 64 for `POSTGRES_PASSWORD`, `LITELLM_SALT_KEY` and `WEBUI_SECRET_KEY`, 51 for `LITELLM_MASTER_KEY` and the three `KEY_*`, 32 for `LITELLM_UI_PASSWORD`, and about 70 for the OpenRouter key. `SECRETS_SERVICE_TOKEN_FILE` stays empty.
+The 13 secrets must all have a length above 0: 64 for `POSTGRES_PASSWORD`, `LITELLM_SALT_KEY`, `WEBUI_SECRET_KEY` and `TOWER_SESSION_SECRET`, 51 for `LITELLM_MASTER_KEY`, `TOWER_GATEWAY_KEY` and the three `KEY_*`, 32 for `LITELLM_UI_PASSWORD` and `TOWER_PASSWORD`, and about 70 for the two OpenRouter keys. `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` may be 0. `SECRETS_SERVICE_TOKEN_FILE` stays empty.
 
 **Keep a safe copy of `.env` away from the host,** for example in a password manager. It is the only copy of your secrets.
 
@@ -107,10 +111,14 @@ read -rs TOKEN
 unset TOKEN
 ```
 
-Do the same with the OpenRouter key:
+Do the same with the OpenRouter inference key, and then with the management key:
 
 ```bash
 read -rs ORKEY
+```
+
+```bash
+read -rs MGKEY
 ```
 
 Generate the other secrets into a temporary private file. Do this **only once**, because a second run followed by the upload below replaces every secret:
@@ -128,9 +136,13 @@ SECRET_ARGS=(
   --arg KEY_CHAT "sk-$(openssl rand -hex 24)"
   --arg KEY_NODE_RED "sk-$(openssl rand -hex 24)"
   --arg KEY_SMOKE_TEST "sk-$(openssl rand -hex 24)"
+  --arg TOWER_PASSWORD "$(openssl rand -hex 16)"
+  --arg TOWER_SESSION_SECRET "$(openssl rand -hex 32)"
+  --arg OPENROUTER_MANAGEMENT_KEY "$MGKEY"
+  --arg TOWER_GATEWAY_KEY "sk-$(openssl rand -hex 24)"
 )
 jq -n "${SECRET_ARGS[@]}" '{blob: $ARGS.named}' > "$HOME/rapidselector-secrets.json"
-unset SECRET_ARGS ORKEY
+unset SECRET_ARGS ORKEY MGKEY
 ```
 
 Store them as the secret `rapidselector`, and read back the names and lengths. Replace `<secrets-service host>` first:
@@ -142,11 +154,13 @@ curl -sS -X PUT -H "Authorization: Bearer $(cat $T)" -H 'Content-Type: applicati
 curl -sS -H "Authorization: Bearer $(cat $T)" "$SERVICE/secrets/rapidselector" | jq -r '.blob | to_entries[] | "\(.key) \(.value | length)"'
 ```
 
-Expect a line with `"status":"success"`, then 9 names with lengths above 0. Delete the temporary file only then:
+Expect a line with `"status":"success"`, then 13 names with lengths above 0. Delete the temporary file only then:
 
 ```bash
 rm ~/rapidselector-secrets.json
 ```
+
+If the secret `rapidselector` already exists from before tower, do not run the upload again: it would replace every secret. Run `scripts/add-tower-secrets.sh` instead. It keeps every field, adds the three tower secrets it can generate, asks for the management key without showing it, and prints names and lengths.
 
 The stored secrets are only as safe as secrets-service's own backup, which also needs its encryption key kept away from its host.
 
@@ -160,7 +174,7 @@ The stored secrets are only as safe as secrets-service's own backup, which also 
 ./rapidselector.sh up
 ```
 
-The containers run in the background, and you get your prompt back when they have started. The first start takes a few minutes. Then check that all three report `healthy`:
+The containers run in the background, and you get your prompt back when they have started. The first start takes a few minutes, and a few more the first time because it builds tower's image on the host. Then check that all four report `healthy`:
 
 ```bash
 ./rapidselector.sh ps
@@ -172,13 +186,17 @@ The containers run in the background, and you get your prompt back when they hav
 ./rapidselector.sh run-script scripts/setup-keys.sh
 ```
 
-It prints a summary of each team and key. It is safe to run again; it resets budgets and limits to the values in the script.
+It prints a summary of each team and key, and creates tower's own user and key in the gateway (`TOWER_GATEWAY_KEY`). Tower's key can read models, keys, teams and spend and block or unblock keys, and cannot call a model. It is safe to run again; it resets budgets and limits to the values in the script. Until it has run, tower shows the gateway as unreachable.
 
-### 6. Create the Open WebUI admin account
+### 6. Log in to tower
+
+Open `http://<host>:4020` and log in with `TOWER_PASSWORD`. Read it without printing the whole file: `./rapidselector.sh run-script bash -c 'echo "$TOWER_PASSWORD"'`. The Cost page shows the month's spend, the balance and the kill switch at the top. The Setup page shows every setting tower can read, including how long the management key has left.
+
+### 7. Create the Open WebUI admin account
 
 Open `http://<host>:4010` and create the account. Only this first account can be created; sign-ups are closed after it. The model list should show 11 names. Sending a chat message costs money.
 
-### 7. Run the smoke test
+### 8. Run the smoke test
 
 This calls real models, and costs well under $0.01:
 
@@ -186,7 +204,7 @@ This calls real models, and costs well under $0.01:
 ./rapidselector.sh run-script scripts/smoke-test.sh
 ```
 
-It calls each role once. Add `--all` to call every name, or `--name <name>` to call one, such as `--name gpt-oss-20b@deepinfra`.
+It calls each role once. Add `--all` to call every name, or `--name <name>` to call one, such as `--name gpt-oss-20b@deepinfra`. Tower can run the same test from its Cost page (**Smoke test: roles** or **all names**). It shows the worst-case cost first and runs only after you confirm.
 
 ## Everyday commands
 
@@ -247,7 +265,7 @@ Background calls are limited on purpose: chat titles are generated with the chea
 
 ## Backups
 
-With the owner's `backup-orchestrator` (in the `production` repository), the database and Open WebUI's data are backed up nightly. Without it, on the host:
+With the owner's `backup-orchestrator` (in the `production` repository), the database, Open WebUI's data and tower's database are backed up nightly. Without it, on the host:
 
 ```bash
 docker exec rapidselector-db pg_dump -U litellm litellm > "litellm-$(date +%F).sql"
@@ -259,17 +277,34 @@ docker run --rm -v rapidselector_chatdata:/data -v "$PWD":/backup postgres:17.11
 docker start rapidselector-chat
 ```
 
+Tower's database (`tower.db`, in the volume `rapidselector_towerdata`) is a SQLite file. Tower writes a consistent copy of it to standard output while it runs:
+
+```bash
+docker exec rapidselector-tower python -m tower.backup > "tower-$(date +%F).db"
+```
+
 Keep the secrets (at least `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY` and the virtual keys) safely with the backups: without the salt key, a restored database cannot read its stored provider keys.
 
-## Stopping all spending (manual kill switch)
+## Stopping all spending (kill switch)
 
-Two ways that do not depend on anything else running (not even secrets-service):
+**In tower** (`http://<host>:4020`), the kill switch is at the top of every page. Each level takes one click and one confirmation in the page.
+
+| Level | What it does | Use it when |
+|---|---|---|
+| 1 | Blocks every virtual key in the gateway except tower's. Models stop answering; the gateway and tower keep running | Something is calling too much and you want it to stop now |
+| 2 | Level 1, and also disables the OpenRouter inference key. Nothing can spend, even a client that gets past the gateway | You do not trust the gateway, or level 1 is not enough |
+
+To release, type `release` in the box and press the button. Release goes one level at a time: level 2 first (which enables the OpenRouter key again), then level 1. Tower releases only what it engaged itself. A key you blocked yourself in the gateway, or an OpenRouter key you disabled yourself, stays as it is, and tower says so.
+
+**Without tower.** Two ways that do not depend on anything else running (not even secrets-service or tower), and they keep working if tower is down:
 1. In OpenRouter's dashboard, disable the gateway's inference key. This stops everything at once.
 2. On the host, stop the gateway with plain Docker:
    ```bash
    docker stop rapidselector-gateway
    ```
    Start it again with `./rapidselector.sh up`.
+
+How fast OpenRouter refuses a disabled key is not documented. It is measured in `docs/test-procedures/tower-1a.md`, and the result is recorded in `docs/decisions.md`.
 
 ## For developers
 
@@ -282,4 +317,5 @@ Code and tests are developed in a cloud sandbox without access to the Pi. The le
   In the cloud sandbox, start Docker first: `dockerd > /tmp/dockerd.log 2>&1 &`.
 - **Before changing an image version:** `tests/check-arm64.sh` checks that every pinned image exists for the Pi.
 - **Before changing the model list:** `tests/check-prices.sh` compares each entry's price, host and tier with OpenRouter's public API. It costs nothing.
-- Anything that needs the Pi or real money is verified with the owner by following `docs/test-procedures/phase-0.md`.
+- Tower's unit tests: `cd tower && uv run pytest` (no network, no Docker).
+- Anything that needs the Pi or real money is verified with the owner by following `docs/test-procedures/phase-0.md` and `docs/test-procedures/tower-1a.md`.
