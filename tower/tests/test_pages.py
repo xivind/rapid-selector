@@ -143,7 +143,7 @@ def test_cost_page_shows_figures(db, config_dir):
     assert "key limit $35" in text
     balance = text.split(">BALANCE<")[1].split("</div>")[0]
     assert "$12.60" in balance
-    assert "forecast" in text and "estimate" in text[text.index("forecast"):][:200]
+    assert ">FORECAST<" in text and "estimate" in text[text.index(">FORECAST<"):][:200]
     assert "classify" in text and "mistralai/mistral-small-3.2-24b-instruct@deepinfra" in text
     assert "in step" in text  # monthly key reset against the gateway's 30d window
     assert '<svg class="bar' in text
