@@ -205,3 +205,12 @@ All sizes are reached through OpenRouter.
 - **Largest:** `qwen3.8-2.4t-a95b` (2.4T).
 - **Same model on several hosts:** `gpt-oss-120b` has over 20, so hosts can be compared directly.
 - **Zero data retention:** `lfm-2.5-2.6b` had no zero data retention host listed.
+
+## Tower dependencies
+
+### Pinned versions, 2026-11-06
+Each is the newest release at least two weeks old on PyPI (cut-off 2026-10-23); locked in `tower/uv.lock`.
+- Python packages: fastapi 0.161.1, uvicorn 0.54.0 (without the `standard` extra), jinja2 3.1.6, peewee 4.5.3, httpx 0.28.1, prometheus-client 0.26.0, pyyaml 6.0.3, python-multipart 0.0.32, itsdangerous 2.2.0; dev: pytest 9.1.1.
+- Images: `python:3.14.7-alpine3.24` and `ghcr.io/astral-sh/uv:0.13.5` (0.13.6 is from 2026-10-27, too new). Both have a `linux/arm64` manifest (Docker Hub and ghcr.io registry APIs, 2026-11-06).
+- Python 3.14, not 3.15: PyYAML 6.0.3 publishes musl wheels for cp314 only, and the slim Alpine image has no compiler. pydantic-core and MarkupSafe have cp315 musl aarch64 wheels, so only PyYAML blocks 3.15. Revisit when PyYAML ships cp315 wheels.
+- `fastapi.testclient` warns that `httpx` with Starlette's test client is deprecated and suggests `httpx2`. Not acted on; tests pass.

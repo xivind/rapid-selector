@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 # Check that every pinned image exists for linux/arm64 (the Raspberry Pi 5), without pulling.
-# Usage: tests/check-arm64.sh [compose files...]  (default: docker-compose.yml and the test fakes)
+# Usage: tests/check-arm64.sh [compose files...]  (default: docker-compose.yml, the test fakes and tower's Dockerfile)
+# Images we build ourselves (rapidselector-*) are skipped; the images our Dockerfile builds on are checked.
 set -uo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
-[ "$#" -gt 0 ] || set -- "$repo/docker-compose.yml" "$repo/tests/compose.fakes.yml"
+dockerfiles=()
+if [ "$#" -eq 0 ]; then
+  set -- "$repo/docker-compose.yml" "$repo/tests/compose.fakes.yml"
+  dockerfiles=("$repo/tower/Dockerfile")
+fi
 
-mapfile -t images < <(grep -hE '^[[:space:]]+image:' "$@" | awk '{ print $2 }' | tr -d '"' | sort -u)
+mapfile -t images < <({
+  grep -hE '^[[:space:]]+image:' "$@" | awk '{ print $2 }' | tr -d '"'
+  [ "${#dockerfiles[@]}" -eq 0 ] || {
+    grep -hE '^FROM ' "${dockerfiles[@]}" | awk '{ print $2 }'
+    grep -hE '^COPY --from=' "${dockerfiles[@]}" | sed -E 's/^COPY --from=([^ ]+).*/\1/'
+  }
+} | grep -v '^rapidselector-' | sort -u)
 failed=0
 for image in "${images[@]}"; do
   out=""

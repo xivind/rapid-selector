@@ -58,3 +58,19 @@ compose_config() {
     [[ "$image" != *:latest ]]
   done < <(jq -r '.services[] | .image' <<<"$config")
 }
+
+@test "tower is published on the LAN address only" {
+  config="$(compose_config)"
+  [ "$(jq -r '.services.tower.ports | length' <<<"$config")" = "1" ]
+  [ "$(jq -r '.services.tower.ports[0].host_ip' <<<"$config")" = "127.0.0.1" ]
+  [ "$(jq -r '.services.tower.ports[0].published' <<<"$config")" = "4020" ]
+  [ "$(jq -r '.services.tower.ports[0].target' <<<"$config")" = "8000" ]
+}
+
+@test "tower mounts config read-only and has no docker socket" {
+  config="$(compose_config)"
+  [ "$(jq -r '[.services.tower.volumes[] | select(.target | startswith("/config/")) | .read_only] | all' <<<"$config")" = "true" ]
+  [ "$(jq -r '[.services.tower.volumes[] | select(.target | startswith("/config/"))] | length' <<<"$config")" = "2" ]
+  [ "$(jq -r '[.services.tower.volumes[] | select(.source | test("docker.sock"))] | length' <<<"$config")" = "0" ]
+  [ "$(jq -r '.services.tower.depends_on.gateway.condition' <<<"$config")" = "service_started" ]
+}

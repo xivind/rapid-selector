@@ -23,11 +23,12 @@ ensure_test_env() {
     echo "RAPIDSELECTOR_LAN_ADDRESS=127.0.0.1"
     echo "GATEWAY_PORT=${GATEWAY_PORT}"
     echo "CHAT_PORT=4010"
+    echo "TOWER_PORT=4020"
     echo "SECRETS_SOURCE=env"
     local name
     for name in "${RAPIDSELECTOR_SECRETS[@]}"; do
       case "$name" in
-        KEY_*) echo "$name=sk-test-$(openssl rand -hex 16)" ;;
+        KEY_* | TOWER_GATEWAY_KEY) echo "$name=sk-test-$(openssl rand -hex 16)" ;;
         *) echo "$name=$(openssl rand -hex 24)" ;;
       esac
     done

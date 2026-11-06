@@ -100,6 +100,38 @@ services:
       start_period: 180s
       retries: 6
 
+  tower:
+    build: ./tower
+    image: rapidselector-tower:0.1.0
+    container_name: rapidselector-tower
+    restart: unless-stopped
+    environment:
+      TOWER_PASSWORD: ${TOWER_PASSWORD:?set TOWER_PASSWORD}
+      TOWER_SESSION_SECRET: ${TOWER_SESSION_SECRET:?set TOWER_SESSION_SECRET}
+      OPENROUTER_MANAGEMENT_KEY: ${OPENROUTER_MANAGEMENT_KEY:?set OPENROUTER_MANAGEMENT_KEY}
+      TOWER_GATEWAY_KEY: ${TOWER_GATEWAY_KEY:?set TOWER_GATEWAY_KEY}
+      KEY_SMOKE_TEST: ${KEY_SMOKE_TEST:?set KEY_SMOKE_TEST}
+      OPENROUTER_INFERENCE_KEY_NAME: ${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}
+      OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT: ${OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT:-}
+    volumes:
+      - towerdata:/data
+      - ./gateway/config.yaml:/config/config.yaml:ro
+      - ./docker-compose.yml:/config/docker-compose.yml:ro
+    ports:
+      - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${TOWER_PORT:-4020}:8000"
+    logging: *logging
+    # Started, not healthy: tower must run, and keep the kill switch reachable, when the gateway is down.
+    depends_on:
+      gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 6
+
 volumes:
   pgdata:
   chatdata:
+  towerdata:
