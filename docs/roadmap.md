@@ -38,4 +38,5 @@ Researched on 2026-11-02 and left out for now:
     - **Untrusted content:** a fetched page can carry instructions. Acceptable in chat, but not for flows that act on a model's answer without checking it.
     - **Comparisons:** keep it off in arena and benchmark runs, so that they compare models and not search results.
     - **Fit:** its memory use must be checked on the Pi, and it stays optional and off by default, as an integration.
+- **Tower engaging the kill switch by itself** (owner's wish, 2026-11-06): today only the owner engages it; the gateway budgets, the key limit and the balance stop spending automatically, but late (D1, D6). A narrow automatic rule could come later, for example level 1 only, on one clear signal such as the balance below a set amount or a jump in spend within an hour, always with an email. To weigh first: a false trigger stops Node-RED's permanent flows unnoticed, so the signal and threshold need care and a test.
 - **Automatic fallback to another model or host** for important flows: possible within the allowlist, but every fallback needs its own price and testing. Left out while models are an enhancement.
