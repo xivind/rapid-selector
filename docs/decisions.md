@@ -217,6 +217,8 @@ Applied on `sandbox` the same day. After `git pull` on `phase-0-walkthrough`, `t
 
 `min_bytes` set in `production`'s `backup-orchestrator/jobs.conf` (`3d441ca`, pushed to `main` with the owner's permission): `rapidselector-postgres` 300000 and `rapidselector-chat` 400000, a little under half, as the chat tar's `-wal` share can shrink. All 107 `backup-orchestrator` tests pass. The backup count (9 to 11) can be raised now rather than after another night, as both jobs have had a success.
 
+Raised the same day by a Claude Code session in `production` with the Grafana MCP, as `grafana/rapidselector-alerts.md` describes: `count(backup_last_success_timestamp_seconds)` returned 11 first; then "Backup missing" (group Infrastructure) went from `< 9` to `< 11`, with its summary and description, and is `Normal`; the Overview dashboard's **Backup** panel from `< 9` to `< 11` (it returns 0); Loki Visualizations' **Backup Jobs OK** from 9 to 11 (it shows 11/11). Each was read back, and nothing else was touched. The note in `production` now records it as done (`777baf7`). **E1 passed.**
+
 ### 2026-11-06: rapid-selector stays on `sandbox`
 Decided by the owner. rapid-selector will not move to `webserver`: much else already runs there, and `sandbox` has the better fan. This replaces "Hosts" above: `sandbox` is the permanent host. So step C5, the reboot check, runs on `sandbox` and no longer waits, the move step in the roadmap is dropped, and clients keep calling `http://sandbox:4000` with no edit to come. The cost: the stack has 8 GB, not 16 GB, so memory is to watch as tower and later services are added. The `webserver` notes in the overall design and in `production`'s backup files are left as they were; `RAPIDSELECTOR_BACKUP_HOST` stays as an override.
 
