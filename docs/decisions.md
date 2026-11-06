@@ -248,6 +248,8 @@ Decided by the owner (Claude's proposal; the owner first thought it was not need
 
 OpenRouter's dashboard afterwards: the balance is **−$0.18**, matching $4.91 − $5.0866. Its Logs page shows the last calls answered and charged while the balance was already below zero, for example at 12:34 (2,048 tokens, $0.0124), 12:36–12:38 (1,024 tokens, $0.00622 each) and 12:39 (512 tokens, $0.00314), each with 36 input tokens. So **the balance is not a hard stop at zero**: OpenRouter's in-flight budget refused most calls as the balance ran out, but let some through and charged them, and the account went $0.18 (3.7% of the balance) below zero before the run stopped on the new-account rate limit. How far below zero it could go is still unknown.
 
+The full output corrects one reading: the overshoot did not come from large calls counted late. Rounds 1–26 at 8192 tokens were all answered ($4.48 spent). OpenRouter began refusing at round 27, with about $0.43 left, with 402 `in_flight_budget_exhausted`. After round 32 the spend was $4.907, so the balance was still about $0.003 above zero, and round 33 was refused entirely. Every cent below zero came after that, in rounds 34–66 (at 4096, 2048, 1024 and 512 tokens), one or two answered calls every few rounds over several minutes, while the balance was already negative. So the in-flight budget throttles but does not refuse at zero. A second, short run is agreed by the owner to see whether calls keep getting through at a steady negative balance: `--max-usd 0.05 --parallel 1 --max-tokens 512 --max-calls 60`, taking the balance to at most about −$0.23, within the agreed $0.25.
+
 ## Open
 
 ### Settle during design or phase 0
