@@ -216,10 +216,11 @@ Always go through `./rapidselector.sh`: it loads the settings and secrets, then 
 | `./rapidselector.sh down` | Stop and remove the containers. Data in the volumes is kept |
 | `./rapidselector.sh logs -f` | Follow the logs (Ctrl-C to stop following). Add a service name, e.g. `logs -f gateway` |
 | `./rapidselector.sh ps` | Show the containers and their health |
-| `./rapidselector.sh update` | Pull the image versions in `docker-compose.yml` and recreate what changed |
+| `./rapidselector.sh update` | Pull the image versions in `docker-compose.yml`, rebuild tower's image, and recreate what changed |
+| `./rapidselector.sh up --build tower` | Rebuild tower's image from the code and restart it, after a `git pull` that changed tower |
 | `./rapidselector.sh run-script <script>` | Run one of the scripts in `scripts/` with the secrets loaded |
 
-**Updating** means changing an image version in `docker-compose.yml` (in a commit), then on the host `git pull` and `./rapidselector.sh update`. Before upgrading LiteLLM or Open WebUI: read the release notes, take a backup, and run the smoke test afterwards.
+**Updating** means changing an image version in `docker-compose.yml` (in a commit), then on the host `git pull` and `./rapidselector.sh update`. Tower's image is built on the host, not pulled: `update` skips it when pulling (a pull of it would fail) and rebuilds it from the code. `up` alone keeps running the tower image it built before, so after a `git pull` that changed tower, run `./rapidselector.sh up --build tower`. Before upgrading LiteLLM or Open WebUI: read the release notes, take a backup, and run the smoke test afterwards.
 
 ## Teams, keys and budgets
 
@@ -235,7 +236,7 @@ All limits are in USD and reset on the 1st of the month at 00:00 UTC.
 
 Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($35, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
-Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file.
+Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`; after changing it (or a `git pull` that changes it), run `./rapidselector.sh restart gateway` and `./rapidselector.sh restart tower`, since `up` does not see a change inside a mounted file. Tower's Setup page shows the old file until it is restarted.
 
 ## Calling a model from Node-RED or an app
 
@@ -293,6 +294,8 @@ Keep the secrets (at least `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY` and the virt
 |---|---|---|
 | 1 | Blocks every virtual key in the gateway except tower's. Models stop answering; the gateway and tower keep running | Something is calling too much and you want it to stop now |
 | 2 | Level 1, and also disables the OpenRouter inference key. Nothing can spend, even a client that gets past the gateway | You do not trust the gateway, or level 1 is not enough |
+
+Level 1 does not block LiteLLM's master key or the admin UI's own session key (they are not in the gateway's key list); level 2 stops both.
 
 To release, type `release` in the box and press the button. Release goes one level at a time: level 2 first (which enables the OpenRouter key again), then level 1. Tower releases only what it engaged itself. A key you blocked yourself in the gateway, or an OpenRouter key you disabled yourself, stays as it is, and tower says so.
 
