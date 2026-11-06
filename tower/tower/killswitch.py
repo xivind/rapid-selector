@@ -286,6 +286,8 @@ def enforce(gw) -> list[str]:
 
 
 def register(router, app):
+    from tower import setup_view  # imported here: setup_view imports this module
+
     # A refusal answers 200, like checks: htmx 2 does not swap 4xx answers, so it would not be seen.
     def render(request, state, confirm=None, error=None):
         context = {
@@ -301,25 +303,29 @@ def register(router, app):
     def clients():
         return app.state.gateway, app.state.openrouter
 
+    def state():
+        # Bound by the page deadline, so a hanging source never leaves the switch unrendered.
+        return current_state(*clients(), end=setup_view.deadline())
+
     def check(level):
         if level not in (1, 2):
             raise HTTPException(status_code=404)
 
     @router.get("/partials/killswitch", response_class=HTMLResponse)
     def partial(request: Request, confirm: int | None = None):
-        return render(request, current_state(*clients()), confirm if confirm in (1, 2) else None)
+        return render(request, state(), confirm if confirm in (1, 2) else None)
 
     @router.post("/kill/engage/{level}", response_class=HTMLResponse)
     def engage_route(request: Request, level: int, confirm: str = Form("")):
         check(level)
         if confirm != "yes":
-            return render(request, current_state(*clients()), error="Nothing changed: confirm first.")
+            return render(request, state(), error="Nothing changed: confirm first.")
         return render(request, engage(level, *clients(), "owner"))
 
     @router.post("/kill/release/{level}", response_class=HTMLResponse)
     def release_route(request: Request, level: int, word: str = Form("")):
         check(level)
         if word != "release":
-            return render(request, current_state(*clients()),
+            return render(request, state(),
                           error='Nothing changed: type the word "release".')
         return render(request, release(level, *clients(), "owner"))

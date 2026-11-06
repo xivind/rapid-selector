@@ -3,7 +3,7 @@
   {% if state.level is none %}
   <strong class="ks-state warn">STATE UNKNOWN</strong>
   {% elif state.level == 0 %}
-  <strong class="ks-state clear">● ALL CLEAR</strong>
+  <strong class="ks-state {{ 'warn' if state.problems else 'clear' }}">● ALL CLEAR</strong>
   {% else %}
   <strong class="ks-state danger">LEVEL {{ state.level }}{% if state.level == 1 and not state.level1_complete %} · PARTIAL{% endif %}</strong>
   {% endif %}
@@ -47,4 +47,5 @@
     <button type="submit">Release level {{ release_level }}</button>
   </form>
   {% endif %}
+  <p class="ks-note">Level 1 does not block LiteLLM's master key or the admin UI's own session key; level 2 stops both.</p>
 </div>

@@ -7,12 +7,15 @@
   <title>{% block title %}RAPID SELECTOR{% endblock %}</title>
   <link rel="stylesheet" href="/static/tower.css">
   <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/tower.js" defer></script>
 </head>
 <body>
   <header class="masthead">
     <div class="mast-top">
       <h1 class="wordmark"><a href="/">RAPID SELECTOR</a></h1>
-      {% block killswitch %}<div id="killswitch" hx-get="/partials/killswitch" hx-trigger="load" hx-swap="outerHTML"><span class="ks-state">reading the kill switch…</span></div>{% endblock %}
+      {% block killswitch %}<div id="killswitch" class="killswitch" hx-get="/partials/killswitch" hx-trigger="load" hx-target="this" hx-swap="outerHTML"><span class="ks-state">reading the kill switch…</span>
+        <button type="button" hx-get="/partials/killswitch?confirm=1">STOP &middot; level 1</button>
+        <button type="button" hx-get="/partials/killswitch?confirm=2">STOP &middot; level 2</button></div>{% endblock %}
     </div>
     {% block nav %}
     <nav class="tabs">

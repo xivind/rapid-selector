@@ -301,3 +301,49 @@ def test_no_secret_in_any_page(db, config_dir):
     for body in bodies:
         for value in env.values():
             assert value not in body
+
+
+# kill switch reachable on every page (final review I-2, owner decision)
+
+def test_killswitch_placeholder_has_both_stop_buttons(db, config_dir):
+    text = browser(config_dir).get("/").text
+    ks = text.split('id="killswitch"')[1].split("</div>")[0]
+    assert 'hx-get="/partials/killswitch?confirm=1"' in ks
+    assert 'hx-get="/partials/killswitch?confirm=2"' in ks
+
+
+def test_killswitch_partial_within_deadline_when_sources_hang(db, config_dir, monkeypatch):
+    monkeypatch.setattr(setup_view, "PAGE_DEADLINE", 1.0)
+    release = threading.Event()
+    try:
+        c = browser(config_dir, gw=Hanging("gateway", release), orc=Hanging("openrouter", release))
+        for method, path in (("get", "/partials/killswitch"), ("get", "/partials/killswitch?confirm=2"),
+                             ("post", "/kill/engage/2")):
+            start = time.monotonic()
+            r = getattr(c, method)(path)
+            assert r.status_code == 200
+            assert time.monotonic() - start < 2.5, path
+            assert "STATE UNKNOWN" in r.text
+        assert 'hx-post="/kill/engage/2"' in c.get("/partials/killswitch?confirm=2").text
+    finally:
+        release.set()
+
+
+def test_htmx_errors_are_shown_in_the_killswitch(db, config_dir):
+    c = browser(config_dir)
+    assert '<script src="/static/tower.js" defer></script>' in c.get("/").text
+    js = c.get("/static/tower.js").text
+    for text in ("htmx:responseError", "htmx:sendError", "killswitch",
+                 "request failed", "reload, or use the README's manual stop"):
+        assert text in js, text
+
+
+def test_killswitch_all_clear_with_problems_is_not_green(db, config_dir):
+    r = browser(config_dir).post("/kill/release/2", data={"word": "release"})  # nothing to release
+    assert "ALL CLEAR" in r.text and "tower did not disable" in r.text
+    assert 'class="ks-state warn"' in r.text and "ks-state clear" not in r.text
+
+
+def test_killswitch_says_level1_leaves_the_master_key(db, config_dir):
+    text = browser(config_dir).get("/partials/killswitch").text
+    assert "Level 1 does not block LiteLLM's master key or the admin UI's own session key" in text
