@@ -39,4 +39,9 @@ Researched on 2026-11-02 and left out for now:
     - **Comparisons:** keep it off in arena and benchmark runs, so that they compare models and not search results.
     - **Fit:** its memory use must be checked on the Pi, and it stays optional and off by default, as an integration.
 - **Tower engaging the kill switch by itself** (owner's wish, 2026-11-06): today only the owner engages it; the gateway budgets, the key limit and the balance stop spending automatically, but late (D1, D6). A narrow automatic rule could come later, for example level 1 only, on one clear signal such as the balance below a set amount or a jump in spend within an hour, always with an email. To weigh first: a false trigger stops Node-RED's permanent flows unnoticed, so the signal and threshold need care and a test.
+- **To consider: graphify in this repository** (owner's wish, 2026-11-06). A development tool, not part of the stack: it builds a knowledge graph of the repository for Claude Code, and its hooks steer Claude to the graph instead of reading files one by one. The `production` repository already uses it. To settle first, against current docs:
+  - **Which repository** is the real one, since several forks exist, and which version to pin.
+  - **What it touches:** the Claude Code hooks it installs, any git post-commit hook, and which generated files are committed or listed in `.gitignore`. In `production`, its hook leaves modified files in the checkout.
+  - **Cost:** code is parsed locally, but documents go through Claude for extraction, and this repository is mostly documents. Claude usage only, not OpenRouter.
+  - **Benefit:** whether a repository this small gains enough to be worth the hooks.
 - **Automatic fallback to another model or host** for important flows: possible within the allowlist, but every fallback needs its own price and testing. Left out while models are an enhancement.
