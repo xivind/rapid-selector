@@ -25,11 +25,14 @@ out="$(mktemp)"
 trap 'rm -f "$out"' EXIT
 
 for ((i = 1; i <= max_calls; i++)); do
-  status="$(curl -sS -m 30 -o "$out" -w '%{http_code}' -X POST "$GATEWAY/v1/chat/completions" \
-    -H "Authorization: Bearer $LITELLM_MASTER_KEY" -H 'Content-Type: application/json' -d "$body" || echo 000)"
+  # The header goes in on stdin, so the key is not in the process list.
+  status="$(printf 'Authorization: Bearer %s\n' "$LITELLM_MASTER_KEY" \
+    | curl -sS -m 30 -o "$out" -w '%{http_code}' -X POST "$GATEWAY/v1/chat/completions" \
+      -H @- -H 'Content-Type: application/json' -d "$body" || true)"
+  [ -n "$status" ] || status=000
   msg=""
   if [ "$status" != "200" ]; then
-    msg="$(jq -r '.error.message // empty' "$out" 2> /dev/null | tr '\n' ' ' | cut -c1-100 || true)"
+    msg="$(jq -r '.error.message // empty' "$out" 2> /dev/null | tr '\n' ' ' | cut -c1-100 | sed -E 's/sk-[A-Za-z0-9_-]+/sk-REDACTED/g' || true)"
   fi
   printf '%s %s %s\n' "$(date -u +%H:%M:%S)" "$status" "$msg"
   sleep 3

@@ -29,7 +29,8 @@ blob="$(jq -c '.blob' <<<"${response%$'\n'*}")"
 [ "$(jq 'length' <<<"$blob")" -ge 9 ] || die 4 "the secret rapidselector has fewer than 9 fields: refusing to write"
 
 has() { [ -n "$(jq -r --arg k "$1" '.[$k] // empty' <<<"$blob")" ]; }
-add() { blob="$(jq -c --arg k "$1" --arg v "$2" '. + {($k): $v}' <<<"$blob")"; }
+# The value goes to jq through its environment and the blob through stdin, never through argv.
+add() { blob="$(V="$2" jq -c --arg k "$1" '. + {($k): env.V}' <<<"$blob")"; }
 
 has TOWER_PASSWORD || add TOWER_PASSWORD "$(openssl rand -hex 16)"
 has TOWER_SESSION_SECRET || add TOWER_SESSION_SECRET "$(openssl rand -hex 32)"
@@ -42,7 +43,7 @@ if ! has OPENROUTER_MANAGEMENT_KEY; then
   unset mgmt
 fi
 
-status="$(jq -n --argjson blob "$blob" '{blob: $blob}' \
+status="$(jq -c '{blob: .}' <<<"$blob" \
   | curl -sS --max-time 15 -o /dev/null -w '%{http_code}' -X PUT -H "@$header_file" -H 'Content-Type: application/json' --data @- "$url")" \
   || die 4 "secrets-service unreachable at $SECRETS_SERVICE_URL"
 [ "$status" = "200" ] || die 4 "secrets-service returned HTTP $status when storing the secret"
