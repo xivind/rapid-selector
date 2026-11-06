@@ -4,7 +4,7 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 
 ## Where we are (2026-11-06)
 
-- **Phase 0:** A1–A3, B1a, B1–B6, C1–C4, D1, D2, D4, D5 and E1 are done and recorded in `docs/decisions.md`. D3 passed for 10 of 11 names. **rapid-selector stays on `sandbox`** (owner, 2026-11-06), so C5 runs there whenever the owner chooses.
+- **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1, D2, D4, D5 and E1 are done and recorded in `docs/decisions.md`. D3 passed for 10 of 11 names. **rapid-selector stays on `sandbox`** (owner, 2026-11-06).
 - **E1 (2026-11-06):** chat now runs Open WebUI's slim image (about 510 MiB less memory), the old model cache is deleted from its volume, and the chat backup leaves out `cache/` (1.08 MB, not 1.1 GB). `min_bytes` and the backup count of 11 are set in `production`.
 - **Tower:** the designs for part 1a (see, stop and check) and part 1b (full editing of models, roles, allowed names and budgets) are **approved**: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md` and `…-tower-part-1b-design.md`. Every decision behind them is in `docs/decisions.md` (2026-11-05 entries). No plan or code yet.
 - **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
@@ -12,16 +12,15 @@ A handoff between sessions, written 2026-11-04 and last updated 2026-11-06. Upda
 ## Next, in order (the owner picks)
 
 1. **Check the 06:00 backup of 2026-11-07:** both jobs status 1, the chat tar around 1 MB, and "Backup missing" still `Normal`.
-2. **C5, the reboot check,** on `sandbox`, any time.
-3. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once, on `sandbox` in `~/code/rapid-selector` (prints only the status and the recorded cost):
+2. **D3's last name, `gpt-oss-20b@deepinfra`:** it got 429 three times (DeepInfra `engine_overloaded`, `upstream_provider_shared_pool`). Call it once, on `sandbox` in `~/code/rapid-selector` (prints only the status and the recorded cost):
    ```bash
    ./rapidselector.sh run-script bash -c 'printf "Authorization: Bearer %s\n" "$KEY_SMOKE_TEST" | curl -sS --max-time 120 -H @- -H "Content-Type: application/json" -D - -o /dev/null -d "{\"model\":\"gpt-oss-20b@deepinfra\",\"max_tokens\":256,\"reasoning_effort\":\"low\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the word ok.\"}]}" "http://$RAPIDSELECTOR_LAN_ADDRESS:$GATEWAY_PORT/v1/chat/completions" | grep -i -E "^HTTP|x-litellm-response-cost"'
    ```
 
    If it answers, its host on OpenRouter's Logs page should be DeepInfra. If it keeps failing over days, the owner decides whether to re-pin it.
-4. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
-5. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
-6. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
+3. **D6, test A, empty balance,** when the owner chooses: `tests/check-prices.sh` first, then `drain-balance.sh --max-usd <balance + 1> --max-calls 2000`. Spends the rest of the balance (about $4.91) and up to about $0.25 below zero. Then D7 (regular top-up) and D8 (budget alerts).
+4. **Tower part 1a's plan** (superpowers:writing-plans), then part 1b's. Building waits until D6–D8 are done, unless the owner decides otherwise.
+5. **Merge `phase-0-walkthrough` into `main`** when the owner says: open the PR then. `sandbox` is on that branch.
 
 ## Things to remember
 
@@ -74,12 +73,11 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ## To do before particular steps
 
-- **C5, the reboot,** also settles deferred finding 31.
 - **E2:** Claude writes the restore commands then. The backup has no `cache/`, and the slim image needs none.
 
 ## Deferred, for the owner to decide
 
-Findings 20–25, 30, 32–36, 38 and 39 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
+Findings 20–25, 30, 32–36 and 38–40 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
 
 ## For developers on this machine
 
