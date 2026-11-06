@@ -258,6 +258,9 @@ The full output corrects one reading: the overshoot did not come from large call
 ### 2026-11-06: `CLAUDE.md`, the maximum loss includes a small overshoot
 Changed by the owner's decision after D6: principle 1 now reads "maximum possible loss = prepaid balance, plus a small overshoot", with D6's $0.19 as the figure seen. Reason: D6 showed the balance is not a hard stop at zero.
 
+### 2026-11-06: Step D7, the regular top-up
+The owner topped up $35 of credit. The balance afterwards: $34.81, so the top-up first covered D6's −$0.19. The amount paid, with fee and VAT, was not recorded here.
+
 ## Open
 
 ### Settle during design or phase 0
