@@ -2,7 +2,7 @@
 # Load settings and secrets, then run docker compose.
 #   ./rapidselector.sh up | down | logs -f | ps | <any docker compose command>
 #   (up always runs detached)
-#   ./rapidselector.sh update   (pull new images, then recreate what changed)
+#   ./rapidselector.sh update   (pull new images, rebuild tower, then recreate what changed)
 #   ./rapidselector.sh run-script scripts/setup-keys.sh   (run one of our scripts with the secrets)
 # Settings come from .env (or $RAPIDSELECTOR_ENV_FILE). Secrets come from .env or,
 # with SECRETS_SOURCE=secrets-service, from the secret "rapidselector" in secrets-service.
@@ -29,8 +29,9 @@ fi
 
 if [ "${1:-}" = "update" ]; then
   shift
-  docker compose "$@" pull
-  exec docker compose "$@" up -d
+  # Tower's image is built here, not pulled: a pull of it fails and would stop the update.
+  docker compose "$@" pull --ignore-buildable
+  exec docker compose "$@" up -d --build
 fi
 
 exec docker compose "$@"

@@ -153,12 +153,12 @@ blob_json() {
   [ ! -e "$DOCKER_CALL_LOG" ]
 }
 
-@test "update runs pull then up -d" {
+@test "update runs pull, skipping tower, then up -d with a build" {
   mapfile -t lines < <(all_secrets_lines)
   write_env env "${lines[@]}"
   run "$REPO/rapidselector.sh" update
   [ "$status" -eq 0 ]
-  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG" | tr '\n' '|')" = "ARGS=compose pull|ARGS=compose up -d|" ]
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG" | tr '\n' '|')" = "ARGS=compose pull --ignore-buildable|ARGS=compose up -d --build|" ]
 }
 
 @test "no secret value is printed to stdout or stderr" {

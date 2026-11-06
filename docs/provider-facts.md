@@ -214,6 +214,10 @@ Pi 5, 8 GB, Docker with cgroup v2.
 ### Compose, 2026-11-05
 - `docker compose up` attaches by default and stops the containers when it exits; `-d`, `--detach` or `--wait` detach it. The environment variables page lists no `COMPOSE_*` variable for it. The service attribute `attach: false` only stops Compose collecting that service's logs. The services page's attributes from `links` onward were read in summary, not verbatim. Sources: https://docs.docker.com/reference/cli/docker/compose/up/, https://docs.docker.com/compose/how-tos/environment-variables/envvars/, https://docs.docker.com/reference/compose-file/services/
 
+### Compose pull and images built on the host, checked 2026-11-06
+- `docker compose pull` also tries to pull the image of a service with a `build:` section. When that fails (tower's `rapidselector-tower:<version>` is in no registry), Compose warns that the image must be built, and still returns the failure as an error unless `--ignore-pull-failures` is given. `--ignore-buildable` skips such services before any pull. A `pull_policy` of `build` or `never` also skips them. Sources: https://docs.docker.com/reference/cli/docker/compose/pull/ and `pkg/compose/pull.go` on Compose's `main` branch (read in summary).
+- `docker compose up` builds a service's image only when it is missing, unless `--build` is given: with a fixed `image:` tag, `up` after a `git pull` keeps running the image built before.
+
 ## Docker in the cloud sandbox
 
 ### 2026-11-03
