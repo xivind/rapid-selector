@@ -4,12 +4,15 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+from tower import killswitch, store
+from tower.clients import GatewayClient, OpenRouterClient
 from tower.settings import Settings, load_settings
 
 HERE = Path(__file__).parent
@@ -18,7 +21,7 @@ THROTTLE_TRIES = 5
 THROTTLE_WINDOW = 60.0
 
 
-REGISTRARS: list[Callable[[APIRouter, FastAPI], None]] = []
+REGISTRARS: list[Callable[[APIRouter, FastAPI], None]] = [killswitch.register]
 
 
 def require_login(request: Request) -> None:
@@ -33,6 +36,15 @@ def require_login(request: Request) -> None:
 def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop: bool = True) -> FastAPI:
     app = FastAPI(title="rapidselector tower", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
+    http = httpx.Client()  # shared by the default clients; tests pass their own
+    if gateway is None:
+        gateway = GatewayClient(settings.gateway_url, settings.gateway_key, http)
+    if openrouter is None:
+        openrouter = OpenRouterClient(
+            settings.openrouter_url, settings.management_key, settings.inference_key_name, http
+        )
+    app.state.gateway = gateway
+    app.state.openrouter = openrouter
     app.state.templates = Jinja2Templates(directory=HERE / "templates")
     app.add_middleware(
         SessionMiddleware,
@@ -94,4 +106,6 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
 
 
 def main() -> FastAPI:
-    return create_app(load_settings(os.environ))
+    settings = load_settings(os.environ)
+    store.init_db(settings.data_dir / "tower.db")
+    return create_app(settings)

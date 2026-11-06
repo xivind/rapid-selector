@@ -1,0 +1,49 @@
+{# Kill switch state, read back from the sources, and its controls. htmx swaps this element in place. #}
+<div id="killswitch" class="killswitch" hx-target="this" hx-swap="outerHTML">
+  {% if state.level is none %}
+  <strong class="ks-state warn">STATE UNKNOWN</strong>
+  {% elif state.level == 0 %}
+  <strong class="ks-state clear">● ALL CLEAR</strong>
+  {% else %}
+  <strong class="ks-state danger">LEVEL {{ state.level }}{% if state.level == 1 and not state.level1_complete %} · PARTIAL{% endif %}</strong>
+  {% endif %}
+  <span class="ks-detail">
+    {% if state.blocked_by_tower %}blocked by tower: {{ state.blocked_by_tower|length }} key(s) &middot;{% endif %}
+    OpenRouter key:
+    {% if state.openrouter_disabled is none %}<span class="warn">unknown</span>{% elif state.openrouter_disabled %}disabled{% else %}enabled{% endif %}
+  </span>
+  {% if state.outside_tower %}
+  <ul class="ks-outside warn">
+    {% if state.openrouter_disabled and not tower_level2 %}<li>OpenRouter key disabled outside tower. Tower does not release it: use OpenRouter's dashboard.</li>{% endif %}
+    {% if state.blocked_outside %}<li>Blocked outside tower: {{ state.blocked_outside|join(", ") }}. Tower does not release these: use the gateway's admin UI, /ui.</li>{% endif %}
+  </ul>
+  {% endif %}
+  {% if error %}<p class="warn" role="alert">{{ error }}</p>{% endif %}
+  {% if state.problems %}
+  <ul class="ks-problems warn">{% for p in state.problems %}<li>{{ p }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if confirm %}
+  <form class="ks-confirm" hx-post="/kill/engage/{{ confirm }}">
+    <input type="hidden" name="confirm" value="yes">
+    <span>Stop at level {{ confirm }}? Blocks every gateway key except tower's{% if confirm == 2 %} and disables the OpenRouter key: everything stops, the gateway too{% endif %}.</span>
+    <button type="submit" class="danger">Confirm level {{ confirm }}</button>
+    <button type="button" hx-get="/partials/killswitch">Cancel</button>
+  </form>
+  {% else %}
+  {% if not (state.level in (1, 2) and state.level1_complete) %}
+  <button type="button" hx-get="/partials/killswitch?confirm=1">STOP &middot; level 1</button>
+  {% endif %}
+  {% if state.level != 2 %}
+  <button type="button" hx-get="/partials/killswitch?confirm=2">STOP &middot; level 2</button>
+  {% endif %}
+  {% endif %}
+
+  {% if tower_level2 or tower_level1 %}
+  {% set release_level = 2 if tower_level2 else 1 %}
+  <form class="ks-release" hx-post="/kill/release/{{ release_level }}">
+    <label>Type <code>release</code> <input name="word" required pattern="release" autocomplete="off"></label>
+    <button type="submit">Release level {{ release_level }}</button>
+  </form>
+  {% endif %}
+</div>

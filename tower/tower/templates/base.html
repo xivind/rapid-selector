@@ -10,7 +10,7 @@
 <body>
   <header>
     <h1>RAPID SELECTOR</h1>
-    <div id="killswitch"></div>
+    {% block killswitch %}<div id="killswitch" hx-get="/partials/killswitch" hx-trigger="load" hx-swap="outerHTML"></div>{% endblock %}
     <nav>
       <a href="/">Cost</a> &middot;
       <a href="/usage">Usage</a> &middot;
