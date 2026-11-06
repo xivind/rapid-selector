@@ -1,0 +1,17 @@
+{# Lights, badges and change marks. A light always has its word beside it. #}
+{% macro light(colour, word, big=False) -%}
+<span class="lit"><span class="dot {{ colour }}{{ ' big' if big }}" aria-hidden="true"></span>{{ word }}</span>
+{%- endmacro %}
+
+{% macro badge(text, colour=None, dot=False) -%}
+<span class="badge{{ ' ' ~ colour if colour }}">{% if dot and colour %}<span class="dot {{ colour }}" aria-hidden="true"></span>{% endif %}{{ text }}</span>
+{%- endmacro %}
+
+{# c: a summary.Change or None. Nothing at all for None. #}
+{% macro change_mark(c) -%}
+{%- if c is none -%}
+{%- elif c.kind == "new" %}<span class="new">new</span>
+{%- elif c.kind == "same" %}<span class="same">=</span>
+{%- else %}<span class="{{ c.kind }}">{{ "%.0f"|format(c.pct) }}%</span>
+{%- endif -%}
+{%- endmacro %}

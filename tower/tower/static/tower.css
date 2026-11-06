@@ -15,6 +15,8 @@
   --warn: #e8d27a;
   --danger: #ef4f4f;
   --danger-ink: #1a0b0b;
+  --go: #74c47a;
+  --caution: #f0dc6a;  /* kept apart from --amber, the accent */
 
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", P052, Georgia, serif;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
@@ -32,7 +34,7 @@ body {
   padding: 0 16px 4rem;
   background: var(--ground);
   color: var(--ink);
-  font: 1.0625rem/1.55 var(--serif);
+  font: 1.1875rem/1.55 var(--serif);
   font-variant-numeric: lining-nums tabular-nums;
 }
 
@@ -75,7 +77,7 @@ code { font: .85em var(--mono); color: var(--ink); }
   align-items: center;
   gap: .25rem 1.25rem;
   padding: .6rem 0;
-  font: .8rem var(--mono);
+  font: .85rem var(--mono);
   letter-spacing: .08em;
 }
 .tabs a { text-decoration: none; color: var(--dim); padding: .2rem 0; border-bottom: 2px solid transparent; }
@@ -87,7 +89,7 @@ code { font: .85em var(--mono); color: var(--ink); }
 
 .label {
   margin: 0 0 .5rem;
-  font: 400 .72rem/1.3 var(--mono);
+  font: 400 .85rem/1.3 var(--mono);
   letter-spacing: .1em;
   color: var(--dim);
 }
@@ -124,7 +126,7 @@ p { max-width: 44em; }
   margin: .5rem 0 0;
   padding: 0;
   list-style: none;
-  font: .8rem var(--mono);
+  font: .85rem var(--mono);
   color: var(--dim);
 }
 .legend .marker-key::before {
@@ -137,9 +139,9 @@ p { max-width: 44em; }
   background: var(--ink);
 }
 .figures { margin-top: 1.5rem; font-size: .9rem; color: var(--ink); }
-.figures .note { font-size: .8rem; }
-.figures.small { margin-top: .25rem; font-size: .8rem; color: var(--dim); }
-.resets { margin: .4rem 0 0; font: .8rem var(--mono); color: var(--dim); }
+.figures .note { font-size: .85rem; }
+.figures.small { margin-top: .25rem; font-size: .85rem; color: var(--dim); }
+.resets { margin: .4rem 0 0; font: .85rem var(--mono); color: var(--dim); }
 
 /* ---- Sections ------------------------------------------------------------------------------ */
 
@@ -147,7 +149,7 @@ main > section { margin-top: 2.5rem; }
 .ranked, .recon, .checks-section { border-top: 1px solid var(--rule); padding-top: .9rem; }
 
 .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem 1rem; }
-.periods { display: flex; gap: 1rem; font: .8rem var(--mono); }
+.periods { display: flex; gap: 1rem; font: .85rem var(--mono); }
 .periods a { color: var(--dim); text-decoration: none; border-bottom: 1px solid transparent; }
 .periods a[aria-current] { color: var(--amber); border-bottom-color: var(--amber); }
 .ranked h3.label { margin-top: 1.25rem; }
@@ -165,7 +167,7 @@ main > section { margin-top: 2.5rem; }
 .ranks .name { font-size: .95rem; overflow-wrap: anywhere; }
 .ranks .bar { height: .7rem; }
 .nowrap { white-space: nowrap; }
-.num { font-family: var(--mono); font-size: .8rem; text-align: right; white-space: nowrap; }
+.num { font-family: var(--mono); font-size: .85rem; text-align: right; white-space: nowrap; }
 .ranks li:nth-child(n+2) .bar .fill { fill: var(--amber-low); }
 
 /* ---- Bars (SVG from macros/bars.html) ----------------------------------------------------- */
@@ -179,7 +181,7 @@ main > section { margin-top: 2.5rem; }
 /* ---- Tables and pairs ---------------------------------------------------------------------- */
 
 .scroll { overflow-x: auto; max-width: 100%; scrollbar-color: var(--rule) transparent; }
-.data { border-collapse: collapse; width: 100%; font: .8rem/1.4 var(--mono); }
+.data { border-collapse: collapse; width: 100%; font: .85rem/1.4 var(--mono); }
 .data th, .data td { padding: .4rem .75rem .4rem 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--track); }
 .data thead th { color: var(--dim); font-weight: 400; letter-spacing: .06em; border-bottom-color: var(--rule); white-space: nowrap; }
 .data tbody th { font-weight: 400; color: var(--ink); }
@@ -191,19 +193,19 @@ main > section { margin-top: 2.5rem; }
 .data.usage tbody + tbody tr:first-child > * { border-top: 1px solid var(--rule); }
 .data.usage .period { color: var(--dim); }
 .data.log .when { white-space: nowrap; color: var(--dim); }
-.data.models { font-size: .72rem; }
+.data.models { font-size: .85rem; }
 .data.models th, .data.models td { padding-right: .6rem; }
 .data.models th[scope="row"], .data.models td:nth-child(3) { overflow-wrap: anywhere; min-width: 9em; }
 
 .pairs { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1.5rem; margin: .5rem 0; font: .85rem var(--mono); }
 .pairs dt { color: var(--dim); }
 .pairs dd { margin: 0; overflow-wrap: anywhere; }
-.tag { font: .7rem var(--mono); color: var(--dim); border: 1px solid var(--rule); padding: 0 .35em; margin-left: .4em; }
-.names { font: .8rem var(--mono); overflow-wrap: anywhere; }
+.tag { font: .85rem var(--mono); color: var(--dim); border: 1px solid var(--rule); padding: 0 .35em; margin-left: .4em; }
+.names { font: .85rem var(--mono); overflow-wrap: anywhere; }
 .big-inline { font-size: 2rem; line-height: 1; }
 
 details { margin-top: .75rem; }
-summary { cursor: pointer; font: .8rem var(--mono); color: var(--dim); }
+summary { cursor: pointer; font: .85rem var(--mono); color: var(--dim); }
 summary:hover { color: var(--ink); }
 
 .latest { margin: 0 0 1rem; padding: 0; list-style: none; font: .85rem var(--mono); }
@@ -238,7 +240,7 @@ p.danger { border-left: 3px solid var(--danger); padding-left: .75rem; }
   justify-content: flex-end;
   gap: .5rem .75rem;
   max-width: 40rem;
-  font: .75rem var(--mono);
+  font: .85rem var(--mono);
 }
 .ks-state {
   font-weight: 400;
@@ -265,7 +267,7 @@ p.danger { border-left: 3px solid var(--danger); padding-left: .75rem; }
 /* ---- Controls -------------------------------------------------------------------------------- */
 
 button {
-  font: .75rem var(--mono);
+  font: .85rem var(--mono);
   letter-spacing: .08em;
   color: var(--amber);
   background: transparent;
@@ -290,18 +292,45 @@ input:focus { border-color: var(--amber); }
 
 .checks { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
 .checks > table, .checks > form, .checks > p { flex-basis: 100%; }
-.checks table { border-collapse: collapse; font: .8rem var(--mono); }
+.checks table { border-collapse: collapse; font: .85rem var(--mono); }
 .checks td { padding: .25rem .75rem .25rem 0; border-bottom: 1px solid var(--track); }
 .smoke-confirm { padding: .75rem; border: 1px solid var(--rule); background: var(--raised); }
-.smoke-confirm ul { font: .8rem var(--mono); color: var(--dim); }
+.smoke-confirm ul { font: .85rem var(--mono); color: var(--dim); }
 
 .login { display: grid; gap: 1rem; max-width: 22rem; margin: 4rem auto; }
-.login label { display: grid; gap: .35rem; font: .75rem var(--mono); letter-spacing: .08em; color: var(--dim); }
+.login label { display: grid; gap: .35rem; font: .85rem var(--mono); letter-spacing: .08em; color: var(--dim); }
+
+/* ---- Lights, badges and change marks (macros/marks.html) ------------------------------------ */
+
+/* A light never stands alone: a word always follows it. */
+.dot { display: inline-block; flex: none; width: .8em; height: .8em; border-radius: 50%; vertical-align: -.05em; }
+.dot.big { width: 1.1rem; height: 1.1rem; }
+.dot.go { background: var(--go); box-shadow: 0 0 .5em rgb(116 196 122 / .55); }
+.dot.caution { background: var(--caution); box-shadow: 0 0 .5em rgb(240 220 106 / .5); }
+.dot.stop { background: var(--danger); box-shadow: 0 0 .6em rgb(239 79 79 / .65); }
+.dot.off { background: transparent; border: 2px solid var(--rule); }
+.lit { display: inline-flex; align-items: center; gap: .5em; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: .4em;
+  font: .85rem var(--mono); letter-spacing: .04em; white-space: nowrap;
+  padding: .1em .6em; border: 1px solid var(--rule); border-radius: 1em; color: var(--ink);
+}
+.badge.go { color: var(--go); border-color: rgb(116 196 122 / .6); }
+.badge.caution { color: var(--caution); border-color: rgb(240 220 106 / .6); }
+.badge.stop { color: var(--danger); border-color: var(--danger); }
+.badge.plain { color: var(--dim); }
+
+/* Change against the previous period: more in amber, less in grey; never green or red. */
+.up, .down, .same, .new { font: .85rem var(--mono); white-space: nowrap; color: var(--dim); }
+.up::before { content: "\25B2  "; color: var(--amber); }
+.down::before { content: "\25BC  "; }
+.cmp { display: block; }
 
 /* ---- Phone width ----------------------------------------------------------------------------- */
 
 @media (max-width: 40rem) {
-  body { font-size: 1rem; }
+  body { font-size: 1.0625rem; }
   .mast-top { flex-direction: column; align-items: stretch; }
   .wordmark { font-size: 1.1rem; letter-spacing: .22em; }
   .killswitch, #killswitch { justify-content: flex-start; max-width: none; }

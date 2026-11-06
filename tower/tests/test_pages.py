@@ -377,3 +377,16 @@ def test_cost_page_renders_when_the_summary_cannot_be_built(db, config_dir, monk
     assert r.status_code == 200
     assert "The cost summary cannot be built" in r.text
     assert 'hx-get="/partials/killswitch?confirm=2"' in r.text
+
+
+def test_css_has_no_label_below_085rem():
+    import re
+    css = (Path(__file__).resolve().parents[1] / "tower" / "static" / "tower.css").read_text()
+    body = re.search(r"^body \{[^}]*\}", css, re.M).group(0)
+    assert "1.1875rem" in body
+    small = []
+    for decl in re.findall(r"font(?:-size)?\s*:\s*([^;}]*)", css):
+        if "clamp(" in decl:
+            continue
+        small += [v for v in re.findall(r"(?<![\d.])(\d*\.?\d+)rem", decl) if float(v) < 0.85]
+    assert not small, small
