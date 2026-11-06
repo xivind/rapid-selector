@@ -1,6 +1,7 @@
 import hmac
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Request
@@ -17,6 +18,9 @@ THROTTLE_TRIES = 5
 THROTTLE_WINDOW = 60.0
 
 
+REGISTRARS: list[Callable[[APIRouter, FastAPI], None]] = []
+
+
 def require_login(request: Request) -> None:
     """Dependency for every route except /health, /metrics, /login and /static."""
     if request.session.get("logged_in"):
@@ -27,7 +31,7 @@ def require_login(request: Request) -> None:
 
 
 def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop: bool = True) -> FastAPI:
-    app = FastAPI(title="rapidselector tower")
+    app = FastAPI(title="rapidselector tower", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.templates = Jinja2Templates(directory=HERE / "templates")
     app.add_middleware(
@@ -41,8 +45,10 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     failures: dict[str, list[float]] = {}  # client IP -> times of counted wrong tries
 
-    # Later tasks add their routes to this router (or use Depends(require_login)).
-    app.state.protected = protected = APIRouter(dependencies=[Depends(require_login)])
+    # Every page module exposes register(router, app) and is listed in REGISTRARS.
+    # The router below requires login; it is filled before it is included, because
+    # include_router copies the routes that exist at that moment.
+    protected = APIRouter(dependencies=[Depends(require_login)])
 
     @app.get("/health")
     def health():
@@ -81,6 +87,8 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
     def index(request: Request):
         return app.state.templates.TemplateResponse(request, "base.html", {})
 
+    for register in REGISTRARS:
+        register(protected, app)
     app.include_router(protected)
     return app
 

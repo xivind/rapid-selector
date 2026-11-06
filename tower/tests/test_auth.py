@@ -77,3 +77,28 @@ def test_logout_clears_session(client):
     client.post("/login", data={"password": "right"})
     assert client.post("/logout").status_code in (302, 303)
     assert client.get("/").status_code in (302, 303)
+
+
+@pytest.mark.parametrize("path", ["/openapi.json", "/docs", "/redoc"])
+def test_api_docs_not_exposed(client, path):
+    assert client.get(path).status_code != 200
+
+
+def test_registered_route_requires_login(monkeypatch):
+    from tower import app as app_module
+
+    def register(router, app):
+        @router.get("/extra")
+        def extra():
+            return {"ok": True}
+
+    monkeypatch.setattr(app_module, "REGISTRARS", [register])
+    settings = load_settings({
+        "TOWER_PASSWORD": "right", "TOWER_SESSION_SECRET": "s3", "OPENROUTER_MANAGEMENT_KEY": "c",
+        "TOWER_GATEWAY_KEY": "d", "KEY_SMOKE_TEST": "e",
+    })
+    c = TestClient(create_app(settings, start_loop=False), follow_redirects=False)
+    r = c.get("/extra")
+    assert r.status_code in (302, 303) and r.headers["location"] == "/login"
+    c.post("/login", data={"password": "right"})
+    assert c.get("/extra").status_code == 200
