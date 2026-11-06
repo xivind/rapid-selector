@@ -5,7 +5,9 @@ import pytest
 
 from tower.clients import UsageRow, Unavailable
 from tower.summary import (
+    change,
     cost_summary,
+    previous_stretches,
     forecast,
     period_bounds,
     reconcile,
@@ -171,3 +173,63 @@ def test_resets_mismatch_shown():
     s = cost_summary(**_kw(inference_key={**_kw()["inference_key"], "limit_reset": "weekly"}))
     assert s.resets_agree is False
     assert (s.key_reset, s.gateway_window) == ("weekly", "30d")
+
+
+def test_change_up_down_same_new_none():
+    up, down, same, new = change(12, 10), change(9, 10), change(10.04, 10), change(1, 0)
+    assert (up.kind, up.pct) == ("up", pytest.approx(20.0))
+    assert (down.kind, down.pct) == ("down", pytest.approx(10.0))
+    assert same.kind == "same"
+    assert (new.kind, new.pct) == ("new", None)
+    assert change(0, 0) is None
+    assert (change(0, 5).kind, change(0, 5).pct) == ("down", pytest.approx(100.0))
+
+
+def test_previous_stretch_on_a_monday():
+    p = previous_stretches(dt(2026, 11, 9, 0, 10))
+    assert p["week"] == (dt(2026, 11, 2), dt(2026, 11, 3))
+    assert p["day"] == (dt(2026, 11, 8), dt(2026, 11, 9))
+
+
+def test_previous_stretch_on_a_sunday():
+    assert previous_stretches(dt(2026, 11, 15, 23, 59))["week"] == (dt(2026, 11, 2), dt(2026, 11, 9))
+
+
+def test_previous_stretch_on_the_first():
+    p = previous_stretches(dt(2026, 12, 1, 0, 10))
+    assert p["month"] == (dt(2026, 11, 1), dt(2026, 11, 2))
+    assert p["day"] == (dt(2026, 11, 30), dt(2026, 12, 1))
+
+
+def test_previous_stretch_cut_at_month_end():
+    assert previous_stretches(dt(2027, 3, 31, 12))["month"] == (dt(2027, 2, 1), dt(2027, 3, 1))
+    assert previous_stretches(dt(2027, 1, 15))["month"] == (dt(2026, 12, 1), dt(2026, 12, 16))
+
+
+def test_usage_lines_carry_previous_stretches():
+    now = dt(2026, 11, 18, 12)  # a Wednesday
+    rows = [row(date(2026, 11, 18), "chat", spend=1.0), row(date(2026, 11, 17), "chat", spend=0.2),
+            row(date(2026, 11, 11), "chat", spend=0.3), row(date(2026, 11, 12), "chat", spend=9.0),
+            row(date(2026, 10, 18), "chat", spend=0.4), row(date(2026, 10, 19), "chat", spend=9.0)]
+    chat = next(x for x in usage_tables(rows, MODELS, now).roles if x.label == "chat")
+    assert chat.yesterday.spend_usd == pytest.approx(0.2)
+    assert chat.week_before.spend_usd == pytest.approx(0.3)
+    assert chat.month_before.spend_usd == pytest.approx(0.4)
+
+
+def _week_rows():
+    # Wednesday 18 Nov: this week 0.85 + 0.25 + 1.00 = 2.10; last week Mon-Wed 1.40 + 1.00 = 2.40.
+    return [row(date(2026, 11, 16), "chat", spend=0.85), row(date(2026, 11, 17), "chat", spend=0.25),
+            row(date(2026, 11, 18), "chat", spend=1.00), row(date(2026, 11, 9), "chat", spend=1.40),
+            row(date(2026, 11, 11), "chat", spend=1.00), row(date(2026, 11, 12), "chat", spend=5.00)]
+
+
+def test_cost_summary_yesterday_and_week_change():
+    s = cost_summary(**_kw(usage=_week_rows(), now=dt(2026, 11, 18, 12)))
+    assert s.spend_yesterday_usd == pytest.approx(0.25)
+    assert (s.week_change.kind, s.week_change.pct) == ("down", pytest.approx(12.5))
+
+
+def test_cost_summary_gateway_unavailable_has_no_comparison():
+    s = cost_summary(**_kw(usage=Unavailable("gateway", "x"), now=dt(2026, 11, 18, 12)))
+    assert s.spend_yesterday_usd is None and s.week_change is None

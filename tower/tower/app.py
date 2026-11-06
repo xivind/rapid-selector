@@ -28,6 +28,7 @@ THROTTLE_WINDOW = 60.0
 
 REGISTRARS: list[Callable[[APIRouter, FastAPI], None]] = [killswitch.register, checks.register]
 USAGE_DAYS = 30  # covers this month, this week (which can start last month) and OpenRouter's activity
+USAGE_DAYS_COMPARED = 62  # Usage also shows the same days of last month
 LOG_KINDS = {"kill_switch": "kill switch", "price_check": "price check", "smoke_test": "smoke test",
              "balance": "balance"}
 
@@ -222,7 +223,7 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
         now = datetime.now(UTC)
         today, gw = now.date(), app.state.gateway
         got = setup_view.gather({
-            "usage": ("gateway", lambda: gw.usage(today - timedelta(days=USAGE_DAYS), today)),
+            "usage": ("gateway", lambda: gw.usage(today - timedelta(days=USAGE_DAYS_COMPARED), today)),
             "models": ("gateway", lambda: gw.model_info()),
         }, setup_view.deadline())
         table = None

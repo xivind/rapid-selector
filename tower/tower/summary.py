@@ -2,8 +2,9 @@
 
 import calendar
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from typing import Literal
 
 from tower.clients import UsageRow, Unavailable
 
@@ -30,6 +31,38 @@ def period_bounds(now: datetime) -> dict[str, tuple[datetime, datetime]]:
         "week": (week, week + timedelta(days=7)),
         "month": (month, _next_month(month)),
     }
+
+
+def previous_stretches(now: datetime) -> dict[str, tuple[datetime, datetime]]:
+    """[start, end) of the same stretch one period back: yesterday; last week from Monday to the
+    same weekday; last month from the 1st to the same day, cut at that month's last day."""
+    now = _utc(now)
+    day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week = day - timedelta(days=day.weekday()) - timedelta(days=7)
+    first = day.replace(day=1)
+    last_month = (first - timedelta(days=1)).replace(day=1)
+    days_in_last = calendar.monthrange(last_month.year, last_month.month)[1]
+    return {
+        "day": (day - timedelta(days=1), day),
+        "week": (week, week + timedelta(days=day.weekday() + 1)),
+        "month": (last_month, last_month + timedelta(days=min(day.day, days_in_last))),
+    }
+
+
+@dataclass
+class Change:
+    kind: Literal["up", "down", "same", "new"]
+    pct: float | None
+
+
+def change(current: float, previous: float) -> Change | None:
+    """None when both are 0; "new" when only the previous is; "same" under half a percent."""
+    if not previous:
+        return Change("new", None) if current else None
+    pct = (current - previous) / previous * 100
+    if abs(pct) < 0.5:
+        return Change("same", abs(pct))
+    return Change("up" if pct > 0 else "down", abs(pct))
 
 
 def forecast(spent_month: float, now: datetime) -> float:
@@ -160,6 +193,9 @@ class UsageLine:
     day: Totals
     week: Totals
     month: Totals
+    yesterday: Totals = field(default_factory=Totals)
+    week_before: Totals = field(default_factory=Totals)
+    month_before: Totals = field(default_factory=Totals)
 
 
 @dataclass
@@ -169,14 +205,19 @@ class UsageTable:
     keys: list[UsageLine]
 
 
+_STRETCHES = (("day", "day"), ("week", "week"), ("month", "month"),
+              ("yesterday", "before_day"), ("week_before", "before_week"), ("month_before", "before_month"))
+
+
 def _lines(rows, bounds, label_of) -> list[UsageLine]:
+    """bounds: period_bounds plus previous_stretches as before_day, before_week, before_month."""
     acc: dict[str, UsageLine] = {}
     for r in rows:
         label = label_of(r)
         line = acc.setdefault(label, UsageLine(label, Totals(), Totals(), Totals()))
-        for period in ("day", "week", "month"):
-            if _in(r, *bounds[period]):
-                t = getattr(line, period)
+        for attr, period in _STRETCHES:
+            if period in bounds and _in(r, *bounds[period]):
+                t = getattr(line, attr)
                 t.calls += r.calls
                 t.tokens_in += r.tokens_in
                 t.tokens_out += r.tokens_out
@@ -188,7 +229,7 @@ def _lines(rows, bounds, label_of) -> list[UsageLine]:
 
 def usage_tables(rows, models, now) -> UsageTable:
     """Names missing from /model/info are listed with the experiments, so their spend stays visible."""
-    bounds = period_bounds(now)
+    bounds = {**period_bounds(now), **{f"before_{k}": v for k, v in previous_stretches(now).items()}}
     info = _info(models)
     is_role = lambda r: info.get(r.name, ("experiment",))[0] == "role"  # noqa: E731
     return UsageTable(
@@ -215,6 +256,8 @@ class CostSummary:
     top_roles: list[Ranked] | None
     top_models: list[Ranked] | None
     reconciliation: Reconciliation | None
+    spend_yesterday_usd: float | None  # the gateway's, as is week_change
+    week_change: Change | None
     price_check: object  # latest LogEntry or None
     smoke_test: object
     missing: list[str]  # sources that were Unavailable: "gateway", "openrouter"
@@ -247,6 +290,8 @@ def cost_summary(*, inference_key, credits, usage, models, global_budget, global
     else:
         agree = reset == "monthly" and global_window == "30d"
     gw_month = sum(r.spend_usd for r in rows if _in(r, *bounds["month"])) if rows is not None else None
+    before = previous_stretches(now)
+    spent = (lambda start, end: sum(r.spend_usd for r in rows if _in(r, start, end))) if rows is not None else None
     return CostSummary(
         spend_day_usd=key.get("usage_daily") if key else None,
         spend_week_usd=key.get("usage_weekly") if key else None,
@@ -263,6 +308,8 @@ def cost_summary(*, inference_key, credits, usage, models, global_budget, global
         top_roles=top_roles(rows, mods, *bounds[period]) if rows is not None and mods is not None else None,
         top_models=top_models(rows, mods, *bounds[period]) if rows is not None and mods is not None else None,
         reconciliation=reconcile(gw_month, month_spend) if gw_month is not None and month_spend is not None else None,
+        spend_yesterday_usd=spent(*before["day"]) if spent else None,
+        week_change=change(spent(*bounds["week"]), spent(*before["week"])) if spent else None,
         price_check=price_check,
         smoke_test=smoke_test,
         missing=sorted(missing),
