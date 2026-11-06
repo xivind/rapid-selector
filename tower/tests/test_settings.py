@@ -38,3 +38,22 @@ def test_expiry_parsed():
 
 def test_secret_values_lists_all_secrets():
     assert sorted(load_settings(SECRETS).secret_values()) == sorted(SECRETS.values())
+
+
+def test_expiry_with_offset_is_converted_to_utc():
+    s = load_settings({**SECRETS, "OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT": "2027-11-06T02:00:00+02:00"})
+    assert s.management_key_expires_at == datetime(2027, 11, 6, tzinfo=UTC)
+    assert s.management_key_expires_at.utcoffset().total_seconds() == 0
+
+
+def test_malformed_expiry_does_not_stop_tower():
+    s = load_settings({**SECRETS, "OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT": "6 Nov 2027"})
+    assert s.management_key_expires_at is None
+    assert s.management_key_expires_at_invalid
+    assert not load_settings(SECRETS).management_key_expires_at_invalid
+
+
+def test_repr_has_no_secret():
+    text = repr(load_settings(SECRETS))
+    for value in SECRETS.values():
+        assert value not in text

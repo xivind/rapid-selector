@@ -201,6 +201,7 @@ def build(gw, orc, settings) -> dict:
         "management_key": {
             "expires_at": expires,
             "days_left": (expires - datetime.now(UTC)).days if expires else None,
+            "setting_invalid": settings.management_key_expires_at_invalid,
         },
         "gateway_settings": _gateway_settings(gateway_config(settings), got["budget"], got["retention"]),
         "open_webui": _open_webui(settings),

@@ -347,3 +347,10 @@ def test_killswitch_all_clear_with_problems_is_not_green(db, config_dir):
 def test_killswitch_says_level1_leaves_the_master_key(db, config_dir):
     text = browser(config_dir).get("/partials/killswitch").text
     assert "Level 1 does not block LiteLLM's master key or the admin UI's own session key" in text
+
+
+def test_setup_warns_about_a_malformed_expiry(db, config_dir):
+    c = browser(config_dir, env={**ENV, "OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT": "next-year-x"})
+    text = c.get("/setup").text
+    assert "<code>OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT</code> is not a date (YYYY-MM-DD)" in text
+    assert "next-year-x" not in text

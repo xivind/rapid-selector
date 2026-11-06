@@ -82,6 +82,7 @@
 <section aria-labelledby="mk-title">
   <h3 class="section-title" id="mk-title">Management key</h3>
   {% set mk = v.management_key %}
+  {% if mk.setting_invalid %}<p class="warn"><code>OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT</code> is not a date (YYYY-MM-DD).</p>{% endif %}
   {% if mk.days_left is none %}
   <p class="warn">Expiry unknown: set <code>OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT</code> in <code>.env</code> to the date shown in OpenRouter's dashboard.</p>
   {% else %}
