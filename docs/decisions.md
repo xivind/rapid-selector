@@ -240,6 +240,9 @@ Decided by the owner. rapid-selector will not move to `webserver`: much else alr
 ### 2026-11-06: Step E2, the restore rehearsal, moves to after part 1b
 Decided by the owner (Claude's proposal; the owner first thought it was not needed). Today the database holds keys, budgets and spend, and nothing in it depends on `LITELLM_SALT_KEY`. Once part 1b moves the 11 models into the database, their stored settings are encrypted with it, and an untested restore becomes a real risk. So E2 is done after part 1b is deployed, when it tests more. Until then phase 0 is verified without E2.
 
+### 2026-11-06: Step D6, before the drain
+`tests/check-prices.sh` on `sandbox`: `ok` for all 11. The balance on OpenRouter's Credits page: $4.91, so `--max-usd 5.91` (balance + 1) and `--max-calls 2000`. Cost agreed by the owner: the rest of the balance, and up to about $0.25 below zero.
+
 ## Open
 
 ### Settle during design or phase 0
