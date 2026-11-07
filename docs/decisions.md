@@ -315,6 +315,9 @@ Run again: it did not ask for the key and printed the same 13 names and lengths,
 ### 2026-11-07: Tower's test procedure, A3 and A4, tower's user and key in the gateway
 A3 (the management key's expiry in `.env`) is left until C3 shows whether tower can read the date. A4: `./rapidselector.sh run-script scripts/setup-keys.sh` printed the same teams and keys as at the end of D8 (`team:permanent` 8.0 30d 4 names, `team:experiments` 24.0 30d 11, `node-red` permanent 4.0 30d 4 RPM 30, `chat` experiments on the team's budget 11, `smoke-test` experiments 1.0 30d 11) and the new row `tower`: no team, no budget, no reset, 0 names (no model restriction in LiteLLM's terms; its `allowed_routes` keep it to reading and blocking). Nothing spent.
 
+### 2026-11-07: Tower's test procedure, B1, tower built and started
+`./rapidselector.sh up` on `sandbox` at `672a24e`: the tower image built in 9.4 s (`python:3.14.7-alpine3.24`, `uv:0.13.5`), the volume `rapidselector_towerdata` was created and `rapidselector-tower` started; `chat` stayed `Running`, `db` and `gateway` `Healthy`, none recreated. Before the build, Compose printed "Image rapidselector-tower:0.1.0 pull access denied … repository does not exist", since it tries to pull an image that only exists locally, then builds it. Harmless; see finding 42. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
@@ -364,6 +367,8 @@ Minor, not fixed yet; each to be decided by the owner.
 39. *(2026-11-05, seen at D3)* LiteLLM retries 403, 429 and 503 twice by itself, as level 1 already showed (`provider-facts.md`), and the gateway's log confirmed it for a real 429. One client call can be three calls upstream, and with the README's one client retry, six. A refused call costs nothing; a retried call that timed out might. Decide whether to set `num_retries`.
 41. *(2026-11-06, seen at D8)* LiteLLM's admin UI warns at login: "Environment-credential login is enabled. Anyone with UI_USERNAME/UI_PASSWORD (or the master key, when UI_PASSWORD is unset) can sign in as a proxy admin with a shared static secret. First create a regular admin account with its own password, then set general_settings.disable_env_credential_login: true." The risk is low here (LAN only, one owner, a random 32-character `LITELLM_UI_PASSWORD` from secrets-service), but it is a shared static secret. To decide later: a personal admin account and `disable_env_credential_login: true`, checking first how that affects the README's manual ways to stop spending and the admin UI that tower's kill switch page points to.
 40. *(2026-11-06, seen at C5)* "rapid-selector: database failing" misses the first failures. `litellm_postgres_failed_requests_total` appears only when a query first fails, and `increase()` does not count a series that is already above 0 on its first sample, so it fires only on failures after the series exists. Failures that keep coming are still caught, and a database that is fully down also shows as 503s to clients. The rule has never seen this series, so it is untested. Could be widened to also fire when the series is new.
+
+42. *(2026-11-07, seen at tower's B1)* `./rapidselector.sh up` prints "pull access denied for rapidselector-tower" before building tower, because the service has both `image:` and `build:`, and Compose tries the pull first. Harmless, but it reads like an error to someone new to Compose. `pull_policy: build` on the tower service would stop the attempt (check against current Compose docs, and whether `update`'s `pull --ignore-buildable` still needs to change). For the owner to decide.
 
 ### Settle later
 
