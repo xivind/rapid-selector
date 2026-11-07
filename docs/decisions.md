@@ -305,6 +305,9 @@ Asked by the owner while looking at the shapes in `preview.py`; built on `tower-
 ### 2026-11-07: Tower's test procedure on `sandbox`, step 0 and the switch
 `docker compose version` on `sandbox`: v5.7.0, past the v2.15 that `update`'s `--ignore-buildable` needs. Then `git fetch` and `git switch tower-part-1a` in `~/code/rapid-selector`; the owner confirmed the commit Claude named. The running stack was not touched. Nothing spent.
 
+### 2026-11-07: Tower's test procedure, A1, the management key
+Created by the owner in OpenRouter's dashboard (Management API Keys, "Create New Key"), named `rapidselector-tower`, with an expiry of one year: **Nov 7, 2027, 10:41 AM GMT+1** (09:41 UTC). One year was the longest choice offered short of no expiry, which is not used (decision "The management key expires after a year"). The key list shows the expiry date after creation. The value was not shown to Claude. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
