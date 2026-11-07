@@ -1,6 +1,6 @@
 # Phase 0: where the walkthrough stands
 
-A handoff between sessions, written 2026-11-04 and last updated midday on 2026-11-07. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+A handoff between sessions, written 2026-11-04 and last updated in the afternoon of 2026-11-07. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
 ## Where we are (midday 2026-11-07)
 
@@ -14,11 +14,7 @@ A handoff between sessions, written 2026-11-04 and last updated midday on 2026-1
 
 ## Next, in order (the owner picks)
 
-1. **Tower's test procedure on `sandbox`** (`docs/test-procedures/tower-1a.md` on `tower-part-1a`), one step at a time. **Done and recorded:** step 0 (Compose v5.7.0), the switch to `tower-part-1a`, A1–A4, B1–B4, C1, C3 with A3. **Stopped in C2** (`docs/decisions.md`, "C2, cost against OpenRouter (in progress…)"): balance and totals match, but the per-day lines show two bugs in tower:
-   - **Bug 1, cause found, fix not made:** `reconcile_days` (`tower/tower/summary.py`) cuts the gateway's host to before the `/` (`_slug_host`), while OpenRouter's activity `provider_name` is the full endpoint tag (`siliconflow/fp8`), so every model shows as two lines. Fix test first with the real shape: compare the full tag on both sides, as `checks.py` does; fix the guessed sample in `tests/test_summary.py`; record the field's real form in `provider-facts.md`.
-   - **Bug 2, cause not found:** `gpt-oss-120b@coreweave`'s spend is missing on the gateway side, and `@deepinfra`'s is about that much larger (11-05 and 11-06). Three names share `openai/gpt-oss-120b` (`chat`, `gpt-oss-120b@deepinfra`, `gpt-oss-120b@coreweave`). **First, ask the owner for the evidence they had not yet given:** Usage page, month columns, calls and spend for those three names; the Cost page's reconciliation line; whether any per-day line is red. If Usage shows CoreWeave calls, the fault is in tower's mapping; if not, LiteLLM's `/user/daily/activity` files them under another name, which makes the Usage page wrong too and needs a look at LiteLLM's current docs. Use `superpowers:systematic-debugging`: no fix before the cause.
-   - After both fixes (tests first, all unit tests pass): push to `tower-part-1a`; the owner runs `git pull` and `./rapidselector.sh up --build tower` on `sandbox`, and C2 is repeated. A cloud Docker run is probably not needed for a change inside `summary.py`; say so and let the owner decide.
-   - **Then C4, C5, C6, D1–D4** (the smoke test spends under $0.01), **E1–E7** (the kill switch; under $0.001 each with the probe), **F1–F2**, **G1–G7** (`production`).
+1. **Tower is paused; brainstorm its replacement** (`docs/decisions.md`, "Tower paused; its place to be reconsidered", and the entry before it with bug 2's cause in LiteLLM). Tower's test procedure stopped in C2 after A1–A4, B1–B4, C1, C3; neither per-day bug is fixed. The brainstorm covers the script set (cost, reconciliation, kill switch, maybe a guarded model change), promptfoo for benchmarking, the owner's middle way (a small container running the scripts behind one page), and what is archived or changed (`CLAUDE.md`, requirements, roadmap, `tower-part-1a`, the tower container on `sandbox`, `production`'s `rapidselector-tower` branch). Until it ends, tower keeps running read-only on `sandbox`.
 2. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is now on `tower-part-1a`.
 3. **After the merge:** the README dry run, and two-factor authentication on the OpenRouter account (both in `docs/roadmap.md`, phase 1).
 4. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
