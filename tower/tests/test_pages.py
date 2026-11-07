@@ -468,7 +468,7 @@ def test_setup_tabs_default_models(db, config_dir):
     current = re.findall(r'<a href="/setup\?tab=(\w+)"[^>]*aria-current="page"', text)
     assert current == ["models"]
     nav = text.split('class="subtabs"')[1].split("</nav>")[0]
-    assert nav.count('class="dot ') == 4  # Models, Teams and keys, OpenRouter, Secrets
+    assert nav.count('class="dot ') == 6  # every tab
 
 
 def test_setup_tab_openrouter_has_both_keys(db, config_dir):

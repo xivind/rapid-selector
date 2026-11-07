@@ -73,8 +73,13 @@ def test_reconciliation_light_none_flagged_in_step_apart():
     assert lights(state(), recon=reconcile(7.44, 7.40))["reconciliation"] == ("go", "$0.04 apart")
 
 
-def view(models=None, teams=None, or_key=None, days_left=200, secrets=None):
+def view(models=None, teams=None, or_key=None, days_left=200, secrets=None,
+         settings=None, webui=(("TASK_MODEL_EXTERNAL", "x"),), missing=()):
     return {
+        "gateway_settings": settings if settings is not None else [
+            {"name": "global budget", "value": 32.0}, {"name": "budget window", "value": "30d"}],
+        "open_webui": None if webui is None else list(webui),
+        "missing": list(missing),
         "models": models if models is not None else [{"name": "chat", "price_check": "ok"}],
         "teams_and_keys": teams if teams is not None else [
             {"id": "t1", "alias": "experiments", "budget": 24.0, "spend": 5.0, "blocked": False,
@@ -89,9 +94,9 @@ def colours(v):
     return {k: (x.colour if x else None) for k, x in tab_lights(v, NOW).items()}
 
 
-def test_tab_lights_all_green_and_no_light_for_gateway_and_webui():
+def test_tab_lights_all_green():
     assert colours(view()) == {"models": "go", "teams_and_keys": "go", "openrouter": "go",
-                               "secrets": "go", "gateway": None, "open_webui": None}
+                               "secrets": "go", "gateway": "go", "open_webui": "go"}
 
 
 def test_tab_lights_models():
@@ -141,3 +146,19 @@ def test_price_light_failed_stays_red_when_stale():
 def test_tab_lights_models_caution_when_one_not_checked():
     some = [{"name": "a", "price_check": "ok"}, {"name": "new", "price_check": None}]
     assert colours(view(models=some))["models"] == "caution"
+
+
+def test_tab_lights_gateway():
+    def teams(*budgets):
+        return [{"id": f"t{i}", "alias": f"t{i}", "budget": b, "spend": 0.0, "blocked": False, "keys": []}
+                for i, b in enumerate(budgets)]
+    assert colours(view(teams=teams(8.0, 24.0)))["gateway"] == "go"
+    over = tab_lights(view(teams=teams(8.0, 26.0)), NOW)["gateway"]
+    assert over.colour == "stop" and "$34" in over.word and "$32" in over.word
+    unknown = [{"name": "global budget", "value": 32.0}, {"name": "budget window", "value": None}]
+    assert colours(view(settings=unknown))["gateway"] == "caution"
+    assert colours(view(missing=["gateway"]))["gateway"] == "off"
+
+
+def test_tab_lights_open_webui():
+    assert colours(view(webui=None))["open_webui"] == "off"

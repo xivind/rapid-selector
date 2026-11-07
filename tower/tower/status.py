@@ -131,15 +131,31 @@ def _openrouter_tab(key, management) -> Light:
     return Light("go", "keys ok")
 
 
-def tab_lights(view: dict, now: datetime) -> dict[str, Light | None]:
-    """Setup's tabs: one light each where there is a status to sum up; None for the others."""
+def _gateway_tab(view) -> Light:
+    if "gateway" in (view.get("missing") or []):
+        return Light("off", "cannot be read")
+    settings = view.get("gateway_settings") or []
+    budget = next((g["value"] for g in settings if g["name"] == "global budget"), None)
+    teams = view.get("teams_and_keys")
+    if budget is not None and teams is not None:
+        total = sum(t["budget"] for t in teams if t.get("id") and t.get("budget") is not None)
+        if total > float(budget) + 1e-6:  # principle 1: the team budgets must fit in the global one
+            return Light("stop", f"team budgets ${total:,.0f} add up to more than the global budget ${float(budget):,.0f}")
+    if any(g["value"] is None for g in settings):
+        return Light("caution", "a setting cannot be read")
+    return Light("go", "settings read")
+
+
+def tab_lights(view: dict, now: datetime) -> dict[str, Light]:
+    """Setup's tabs: one light each."""
     secrets = view.get("secrets") or []
     return {
         "models": _models_tab(view.get("models")),
         "teams_and_keys": _teams_tab(view.get("teams_and_keys")),
         "openrouter": _openrouter_tab(view.get("openrouter_key"), view.get("management_key")),
-        "gateway": None,
-        "open_webui": None,
+        "gateway": _gateway_tab(view),
+        "open_webui": Light("go", "read from docker-compose.yml") if view.get("open_webui") is not None
+        else Light("off", "docker-compose.yml cannot be read"),
         "secrets": Light("stop", "a secret is not set") if any(s != "set" for _, s in secrets)
         else Light("go", "all set"),
     }
