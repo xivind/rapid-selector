@@ -180,6 +180,18 @@ def test_setup_legend_names_every_light(db, config_dir):
         assert f'<span class="dot {colour}" aria-hidden="true"></span>{word}' in legend
 
 
+def test_setup_tab_says_why_only_when_yellow_or_red(db, config_dir):
+    class TightGateway(FakeGateway):
+        def global_budget(self):
+            return 1.0  # below the team's budget: the gateway light turns red
+    c = browser(config_dir, TightGateway())
+    gateway = c.get("/setup?tab=gateway").text
+    assert 'class="reason danger"' in gateway
+    assert "add up to more than the global budget $1.00" in gateway.split('class="reason danger"')[1].split("</p>")[0]
+    assert 'class="reason' not in c.get("/setup?tab=models").text  # not checked: no information, no line
+    assert 'class="reason' not in c.get("/setup?tab=secrets").text  # all set: green, no line
+
+
 def test_cost_page_bars_show_share_of_spend(db, config_dir):
     # summarise has the most calls, classify the most spend: the bars follow the money
     gw = FakeGateway([UsageRow(today(), "classify", "k", 1, 1, 1, 0.75),
