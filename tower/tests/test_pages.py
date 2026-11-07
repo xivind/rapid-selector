@@ -187,7 +187,9 @@ def test_setup_tab_says_why_only_when_yellow_or_red(db, config_dir):
     c = browser(config_dir, TightGateway())
     gateway = c.get("/setup?tab=gateway").text
     assert 'class="reason danger"' in gateway
-    assert "add up to more than the global budget $1.00" in gateway.split('class="reason danger"')[1].split("</p>")[0]
+    reason = gateway.split('class="reason danger"')[1].split("</p>")[0]
+    assert 'aria-hidden="true"></span>Team budgets ' in reason  # a sentence on its own: capital first letter
+    assert "add up to more than the global budget $1.00" in reason
     assert 'class="reason' not in c.get("/setup?tab=models").text  # not checked: no information, no line
     assert 'class="reason' not in c.get("/setup?tab=secrets").text  # all set: green, no line
 

@@ -17,7 +17,7 @@
 </nav>
 <p class="note legend-lights">{% for colour, word in (("go", "Ok"), ("caution", "Investigate"), ("stop", "Action required"), ("off", "No information: not run, not checked or cannot be read")) %}<span class="lit"><span class="dot {{ colour }}" aria-hidden="true"></span>{{ word }}</span>{% endfor %}</p>
 {% set l = tab_lights[{"teams": "teams_and_keys", "webui": "open_webui"}.get(tab, tab)] %}
-{% if l and l.colour in ("caution", "stop") %}<p class="reason {{ 'danger' if l.colour == 'stop' else 'warn' }}"><span class="lit"><span class="dot {{ l.colour }}" aria-hidden="true"></span>{{ l.word }}</span></p>{% endif %}
+{% if l and l.colour in ("caution", "stop") %}<p class="reason {{ 'danger' if l.colour == 'stop' else 'warn' }}"><span class="lit"><span class="dot {{ l.colour }}" aria-hidden="true"></span>{{ l.word[:1]|upper ~ l.word[1:] }}</span></p>{% endif %}
 
 {% if tab == "models" %}
 <section aria-labelledby="models-title">
