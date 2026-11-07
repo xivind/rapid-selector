@@ -38,10 +38,11 @@ def _openrouter_key(state) -> Light:
 def _price_check(entry, now: datetime) -> Light:
     if entry is None:
         return Light("off", "not run yet")
-    if now - entry.at > PRICE_CHECK_STALE:
+    stale = now - entry.at > PRICE_CHECK_STALE
+    if not entry.ok:  # a failure stays red, however old
+        return Light("stop", f"failed, {'last ' if stale else ''}{_stamp(entry.at)}")
+    if stale:
         return Light("caution", f"stale, last {_stamp(entry.at)}")
-    if not entry.ok:
-        return Light("stop", f"failed, {_stamp(entry.at)}")
     return Light("go", f"ok, {entry.at.astimezone(UTC):%H:%M}")
 
 
@@ -93,6 +94,8 @@ def _models_tab(models) -> Light:
         return Light("off", "not checked")
     if any(r and r != "ok" for r in results):
         return Light("stop", "a price check failed")
+    if not all(results):
+        return Light("caution", "a model not checked yet")
     return Light("go", "prices ok")
 
 

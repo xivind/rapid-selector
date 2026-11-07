@@ -94,7 +94,7 @@ release() {
   [ "$output" = "200" ]
   run curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$TOWER_URL/"
   [ "$output" = "303 $TOWER_URL/login" ]
-  for path in /usage /setup /log /partials/killswitch; do
+  for path in /usage "/setup?tab=models" "/setup?tab=teams" "/setup?tab=openrouter" "/setup?tab=gateway" "/setup?tab=webui" "/setup?tab=secrets" /log /partials/killswitch; do
     run curl -sS -o /dev/null -w '%{http_code}' "$TOWER_URL$path"
     [ "$output" = "303" ] || { echo "$path: $output"; false; }
   done
@@ -122,7 +122,7 @@ release() {
   gw_call "$(test_env KEY_CHAT)" chat
   [ "$GW_STATUS" = "401" ]
   [ "$(key_blocked "$(test_env TOWER_GATEWAY_KEY)")" = "false" ]
-  for path in / /usage /setup /log /partials/killswitch; do
+  for path in / /usage "/setup?tab=models" "/setup?tab=teams" "/setup?tab=openrouter" "/setup?tab=gateway" "/setup?tab=webui" "/setup?tab=secrets" /log /partials/killswitch; do
     tower_get "$path"
     [ "$TOWER_STATUS" = "200" ] || { echo "$path: $TOWER_STATUS"; false; }
   done
@@ -233,7 +233,7 @@ release() {
   openrouter_state '{"fail":"keys"}'
   tower_until /partials/killswitch "STATE UNKNOWN"
   [[ "$output" == *"openrouter unavailable: HTTP 500"* ]]
-  for path in / /usage /setup /log; do
+  for path in / /usage "/setup?tab=models" "/setup?tab=teams" "/setup?tab=openrouter" "/setup?tab=gateway" "/setup?tab=webui" "/setup?tab=secrets" /log; do
     tower_get "$path"
     [ "$TOWER_STATUS" = "200" ] || { echo "$path: $TOWER_STATUS"; false; }
   done
@@ -279,7 +279,7 @@ release() {
 @test "with the gateway down, pages render and level 2 still works" {
   docker stop rapidselector-gateway >/dev/null
   tower_until /partials/killswitch "STATE UNKNOWN"  # reads are cached for 30 seconds
-  for path in / /usage /setup /log /partials/killswitch; do
+  for path in / /usage "/setup?tab=models" "/setup?tab=teams" "/setup?tab=openrouter" "/setup?tab=gateway" "/setup?tab=webui" "/setup?tab=secrets" /log /partials/killswitch; do
     start=$SECONDS
     tower_get "$path"
     [ "$TOWER_STATUS" = "200" ] || { echo "$path: $TOWER_STATUS"; false; }
@@ -309,7 +309,7 @@ release() {
 @test "no secret value in any page, /metrics or tower's container log" {
   pages="$BATS_TEST_TMPDIR/pages.txt"
   : > "$pages"
-  for path in / "/?period=day" "/?period=week" /usage /setup /log /partials/killswitch "/partials/killswitch?confirm=2" \
+  for path in / "/?period=day" "/?period=week" /usage "/setup?tab=models" "/setup?tab=teams" "/setup?tab=openrouter" "/setup?tab=gateway" "/setup?tab=webui" "/setup?tab=secrets" /log /partials/killswitch "/partials/killswitch?confirm=2" \
               /partials/checks "/checks/smoke?scope=all"; do
     tower_get "$path"
     printf '%s\n' "$output" >> "$pages"

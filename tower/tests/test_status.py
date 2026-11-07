@@ -131,3 +131,13 @@ def test_tab_lights_openrouter():
 
 def test_tab_lights_secrets():
     assert colours(view(secrets=[("A", "set"), ("B", "not set")]))["secrets"] == "stop"
+
+
+def test_price_light_failed_stays_red_when_stale():
+    old_fail = check(ok=False, at=NOW - timedelta(hours=27))
+    assert lights(state(), price=old_fail)["price_check"] == ("stop", "failed, last 6 Nov 09:00")
+
+
+def test_tab_lights_models_caution_when_one_not_checked():
+    some = [{"name": "a", "price_check": "ok"}, {"name": "new", "price_check": None}]
+    assert colours(view(models=some))["models"] == "caution"

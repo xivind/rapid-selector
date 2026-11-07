@@ -464,7 +464,9 @@ def test_setup_tabs_default_models(db, config_dir):
     assert 'class="data models"' in text and "/team/info" not in text
     for tab in SETUP_TABS:
         assert f'href="/setup?tab={tab}"' in text, tab
-    assert 'href="/setup?tab=models" aria-current="page"' in text
+    import re
+    current = re.findall(r'<a href="/setup\?tab=(\w+)"[^>]*aria-current="page"', text)
+    assert current == ["models"]
     nav = text.split('class="subtabs"')[1].split("</nav>")[0]
     assert nav.count('class="dot ') == 4  # Models, Teams and keys, OpenRouter, Secrets
 
@@ -482,3 +484,8 @@ def test_setup_unknown_tab_422(db, config_dir):
 def test_setup_models_badges(db, config_dir):
     text = browser(config_dir).get("/setup").text
     assert 'class="badge go">ZDR</span>' in text and 'class="badge plain">no fallback</span>' in text
+
+
+def test_setup_tab_light_word_on_hover(db, config_dir):
+    text = browser(config_dir).get("/setup").text
+    assert 'href="/setup?tab=secrets" title="Secrets: all set"' in text

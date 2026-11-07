@@ -12,7 +12,7 @@
                                   ("openrouter", "OpenRouter", "openrouter"), ("gateway", "Gateway", "gateway"),
                                   ("webui", "Open WebUI", "open_webui"), ("secrets", "Secrets", "secrets")) %}
   {% set l = tab_lights[light_key] %}
-  <a href="/setup?tab={{ key }}"{% if tab == key %} aria-current="page"{% endif %}>{{ name }}{% if l %} <span class="dot {{ l.colour }}" aria-hidden="true"></span><span class="visually-hidden">{{ l.word }}</span>{% endif %}</a>
+  <a href="/setup?tab={{ key }}"{% if l %} title="{{ name }}: {{ l.word }}"{% endif %}{% if tab == key %} aria-current="page"{% endif %}>{{ name }}{% if l %} <span class="dot {{ l.colour }}" aria-hidden="true"></span><span class="visually-hidden">{{ l.word }}</span>{% endif %}</a>
   {% endfor %}
 </nav>
 {% if tab_lights[{"teams": "teams_and_keys", "webui": "open_webui"}.get(tab, tab)] %}
