@@ -1,22 +1,24 @@
 # Phase 0: where the walkthrough stands
 
-A handoff between sessions, written 2026-11-04 and last updated late on 2026-11-06. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+A handoff between sessions, written 2026-11-04 and last updated late on 2026-11-07. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Where we are (end of 2026-11-06)
+## Where we are (end of 2026-11-07)
 
 - **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1–D8 and E1 are done and recorded in `docs/decisions.md`. **rapid-selector stays on `sandbox`** (owner). E2 moves to after tower part 1b. E3 (first real use from Node-RED) is open.
 - **D6:** the balance is not a hard stop: it went to −$0.19 across two drain runs; `CLAUDE.md` principle 1 now says "plus a small overshoot". The owner may also want principle 1's layer 1 ("Hard, at the provider: the prepaid balance") reworded; asked, not answered.
 - **D7:** $35 topped up; balance $34.81.
 - **D8 done:** both budget rules fired, emailed (after Mailgun was fixed and the rules paused and resumed) and cleared at 22:24. `experiments` is back at $24.
 - **Tower part 1a is built** on branch **`tower-part-1a`** (pushed; worktree `.worktrees/tower-part-1a` on this machine), subagent-driven: all 13 tasks reviewed, the final whole-branch review's fixes done and re-reviewed. 160 unit tests pass (`cd tower && uv run pytest`), and the third Docker run passed the whole level 1 suite (141 tests) at `5877b72` with no changes. The ledger is `.worktrees/tower-part-1a/.superpowers/sdd/2026-11-06-tower-part-1a/progress.md` (not in git). In `production`, branch **`rapidselector-tower`** (local only, not pushed) holds tower's backup job, Prometheus target and alert note, with a summary and description per rule (5 commits, 55b3781..8e36599; the checkout itself is back on `main`): merge it only when tower runs on `sandbox`, since its `jobs.conf` line fails the nightly run until the export word is installed there.
+- **Tower's look was revised on 2026-11-07** and the owner signed it off (`docs/decisions.md`): status panel, lights and badges, comparisons and ◆ on Cost and Usage, Setup in tabs. Built on `tower-part-1a` (`5f4f393..eece57e`), 203 unit tests pass; **not yet run in Docker**. Design `docs/superpowers/specs/2026-11-07-tower-look-revision-design.md`, plan `docs/superpowers/plans/2026-11-07-tower-look-revision.md` (Task 6 open), ledger `.worktrees/tower-part-1a/.superpowers/sdd/2026-11-07-tower-look-revision/progress.md` (not in git; its rulings and deferred minors). To look at tower without Docker: `cd .worktrees/tower-part-1a/tower && uv run python tests/preview.py`, then `http://localhost:8765`, password `look`.
 - **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
 
 ## Next, in order (the owner picks)
 
-1. **Tower's look, revised** (owner's review 2026-11-07, design `docs/superpowers/specs/2026-11-07-tower-look-revision-design.md` on the tower branch): plan, build, a Docker run, and the owner's look at it against the fakes. Then **tower's test procedure on `sandbox`**: `docs/test-procedures/tower-1a.md` (on the tower branch), one step at a time. First check `docker compose version` is v2.15 or later (`update` uses `--ignore-buildable`). It needs the four new secrets added with `scripts/add-tower-secrets.sh`, a management key created with a one-year expiry, and spends under $0.01 plus a few calls under $0.001.
-2. ~~Check the 06:00 backup of 2026-11-07~~: dropped by the owner. It is the first nightly run with the new export and `min_bytes`, but "Backup failed" (fire-tested, now that Mailgun works) emails if either job fails, so no email means it passed.
-3. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is on `phase-0-walkthrough` and gets tower when the owner switches it to the tower branch for the test procedure.
-4. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
+1. **A Docker run of the revised look** in a claude.ai/code session (this Chromebook has no Docker). Prompt: "Repository xivind/rapid-selector, branch `tower-part-1a`; pull, stay on it, read CLAUDE.md. Run the whole level 1 suite `tests/run.sh` and `cd tower && uv run pytest`. Since the last run (5877b72), tower's look was revised (5f4f393..eece57e): the kill switch became a status panel (same routes, same words ALL CLEAR / LEVEL 1 / PARTIAL / STATE UNKNOWN), Setup is split into tabs (`/setup?tab=…`), and the loops in tests/tower.bats now visit every Setup tab. If a test fails, fix the cause in the smallest way with a test, and say what and why. Nothing spends money; never a real secret. Commit with the attribution lines from your system reminder, `git pull --rebase`, push to `tower-part-1a`; no merge, no PR. Report: results, changes, commits." Record the result in `docs/decisions.md` and close the plan's Task 6 in the ledger; then delete that plan's workspace (`.superpowers/sdd/2026-11-07-tower-look-revision/`) once its rulings and minors are recorded.
+2. **Tower's test procedure on `sandbox`**: `docs/test-procedures/tower-1a.md` (on the tower branch), one step at a time. First check `docker compose version` is v2.15 or later (`update` uses `--ignore-buildable`). It needs the four new secrets added with `scripts/add-tower-secrets.sh`, a management key created with a one-year expiry, and spends under $0.01 plus a few calls under $0.001.
+3. ~~Check the 06:00 backup of 2026-11-07~~: dropped by the owner. It is the first nightly run with the new export and `min_bytes`, but "Backup failed" (fire-tested, now that Mailgun works) emails if either job fails, so no email means it passed.
+4. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is on `phase-0-walkthrough` and gets tower when the owner switches it to the tower branch for the test procedure.
+5. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
 
 ## Things to remember
 
@@ -26,7 +28,7 @@ A handoff between sessions, written 2026-11-04 and last updated late on 2026-11-
 - **`tests/resilience.bats`** was edited (memory limits gone) but not run: run it at the next level 1 run.
 - **Findings 38 and 39** (Hugging Face fetch, LiteLLM's own retries) are new and open in `docs/decisions.md`.
 - **Tower 1a facts found:** usage per name from `/user/daily/activity`; tower's own `proxy_admin` key with `allowed_routes` works (question 17); OpenRouter's key list needs `include_disabled=true`; level 1 does not block LiteLLM's master key or the admin UI's own session key (owner accepted). **For 1b, to try first:** database models resolve `os.environ/RAPIDSELECTOR_OPENROUTER_KEY` and accept the pin, prices and `max_tokens` (if not, stop and ask the owner), and that the `/openrouter` pass-through stays refused.
-- **Mockups** from the design talk are in `.superpowers/brainstorm/` (not committed); the visual companion is stopped.
+- **Mockups** from the design talks are in `.superpowers/brainstorm/` (not committed); the 2026-11-07 ones, versions 2 to 4 of tower's look, are in `.superpowers/brainstorm/4355-1794004845/content/`. The visual companion is stopped.
 
 ## How we work through the procedure
 
