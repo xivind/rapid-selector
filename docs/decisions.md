@@ -321,6 +321,9 @@ A3 (the management key's expiry in `.env`) is left until C3 shows whether tower 
 ### 2026-11-07: Tower's test procedure, B2, four containers healthy
 `./rapidselector.sh ps`: `chat`, `db`, `gateway` and `tower` all `(healthy)`; tower `rapidselector-tower:0.1.0` on `192.168.1.212:4020->8000/tcp`, gateway on `:4000`, chat on `:4010`, and `db` with no published port (`5432/tcp` inside the network only). Chat was up 5 hours against 26 for the gateway and db: the 06:00 backup stops it while copying Open WebUI's SQLite and starts it again (`rapidselector-export.sh` in `production`), as designed, which also shows that the night's backup ran. Nothing spent.
 
+### 2026-11-07: Tower's test procedure, B3, tower's port on the LAN address only
+`ss -tln '( sport = :4020 )'` on `sandbox`: one line, `LISTEN` on `192.168.1.212:4020` (peer `0.0.0.0:*`, which is any remote peer, not the listening address). No `0.0.0.0:4020` or `[::]:4020`. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
