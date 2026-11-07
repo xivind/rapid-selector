@@ -368,6 +368,7 @@ input:focus { border-color: var(--amber); }
 .subtabs a:hover { color: var(--ink); border-color: var(--amber-low); }
 .subtabs a[aria-current="page"] { color: var(--ground); background: var(--amber); border-color: var(--amber); }
 .tab-status { margin: 0 0 .5rem; font: .9rem var(--mono); color: var(--dim); }
+.legend-lights { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin: 0 0 1rem; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ---- Phone width ----------------------------------------------------------------------------- */

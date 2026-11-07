@@ -74,10 +74,11 @@
   {% elif not rows %}
   <p class="note">No calls in this period.</p>
   {% else %}
-  {% set most = rows|map(attribute="calls")|max %}
+  {# each bar is the line's share of this list's spend #}
+  {% set total = rows|sum(attribute="spend_usd") %}
   <ol class="ranks">
     {% for r in rows %}
-    <li><span class="name">{{ r.label }}</span>{{ bar(r.calls, most) }}<span class="num">{{ r.calls }} calls</span><span class="num">{{ r.spend_usd|usd }}</span></li>
+    <li><span class="name">{{ r.label }}</span>{{ bar(r.spend_usd, total) }}<span class="num">{{ r.calls }} calls</span><span class="num">{{ r.spend_usd|usd }}</span></li>
     {% endfor %}
   </ol>
   {% endif %}
@@ -94,6 +95,7 @@
   <p class="{{ 'danger' if r.flagged }}">gateway {{ r.gateway_usd|usd }} · OpenRouter {{ r.openrouter_usd|usd }} · Δ {{ r.diff_usd|usd }}{% if r.diff_pct is not none %} ({{ '%+.1f'|format(r.diff_pct) }}%){% endif %}
     {% if r.flagged %}<strong>· gap above $0.05 or 5%</strong>{% endif %}</p>
   {% endif %}
+  <p class="note">What the gateway recorded against what OpenRouter charged. The gateway's budgets count only the gateway's figures, so if it records less than OpenRouter charges, its budgets stop calls later than they should. OpenRouter's own limits still hold. A red gap that lasts past a day usually means a price in the gateway is wrong: open the per-day lines to find the model, then press Check prices.</p>
   {% if days %}
   <details>
     <summary>Per day and model, the last 30 completed days and today</summary>

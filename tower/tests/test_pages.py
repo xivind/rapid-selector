@@ -166,6 +166,37 @@ def test_cost_page_period_switches_top_lists(db, config_dir):
     assert c.get("/?period=year").status_code == 422
 
 
+def test_cost_page_explains_reconciliation(db, config_dir):
+    recon = browser(config_dir).get("/").text.split('id="recon-title"')[1].split("</section>")[0]
+    assert "budgets count only the gateway's figures" in recon
+    assert "OpenRouter's own limits still hold" in recon
+    assert "Check prices" in recon
+
+
+def test_setup_legend_names_every_light(db, config_dir):
+    text = browser(config_dir).get("/setup").text
+    legend = text.split('legend-lights">')[1].split("</p>")[0]
+    for colour, word in (("go", "Ok"), ("caution", "Investigate"), ("stop", "Action required"), ("off", "No information")):
+        assert f'<span class="dot {colour}" aria-hidden="true"></span>{word}' in legend
+
+
+def test_setup_tab_status_names_the_tab(db, config_dir):
+    c = browser(config_dir)
+    for tab, name in (("models", "Models"), ("teams", "Teams and keys"), ("openrouter", "OpenRouter")):
+        line = c.get(f"/setup?tab={tab}").text.split('class="tab-status"')[1].split("</p>")[0]
+        assert f'aria-hidden="true"></span>{name}: ' in line
+
+
+def test_cost_page_bars_show_share_of_spend(db, config_dir):
+    # summarise has the most calls, classify the most spend: the bars follow the money
+    gw = FakeGateway([UsageRow(today(), "classify", "k", 1, 1, 1, 0.75),
+                      UsageRow(today(), "summarise", "k", 9, 1, 1, 0.25)])
+    roles = browser(config_dir, gw).get("/?period=day").text.split("ROLES")[1].split("MODELS")[0]
+    classify, summarise = roles.split("summarise")
+    assert '<rect class="fill" x="0" y="2" width="75.0"' in classify
+    assert '<rect class="fill" x="0" y="2" width="25.0"' in summarise
+
+
 def test_cost_page_renders_with_gateway_down(db, config_dir):
     c = browser(config_dir, gw=Down("gateway"))
     r = c.get("/")
