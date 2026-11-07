@@ -330,6 +330,9 @@ On `sandbox`, about ten minutes after tower started, idle. `free -h`: 2.0 GiB us
 ### 2026-11-07: Tower's test procedure, C1, login
 At `http://sandbox:4020`: a wrong password was refused, the real `TOWER_PASSWORD` logged in, and the status panel read **ALL CLEAR**. Setup's OpenRouter tab showed a yellow light ("Investigate" in the legend); see C3. Nothing spent.
 
+### 2026-11-07: Tower's test procedure, C3 and A3, the management key's expiry
+**Tower cannot read the management key's expiry from OpenRouter's API**, as the procedure expected: Setup's OpenRouter tab was yellow, "management key expiry unknown". So A3: the owner set `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=2027-11-07` in `sandbox`'s `.env`, with the comment from `.env.example` above it, and ran `./rapidselector.sh up --build tower` after `git pull` (`791b2b9`): tower rebuilt in 2.2 s and `Started`, the gateway stayed `Running`, db `Healthy`. Afterwards all Setup tabs were green. The owner noticed the reason line began in lower case; fixed the same morning (`791b2b9`, the reason line starts with a capital; the panel and the hover keep lower case, after a label). `sandbox`'s `.env`, made before tower, also lacked `TOWER_PORT` and `OPENROUTER_INFERENCE_KEY_NAME`, whose defaults in `docker-compose.yml` equal `.env.example`'s values; the owner adds them for completeness. Someone upgrading an older `.env` would meet the same gap: to look at in the README dry run (roadmap). Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
