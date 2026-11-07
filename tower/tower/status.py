@@ -140,7 +140,7 @@ def _gateway_tab(view) -> Light:
     if budget is not None and teams is not None:
         total = sum(t["budget"] for t in teams if t.get("id") and t.get("budget") is not None)
         if total > float(budget) + 1e-6:  # principle 1: the team budgets must fit in the global one
-            return Light("stop", f"team budgets ${total:,.0f} add up to more than the global budget ${float(budget):,.0f}")
+            return Light("stop", f"team budgets ${total:,.2f} add up to more than the global budget ${float(budget):,.2f}")
     if any(g["value"] is None for g in settings):
         return Light("caution", "a setting cannot be read")
     return Light("go", "settings read")
