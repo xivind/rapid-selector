@@ -36,6 +36,8 @@ Facts about providers and tools go in `docs/provider-facts.md` with a date and a
   1. **Hard, at the provider:** the prepaid OpenRouter balance.
   2. **Hard, at the provider:** a credit limit with a monthly reset on the OpenRouter key used by the gateway. This is the actual monthly cap.
   3. **Soft, in the gateway:** global budget in LiteLLM plus a budget per virtual key. The sum of key budgets must never exceed the global budget.
+
+  "Hard" means enforced by OpenRouter, not by our software. Neither stops at the exact cent: the key limit and the balance both overshoot a little (D1 and D6 in `docs/decisions.md`).
 - Software budgets are secondary. No code may assume that the LiteLLM budget alone protects against overspending.
 - A limit counts as working only once it has been tested in practice. Test results are recorded in `docs/decisions.md`.
 - **Allowlisted models and hosts only.** No wildcard routing (`openrouter/*`). Every allowlist entry names both the model and its upstream host, with fallbacks turned off (`provider.order` and `allow_fallbacks: false`), so a request can never move to a more expensive host. `:free` variants are not used.

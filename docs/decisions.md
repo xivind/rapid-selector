@@ -287,6 +287,12 @@ Claude's calls while building (rulings, each with its cost if wrong): phone text
 
 Deferred minor findings from the review, none affecting money or the kill switch: the panel's reconciliation read uses another date range than the Cost page, so it misses the 30-second cache (one extra gateway call per page view); an "ok" price check 24–26 hours old shows its time but not its date; very large percentages are not capped (a tiny earlier figure can give "▲ 49999900%"); Usage lists all-zero rows for names used only 32–62 days ago; the Cost boxes' figures are OpenRouter's while "yesterday" and the week arrow are the gateway's, with no note; two links on Setup carry `aria-current="page"`.
 
+### 2026-11-07: `CLAUDE.md`, what "hard" means for the provider's limits
+Decided by the owner (Claude's suggestion), answering the question left open after D6. Principle 1 keeps the labels "Hard, at the provider" for the balance and the key limit, and adds one line under the three layers: "Hard" means enforced by OpenRouter, not by our software, and neither stops at the exact cent, since both overshoot a little (D1: $0.093 on a $0.05 key limit; D6: the balance to −$0.19). Rejected: leaving it as it was (layer 1 read as exact, which D6 disproved).
+
+### 2026-11-07: Tower's lights differ in shape, not only in colour
+Decided by the owner (option 1 of 2, Claude's recommendation), answering the question left open at the sign-off: someone who cannot tell red from green must be able to read the Setup tab bar's lights without hovering, also on a phone, where hover does not exist. Every light gets a shape by state: go a filled circle, caution a triangle, stop a square, off a hollow circle as now. A CSS change to `.dot` only, so every light in tower gets it, and the tab bar stays as compact as signed off. Rejected: a visible word on every tab that is not green (wider tab bar, changes the approved look), and hover alone (as built). To build on `tower-part-1a` after the cloud Docker run of `5f4f393..eece57e` reports, so that the run tests the code as it was signed off.
+
 ## Open
 
 ### Settle during design or phase 0
