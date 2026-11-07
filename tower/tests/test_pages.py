@@ -401,6 +401,18 @@ def test_css_has_no_label_below_085rem():
     assert not small, small
 
 
+def test_css_lights_differ_in_shape():
+    """Colour alone must not tell the states apart: go and off round, caution a triangle, stop a square."""
+    import re
+    css = (Path(__file__).resolve().parents[1] / "tower" / "static" / "tower.css").read_text()
+    rule = lambda sel: re.search(r"^\.dot" + sel + r" \{([^}]*)\}", css, re.M).group(1)
+    assert "border-radius: 50%" in rule("")
+    assert "clip-path: polygon(50% 0, 100% 100%, 0 100%)" in rule(r"\.caution")
+    assert "border-radius: 0" in rule(r"\.stop")
+    for sel in (r"\.go", r"\.off", r"\.stop"):
+        assert "clip-path" not in rule(sel)
+
+
 def _compare_rows():
     t = today()
     return [UsageRow(t, "classify", "node-red", 10, 1, 1, 1.85),

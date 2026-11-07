@@ -324,8 +324,9 @@ input:focus { border-color: var(--amber); }
 .dot { display: inline-block; flex: none; width: .8em; height: .8em; border-radius: 50%; vertical-align: -.05em; }
 .dot.big { width: 1.1rem; height: 1.1rem; }
 .dot.go { background: var(--go); box-shadow: 0 0 .5em rgb(116 196 122 / .55); }
-.dot.caution { background: var(--caution); box-shadow: 0 0 .5em rgb(240 220 106 / .5); }
-.dot.stop { background: var(--danger); box-shadow: 0 0 .6em rgb(239 79 79 / .65); }
+/* A shape per state as well, for anyone who cannot tell the colours apart: a triangle, a square. */
+.dot.caution { background: var(--caution); border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.dot.stop { background: var(--danger); border-radius: 0; box-shadow: 0 0 .6em rgb(239 79 79 / .65); }
 .dot.off { background: transparent; border: 2px solid var(--rule); }
 .lit { display: inline-flex; align-items: center; gap: .5em; }
 
