@@ -310,6 +310,10 @@ Created by the owner in OpenRouter's dashboard (Management API Keys, "Create New
 
 ### 2026-11-07: Tower's test procedure, A2, tower's secrets
 On `sandbox`, after `git pull` (`672a24e`): `scripts/add-tower-secrets.sh` asked for the management key (pasted, nothing shown) and printed `stored.` with 13 names and lengths: the 9 fields from before unchanged in name and length (`POSTGRES_PASSWORD` 64, `LITELLM_MASTER_KEY` 51, `LITELLM_SALT_KEY` 64, `LITELLM_UI_PASSWORD` 32, `RAPIDSELECTOR_OPENROUTER_KEY` 73, `WEBUI_SECRET_KEY` 64, `KEY_CHAT` 51, `KEY_NODE_RED` 51, `KEY_SMOKE_TEST` 51), then `TOWER_PASSWORD` 32, `TOWER_SESSION_SECRET` 64, `TOWER_GATEWAY_KEY` 51 and `OPENROUTER_MANAGEMENT_KEY` 73 (the procedure said "about 70"). No value was shown to Claude. Nothing spent.
+Run again: it did not ask for the key and printed the same 13 names and lengths, so a second run changes nothing.
+
+### 2026-11-07: Tower's test procedure, A3 and A4, tower's user and key in the gateway
+A3 (the management key's expiry in `.env`) is left until C3 shows whether tower can read the date. A4: `./rapidselector.sh run-script scripts/setup-keys.sh` printed the same teams and keys as at the end of D8 (`team:permanent` 8.0 30d 4 names, `team:experiments` 24.0 30d 11, `node-red` permanent 4.0 30d 4 RPM 30, `chat` experiments on the team's budget 11, `smoke-test` experiments 1.0 30d 11) and the new row `tower`: no team, no budget, no reset, 0 names (no model restriction in LiteLLM's terms; its `allowed_routes` keep it to reading and blocking). Nothing spent.
 
 ## Open
 
