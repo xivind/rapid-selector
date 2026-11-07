@@ -324,6 +324,9 @@ A3 (the management key's expiry in `.env`) is left until C3 shows whether tower 
 ### 2026-11-07: Tower's test procedure, B3, tower's port on the LAN address only
 `ss -tln '( sport = :4020 )'` on `sandbox`: one line, `LISTEN` on `192.168.1.212:4020` (peer `0.0.0.0:*`, which is any remote peer, not the listening address). No `0.0.0.0:4020` or `[::]:4020`. Nothing spent.
 
+### 2026-11-07: Tower's test procedure, B4, memory with tower
+On `sandbox`, about ten minutes after tower started, idle. `free -h`: 2.0 GiB used, 5.8 GiB available of 7.9 GiB, swap unused (B5 in phase 0: 2.3 used, 5.6 available). `docker stats --no-stream` shows `0B` for every container, since the kernel's memory accounting is off on `sandbox` (the owner's decision in phase 0), so per-process figures were read with `ps -eo rss,args --sort=-rss`: LiteLLM 826,368 KiB (about 807 MiB, 593 at B5), Open WebUI 330,208 KiB (about 322 MiB, 857 at B5, restarted by the 06:00 backup), then `influxd` and the desktop's `labwc`, which are not rapid-selector's. Tower is not among the five largest, so it is below about 105 MiB. Used memory is lower than at B5 because Open WebUI was freshly started; the stack still fits with room to spare. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
