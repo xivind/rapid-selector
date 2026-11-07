@@ -308,6 +308,9 @@ Asked by the owner while looking at the shapes in `preview.py`; built on `tower-
 ### 2026-11-07: Tower's test procedure, A1, the management key
 Created by the owner in OpenRouter's dashboard (Management API Keys, "Create New Key"), named `rapidselector-tower`, with an expiry of one year: **Nov 7, 2027, 10:41 AM GMT+1** (09:41 UTC). One year was the longest choice offered short of no expiry, which is not used (decision "The management key expires after a year"). After creation the dashboard's key list does not show the expiry; the key's own record does (opened from the list, where its name can also be changed). Whether tower can read it from OpenRouter's API is step C3. The value was not shown to Claude. Nothing spent.
 
+### 2026-11-07: Tower's test procedure, A2, tower's secrets
+On `sandbox`, after `git pull` (`672a24e`): `scripts/add-tower-secrets.sh` asked for the management key (pasted, nothing shown) and printed `stored.` with 13 names and lengths: the 9 fields from before unchanged in name and length (`POSTGRES_PASSWORD` 64, `LITELLM_MASTER_KEY` 51, `LITELLM_SALT_KEY` 64, `LITELLM_UI_PASSWORD` 32, `RAPIDSELECTOR_OPENROUTER_KEY` 73, `WEBUI_SECRET_KEY` 64, `KEY_CHAT` 51, `KEY_NODE_RED` 51, `KEY_SMOKE_TEST` 51), then `TOWER_PASSWORD` 32, `TOWER_SESSION_SECRET` 64, `TOWER_GATEWAY_KEY` 51 and `OPENROUTER_MANAGEMENT_KEY` 73 (the procedure said "about 70"). No value was shown to Claude. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
