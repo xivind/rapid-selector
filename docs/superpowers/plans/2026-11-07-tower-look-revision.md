@@ -156,3 +156,37 @@ The panel, from the spec: verdict with a `.big` light on the left; the four ligh
 - [ ] **Step 2:** The controller starts `preview.py` on the owner's machine and the owner looks at all four pages. Changes they ask for go back through the task that owns them.
 - [ ] **Step 3:** A cloud session runs `tests/run.sh` and `cd tower && uv run pytest` on `tower-part-1a` (the prompt from `phase-0-status.md`, item "third Docker run", with the commit range of this plan). Expected: all pass.
 - [ ] **Step 4:** Commit and push; record the owner's sign-off and the run in `docs/decisions.md` on `phase-0-walkthrough`.
+
+---
+
+## Addendum: Tasks 7 and 8 (owner, 2026-11-07, after the first build)
+
+From the spec's addendum. Same Global Constraints; tests `cd tower && uv run pytest`.
+
+### Task 7: A light on every Setup tab
+
+**Files:** Modify `tower/tower/status.py`, `tower/tower/templates/setup.html`. Test `tower/tests/test_status.py`, `tower/tests/test_pages.py`.
+
+**Interfaces:** `tab_lights(view, now)` returns a `Light` for all six keys (`gateway` and `open_webui` no longer `None`):
+- gateway: `off` "cannot be read" when `"gateway" in view["missing"]`; `stop` "team budgets $X add up to more than the global budget $Y" when the global budget (the `gateway_settings` entry named `"global budget"`) is known and the sum of `budget` over teams with an `id` exceeds it by more than $0.000001; `caution` "a setting cannot be read" when any `gateway_settings` value is `None`; else `go` "settings read".
+- open_webui: `go` "read from docker-compose.yml" when `view["open_webui"]` is not `None`; else `off` "docker-compose.yml cannot be read".
+
+- [ ] **Step 1: Write tests:** `test_tab_lights_gateway` (budgets 8 + 24 against 32 → go; 8 + 26 against 32 → stop with "$34" and "$32" in the word; a `None` setting → caution; `missing` with gateway → off); `test_tab_lights_open_webui`; update `test_tab_lights_all_green_and_no_light_for_gateway_and_webui` to six lights (renamed `test_tab_lights_all_green`); in `test_pages.py` the tab bar count becomes 6.
+- [ ] **Step 2: Run** — expected FAIL.
+- [ ] **Step 3: Implement.** `view()` in `test_status.py` gains `gateway_settings`, `open_webui` and `missing`.
+- [ ] **Step 4: Run** the whole suite — expected PASS.
+- [ ] **Step 5: Commit** `tower: a light on every setup tab`.
+
+### Task 8: Standouts on Usage
+
+**Files:** Modify `tower/tower/summary.py`, `tower/tower/app.py` (template global), `tower/tower/templates/usage.html`, `tower/tower/static/tower.css`. Test `tower/tests/test_summary.py`, `tower/tests/test_pages.py`.
+
+**Interfaces:** `standouts(lines: list[UsageLine]) -> set[tuple[str, str, str]]` in `summary.py`: `(label, period, column)` with period in `day`, `week`, `month` and column in `spend_usd`, `calls`, `tokens_in`, `tokens_out`, for each figure > 0 that is more than 2 × the mean of the other lines' figures in that period and column; empty when there are fewer than 3 lines. Registered as a template global; the Usage template wraps a standout figure in `<span class="hi">`. CSS: `.hi { color: var(--amber); font-weight: 700; }` and `.hi::after { content: " \25C6"; }`.
+
+- [ ] **Step 1: Write tests:** `test_standouts_per_column` (the mockup's today figures: classify spend 0.12 and calls 41, summarise tokens in 9,800 and code tokens out 5,200 stand out; chat spend 0.05 does not); `test_standouts_two_in_one_column` (week tokens in 29,000 and 30,000 against 4,000 and 3,000 → both); `test_standouts_even_marks_nothing`; `test_standouts_needs_three_lines`; `test_standouts_zero_is_never_marked` (one line > 0, two at 0 → only the line > 0); `test_usage_page_marks_standouts` (`class="hi"` on the right cell only).
+- [ ] **Step 2: Run** — expected FAIL.
+- [ ] **Step 3: Implement.**
+- [ ] **Step 4: Run** the whole suite — expected PASS.
+- [ ] **Step 5: Commit** `tower: standouts on usage`.
+
+Then Task 6's remaining steps: the owner's look, the Docker run, the records.

@@ -77,3 +77,13 @@ Only the larger text.
 - Where the previous-period figures are computed (the cost summary and the usage view), and how the gateway is asked for the extra days, staying within its 30-second cache.
 - Tests for the comparison rules: the stretches (a Monday, the 31st against a 30-day month, the 1st), `=`, "new", and the lights' states.
 - The existing tests that check page text are updated where the text moves, never weakened.
+
+## Addendum, 2026-11-07: standouts on Usage, and a light on every Setup tab
+
+Approved by the owner after the first build, with mockup version 4.
+
+**Standouts on Usage.** A figure stands out when it is more than twice the average of the other names' figures, in the same table (roles, experiment names, keys), the same period (today, week, month) and the same column (spend, calls, tokens in, tokens out). Each column is judged on its own, so a row is never marked as a whole. Nothing is marked in a table of fewer than three names, nor a figure of 0. A standout is shown in bold amber with a ◆ after it; the grey "yday" figure and the change arrow under it stay as they are. Not a light: amber is the accent, not a status colour. Rejected: the largest in each column (always marks one even when use is even); a big jump from the previous period (the arrows already show change).
+
+**A light on every Setup tab.** Replaces "Gateway and Open WebUI have none":
+- *Gateway*: red when the team budgets add up to more than the global budget (principle 1); yellow when a setting cannot be read; green otherwise; hollow when the gateway cannot be read.
+- *Open WebUI*: green when `docker-compose.yml` can be read; hollow when it cannot.
