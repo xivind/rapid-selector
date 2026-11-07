@@ -180,13 +180,6 @@ def test_setup_legend_names_every_light(db, config_dir):
         assert f'<span class="dot {colour}" aria-hidden="true"></span>{word}' in legend
 
 
-def test_setup_tab_status_names_the_tab(db, config_dir):
-    c = browser(config_dir)
-    for tab, name in (("models", "Models"), ("teams", "Teams and keys"), ("openrouter", "OpenRouter")):
-        line = c.get(f"/setup?tab={tab}").text.split('class="tab-status"')[1].split("</p>")[0]
-        assert f'aria-hidden="true"></span>{name}: ' in line
-
-
 def test_cost_page_bars_show_share_of_spend(db, config_dir):
     # summarise has the most calls, classify the most spend: the bars follow the money
     gw = FakeGateway([UsageRow(today(), "classify", "k", 1, 1, 1, 0.75),

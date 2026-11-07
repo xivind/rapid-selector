@@ -15,10 +15,6 @@
   <a href="/setup?tab={{ key }}"{% if l %} title="{{ name }}: {{ l.word }}"{% endif %}{% if tab == key %} aria-current="page"{% endif %}>{{ name }}{% if l %} <span class="dot {{ l.colour }}" aria-hidden="true"></span><span class="visually-hidden">{{ l.word }}</span>{% endif %}</a>
   {% endfor %}
 </nav>
-{% if tab_lights[{"teams": "teams_and_keys", "webui": "open_webui"}.get(tab, tab)] %}
-{% set l = tab_lights[{"teams": "teams_and_keys", "webui": "open_webui"}.get(tab, tab)] %}
-<p class="tab-status"><span class="lit"><span class="dot {{ l.colour }}" aria-hidden="true"></span>{{ {"models": "Models", "teams": "Teams and keys", "openrouter": "OpenRouter", "gateway": "Gateway", "webui": "Open WebUI", "secrets": "Secrets"}[tab] }}: {{ l.word }}</span></p>
-{% endif %}
 <p class="note legend-lights">{% for colour, word in (("go", "Ok"), ("caution", "Investigate"), ("stop", "Action required"), ("off", "No information: not run, not checked or cannot be read")) %}<span class="lit"><span class="dot {{ colour }}" aria-hidden="true"></span>{{ word }}</span>{% endfor %}</p>
 
 {% if tab == "models" %}
