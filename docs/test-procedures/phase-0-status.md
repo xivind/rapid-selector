@@ -1,22 +1,26 @@
 # Phase 0: where the walkthrough stands
 
-A handoff between sessions, written 2026-11-04 and last updated late on 2026-11-07. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+A handoff between sessions, written 2026-11-04 and last updated midday on 2026-11-07. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Where we are (end of 2026-11-07)
+## Where we are (midday 2026-11-07)
 
 - **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1–D8 and E1 are done and recorded in `docs/decisions.md`. **rapid-selector stays on `sandbox`** (owner). E2 moves to after tower part 1b. E3 (first real use from Node-RED) is open.
 - **D6:** the balance is not a hard stop: it went to −$0.19 across two drain runs; `CLAUDE.md` principle 1 now says "plus a small overshoot". On 2026-11-07 a line under the three layers says "hard" means enforced by OpenRouter, not exact to the cent (`docs/decisions.md`).
 - **D7:** $35 topped up; balance $34.81.
 - **D8 done:** both budget rules fired, emailed (after Mailgun was fixed and the rules paused and resumed) and cleared at 22:24. `experiments` is back at $24.
 - **Tower part 1a is built** on branch **`tower-part-1a`** (pushed; worktree `.worktrees/tower-part-1a` on this machine), subagent-driven: all 13 tasks reviewed, the final whole-branch review's fixes done and re-reviewed. 160 unit tests pass (`cd tower && uv run pytest`), and the third Docker run passed the whole level 1 suite (141 tests) at `5877b72` with no changes. The ledger is `.worktrees/tower-part-1a/.superpowers/sdd/2026-11-06-tower-part-1a/progress.md` (not in git). In `production`, branch **`rapidselector-tower`** (local only, not pushed) holds tower's backup job, Prometheus target and alert note, with a summary and description per rule (5 commits, 55b3781..8e36599; the checkout itself is back on `main`): merge it only when tower runs on `sandbox`, since its `jobs.conf` line fails the nightly run until the export word is installed there.
-- **Tower's look was revised on 2026-11-07** and the owner signed it off (`docs/decisions.md`): status panel, lights and badges, comparisons and ◆ on Cost and Usage, Setup in tabs. Built on `tower-part-1a` (`5f4f393..eece57e`), 203 unit tests pass, and the cloud Docker run at `eece57e` passed (203 unit, 141 level 1); the plan and its workspace are closed. Afterwards, by the owner's look (`docs/decisions.md`): lights differ in shape (`fee4518`), Cost bars show share of spend, a reconciliation note and a legend on Setup (`fb152b8`); 208 unit tests, CSS and templates only. Design `docs/superpowers/specs/2026-11-07-tower-look-revision-design.md`, plan `docs/superpowers/plans/2026-11-07-tower-look-revision.md` (done). To look at tower without Docker: `cd .worktrees/tower-part-1a/tower && uv run python tests/preview.py`, then `http://localhost:8765`, password `look`.
+- **Tower's look was revised on 2026-11-07** and the owner signed it off (`docs/decisions.md`): status panel, lights and badges, comparisons and ◆ on Cost and Usage, Setup in tabs. Built on `tower-part-1a` (`5f4f393..eece57e`), 203 unit tests pass, and the cloud Docker run at `eece57e` passed (203 unit, 141 level 1); the plan and its workspace are closed. Afterwards, by the owner's look (`docs/decisions.md`): lights differ in shape (`fee4518`), Cost bars show share of spend, a reconciliation note and a legend on Setup (`fb152b8`); 208 unit tests, CSS and templates only. Then a reason line inside a Setup tab when its light is yellow or red (`672a24e`), the open tab's status line removed (`9ef162b`), and the reason line starting with a capital (`791b2b9`, the branch's head). Design `docs/superpowers/specs/2026-11-07-tower-look-revision-design.md`, plan `docs/superpowers/plans/2026-11-07-tower-look-revision.md` (done). To look at tower without Docker: `cd .worktrees/tower-part-1a/tower && uv run python tests/preview.py`, then `http://localhost:8765`, password `look`.
 - **The real stack runs on `sandbox`.** Level 1 must not be run there. **Do not regenerate the secret `rapidselector`:** `LITELLM_SALT_KEY` must not change.
 
 ## Next, in order (the owner picks)
 
-1. **Tower's test procedure on `sandbox`**: `docs/test-procedures/tower-1a.md` (on the tower branch), one step at a time. First check `docker compose version` is v2.15 or later (`update` uses `--ignore-buildable`). It needs the four new secrets added with `scripts/add-tower-secrets.sh`, a management key created with a one-year expiry, and spends under $0.01 plus a few calls under $0.001.
-2. ~~Check the 06:00 backup of 2026-11-07~~: dropped by the owner. It is the first nightly run with the new export and `min_bytes`, but "Backup failed" (fire-tested, now that Mailgun works) emails if either job fails, so no email means it passed.
-3. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is on `phase-0-walkthrough` and gets tower when the owner switches it to the tower branch for the test procedure.
+1. **Tower's test procedure on `sandbox`** (`docs/test-procedures/tower-1a.md` on `tower-part-1a`), one step at a time. **Done and recorded:** step 0 (Compose v5.7.0), the switch to `tower-part-1a`, A1–A4, B1–B4, C1, C3 with A3. **Stopped in C2** (`docs/decisions.md`, "C2, cost against OpenRouter (in progress…)"): balance and totals match, but the per-day lines show two bugs in tower:
+   - **Bug 1, cause found, fix not made:** `reconcile_days` (`tower/tower/summary.py`) cuts the gateway's host to before the `/` (`_slug_host`), while OpenRouter's activity `provider_name` is the full endpoint tag (`siliconflow/fp8`), so every model shows as two lines. Fix test first with the real shape: compare the full tag on both sides, as `checks.py` does; fix the guessed sample in `tests/test_summary.py`; record the field's real form in `provider-facts.md`.
+   - **Bug 2, cause not found:** `gpt-oss-120b@coreweave`'s spend is missing on the gateway side, and `@deepinfra`'s is about that much larger (11-05 and 11-06). Three names share `openai/gpt-oss-120b` (`chat`, `gpt-oss-120b@deepinfra`, `gpt-oss-120b@coreweave`). **First, ask the owner for the evidence they had not yet given:** Usage page, month columns, calls and spend for those three names; the Cost page's reconciliation line; whether any per-day line is red. If Usage shows CoreWeave calls, the fault is in tower's mapping; if not, LiteLLM's `/user/daily/activity` files them under another name, which makes the Usage page wrong too and needs a look at LiteLLM's current docs. Use `superpowers:systematic-debugging`: no fix before the cause.
+   - After both fixes (tests first, all unit tests pass): push to `tower-part-1a`; the owner runs `git pull` and `./rapidselector.sh up --build tower` on `sandbox`, and C2 is repeated. A cloud Docker run is probably not needed for a change inside `summary.py`; say so and let the owner decide.
+   - **Then C4, C5, C6, D1–D4** (the smoke test spends under $0.01), **E1–E7** (the kill switch; under $0.001 each with the probe), **F1–F2**, **G1–G7** (`production`).
+2. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is now on `tower-part-1a`.
+3. **After the merge:** the README dry run, and two-factor authentication on the OpenRouter account (both in `docs/roadmap.md`, phase 1).
 4. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
 
 ## Things to remember
@@ -50,7 +54,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 |---|---|
 | Balance | About $4.91: $0.00000978 spent at B6 and $0.0932 at D1. $7.25 paid |
 | Inference key | `rapidselector-gateway`: limit $35 since D2, monthly reset. The value is in secrets-service, as `RAPIDSELECTOR_OPENROUTER_KEY` |
-| Management key | None. Only tower needs one, in phase 1 |
+| Management key | `rapidselector-tower`, created 2026-11-07, expires **2027-11-07** 09:41 UTC (set in `sandbox`'s `.env` as `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`, since tower cannot read it from the API). The value is in secrets-service, as `OPENROUTER_MANAGEMENT_KEY` |
 | Auto top-up | Off, and no card on file (Google Pay through Stripe) |
 | Zero data retention | All 5 toggles on, `ZDR only` under "All other models" and "Google" |
 | Data training and the 1% discount | All off |
@@ -58,7 +62,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on `phase-0-walkthrough`, pulled after D5. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
+- Clone at `/home/pi/code/rapid-selector`, on **`tower-part-1a`** since 2026-11-07, at `791b2b9`. Tower runs there (`http://sandbox:4020`, healthy, about 105 MiB or less). `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
 - `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
 - The real stack started at B2. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
 - All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.
@@ -74,7 +78,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ## Deferred, for the owner to decide
 
-Findings 20–25, 30, 32–36 and 38–40 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
+Findings 20–25, 30, 32–36 and 38–42 in `docs/decisions.md`. None blocks the procedure. If finding 33's timing checks fail on the Pi in a later run, widen them.
 
 ## For developers on this machine
 
