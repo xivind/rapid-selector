@@ -18,7 +18,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from tower import checks, killswitch, metrics, setup_view, status, store
 from tower.clients import GatewayClient, OpenRouterClient, Unavailable
 from tower.settings import Settings, load_settings
-from tower.summary import change, cost_summary, period_bounds, reconcile_days, usage_tables
+from tower.summary import change, cost_summary, period_bounds, reconcile_days, standouts, usage_tables
 
 HERE = Path(__file__).parent
 SESSION_MAX_AGE = 30 * 24 * 3600
@@ -136,7 +136,8 @@ def create_app(settings: Settings, *, gateway=None, openrouter=None, start_loop:
     app.state.openrouter = openrouter
     app.state.templates = Jinja2Templates(directory=HERE / "templates")
     app.state.templates.env.filters.update(usd=usd, when=when, stamp=stamp)
-    app.state.templates.env.globals.update(change=change, balance_low_usd=BALANCE_LOW_USD)
+    app.state.templates.env.globals.update(change=change, standouts=standouts,
+                                           balance_low_usd=BALANCE_LOW_USD)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,

@@ -344,6 +344,9 @@ input:focus { border-color: var(--amber); }
 .up::before { content: "\25B2  "; color: var(--amber); }
 .down::before { content: "\25BC  "; }
 .cmp { display: block; }
+/* A standout: more than twice the other names' average in its column (summary.standouts). */
+.hi { color: var(--amber); font-weight: 700; }
+.hi::after { content: " \25C6"; font-size: .85em; }
 
 /* Cost: four boxes in a row, plain text, no badges. */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; margin-top: 1.75rem; }

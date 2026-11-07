@@ -5,9 +5,12 @@ import pytest
 
 from tower.clients import UsageRow, Unavailable
 from tower.summary import (
+    Totals,
+    UsageLine,
     change,
     cost_summary,
     previous_stretches,
+    standouts,
     forecast,
     period_bounds,
     reconcile,
@@ -233,3 +236,37 @@ def test_cost_summary_yesterday_and_week_change():
 def test_cost_summary_gateway_unavailable_has_no_comparison():
     s = cost_summary(**_kw(usage=Unavailable("gateway", "x"), now=dt(2026, 11, 18, 12)))
     assert s.spend_yesterday_usd is None and s.week_change is None
+
+
+def _line(label, spend=0.0, calls=0, tin=0, tout=0, period="day"):
+    t = Totals(calls=calls, tokens_in=tin, tokens_out=tout, spend_usd=spend)
+    empty = Totals()
+    return UsageLine(label, t if period == "day" else empty, t if period == "week" else empty,
+                     t if period == "month" else empty)
+
+
+def test_standouts_per_column():
+    lines = [_line("classify", 0.12, 41, 4120, 824), _line("chat", 0.05, 3, 300, 600),
+             _line("summarise", 0.02, 4, 9800, 700), _line("code", 0.01, 2, 200, 5200)]
+    assert standouts(lines) == {("classify", "day", "spend_usd"), ("classify", "day", "calls"),
+                                ("summarise", "day", "tokens_in"), ("code", "day", "tokens_out")}
+
+
+def test_standouts_two_in_one_column():
+    lines = [_line(n, tin=v, period="week") for n, v in (("a", 29000), ("b", 4000), ("c", 30000), ("d", 3000))]
+    assert {x for x in standouts(lines) if x[2] == "tokens_in"} == {("a", "week", "tokens_in"),
+                                                                    ("c", "week", "tokens_in")}
+
+
+def test_standouts_even_marks_nothing():
+    lines = [_line(n, 0.81 - i * 0.1, 30, 300, 300) for i, n in enumerate("abcd")]
+    assert standouts(lines) == set()
+
+
+def test_standouts_needs_three_lines():
+    assert standouts([_line("a", 9.0), _line("b", 0.1)]) == set()
+
+
+def test_standouts_zero_is_never_marked():
+    marked = standouts([_line("a", 1.0), _line("b"), _line("c")])
+    assert marked == {("a", "day", "spend_usd")}

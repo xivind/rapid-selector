@@ -489,3 +489,16 @@ def test_setup_models_badges(db, config_dir):
 def test_setup_tab_light_word_on_hover(db, config_dir):
     text = browser(config_dir).get("/setup").text
     assert 'href="/setup?tab=secrets" title="Secrets: all set"' in text
+
+
+def test_usage_page_marks_standouts(db, config_dir):
+    t = today()
+    rows = [UsageRow(t, "classify", "node-red", 41, 4120, 824, 0.12),
+            UsageRow(t, "chat", "chat", 3, 300, 600, 0.05),
+            UsageRow(t, "summarise", "node-red", 4, 9800, 700, 0.02),
+            UsageRow(t, "code", "node-red", 2, 200, 5200, 0.01)]
+    text = browser(config_dir, FakeGateway(rows)).get("/usage").text
+    roles = text.split(">Roles<")[1].split("</section>")[0]
+    assert '<span class="hi">$0.12</span>' in roles and '<span class="hi">41</span>' in roles
+    assert '<span class="hi">9,800</span>' in roles and '<span class="hi">5,200</span>' in roles
+    assert '<span class="hi">$0.05</span>' not in roles

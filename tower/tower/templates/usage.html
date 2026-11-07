@@ -2,9 +2,10 @@
 {% from "macros/marks.html" import change_mark %}
 {% block main %}
 <h2 class="page-title">Usage</h2>
-<p class="lede">Calls, tokens and spend from the gateway, per role, per experiment name and per key. Today from {{ since.day|when }}, this week from {{ since.week|when }}, this month from {{ since.month|when }}. Under today: yesterday's figure. Under the week and the month: the change against the same days of the period before, ▲ more, ▼ less.</p>
+<p class="lede">Calls, tokens and spend from the gateway, per role, per experiment name and per key. Today from {{ since.day|when }}, this week from {{ since.week|when }}, this month from {{ since.month|when }}. Under today: yesterday's figure. Under the week and the month: the change against the same days of the period before, ▲ more, ▼ less. In amber with ◆: well above the other names in that column.</p>
 
 {% macro table(lines, empty) %}
+{% set marked = standouts(lines) %}
 {% if not lines %}
 <p class="note">{{ empty }}</p>
 {% else %}
@@ -13,10 +14,11 @@
     <thead><tr><th>name</th><th>period</th><th class="num">spend</th><th class="num">calls</th><th class="num">tokens in</th><th class="num">tokens out</th></tr></thead>
     {% for line in lines %}
     <tbody>
-      {% for period, t, b in (("today", line.day, line.yesterday), ("week", line.week, line.week_before), ("month", line.month, line.month_before)) %}
+      {% for period, key, t, b in (("today", "day", line.day, line.yesterday), ("week", "week", line.week, line.week_before), ("month", "month", line.month, line.month_before)) %}
       <tr>{% if loop.first %}<th rowspan="3" scope="rowgroup">{{ line.label }}</th>{% endif %}<td class="period">{{ period }}</td>
-        {%- for now, then, fmt in ((t.spend_usd, b.spend_usd, "usd"), (t.calls, b.calls, "int"), (t.tokens_in, b.tokens_in, "int"), (t.tokens_out, b.tokens_out, "int")) %}
-        <td class="num">{{ now|usd if fmt == "usd" else "{:,}".format(now) }}<span class="cmp">{% if period == "today" %}<span class="yday">yday {{ then|usd if fmt == "usd" else "{:,}".format(then) }}</span>{% else %}{{ change_mark(change(now, then)) }}{% endif %}</span></td>
+        {%- for column, now, then, fmt in (("spend_usd", t.spend_usd, b.spend_usd, "usd"), ("calls", t.calls, b.calls, "int"), ("tokens_in", t.tokens_in, b.tokens_in, "int"), ("tokens_out", t.tokens_out, b.tokens_out, "int")) %}
+        {%- set figure = now|usd if fmt == "usd" else "{:,}".format(now) %}
+        <td class="num">{% if (line.label, key, column) in marked %}<span class="hi">{{ figure }}</span>{% else %}{{ figure }}{% endif %}<span class="cmp">{% if period == "today" %}<span class="yday">yday {{ then|usd if fmt == "usd" else "{:,}".format(then) }}</span>{% else %}{{ change_mark(change(now, then)) }}{% endif %}</span></td>
         {%- endfor %}</tr>
       {% endfor %}
     </tbody>

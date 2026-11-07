@@ -314,3 +314,26 @@ def cost_summary(*, inference_key, credits, usage, models, global_budget, global
         smoke_test=smoke_test,
         missing=sorted(missing),
     )
+
+
+STANDOUT_FACTOR = 2.0
+STANDOUT_MIN_LINES = 3
+_PERIODS = ("day", "week", "month")
+_COLUMNS = ("spend_usd", "calls", "tokens_in", "tokens_out")
+
+
+def standouts(lines: list[UsageLine]) -> set[tuple[str, str, str]]:
+    """(label, period, column) of each figure above 0 that is more than twice the mean of the
+    other lines' figures in the same period and column. None in a table of under three lines."""
+    if len(lines) < STANDOUT_MIN_LINES:
+        return set()
+    out = set()
+    for period in _PERIODS:
+        for column in _COLUMNS:
+            values = [getattr(getattr(line, period), column) for line in lines]
+            total = sum(values)
+            for line, value in zip(lines, values):
+                others = (total - value) / (len(values) - 1)
+                if value > 0 and value > STANDOUT_FACTOR * others:
+                    out.add((line.label, period, column))
+    return out
