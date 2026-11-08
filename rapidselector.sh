@@ -4,6 +4,8 @@
 #   (up always runs detached)
 #   ./rapidselector.sh update   (pull new images, then recreate what changed)
 #   ./rapidselector.sh run-script scripts/setup-keys.sh   (run one of our scripts with the secrets)
+#   ./rapidselector.sh restart gateway   (checks gateway/config.yaml's rules first; refuses with
+#                                         exit 5 if one is broken; also for restart with no service)
 # Settings come from .env (or $RAPIDSELECTOR_ENV_FILE). Secrets come from .env or,
 # with SECRETS_SOURCE=secrets-service, from the secret "rapidselector" in secrets-service.
 set -euo pipefail
@@ -31,6 +33,26 @@ if [ "${1:-}" = "update" ]; then
   shift
   docker compose "$@" pull
   exec docker compose "$@" up -d
+fi
+
+# A model change is applied by restarting the gateway, so check the config's rules first
+# (scripts/check-prices.sh --rules-only, offline). A reboot or up still starts whatever it holds.
+if [ "${1:-}" = "restart" ]; then
+  named=()
+  skip=0
+  for arg in "${@:2}"; do
+    if [ "$skip" -eq 1 ]; then skip=0; continue; fi
+    case "$arg" in
+      -t | --timeout) skip=1 ;;
+      -*) ;;
+      *) named+=("$arg") ;;
+    esac
+  done
+  if [ "${#named[@]}" -eq 0 ] || [[ " ${named[*]} " == *" gateway "* ]]; then
+    "$RAPIDSELECTOR_ROOT/scripts/check-prices.sh" --rules-only \
+      "${RAPIDSELECTOR_GATEWAY_CONFIG:-$RAPIDSELECTOR_ROOT/gateway/config.yaml}" \
+      || die 5 "gateway not restarted: gateway/config.yaml breaks a rule"
+  fi
 fi
 
 exec docker compose "$@"

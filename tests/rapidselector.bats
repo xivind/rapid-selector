@@ -173,3 +173,45 @@ blob_json() {
   [ "$status" -eq 0 ]
   [[ "$output" != *v-* ]]
 }
+
+# rules_env [sed expression]: an env file with every secret, and RAPIDSELECTOR_GATEWAY_CONFIG
+# pointing at gateway/config.yaml with the expression applied (none: the real config).
+rules_env() {
+  sed -e "${1:-}" "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  export RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/config.yaml"
+}
+
+@test "restart gateway runs the rules check and then docker" {
+  rules_env
+  run "$REPO/rapidselector.sh" restart gateway
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart gateway" ]
+}
+
+@test "restart gateway with a broken rule exits 5 without calling docker" {
+  rules_env '0,/allow_fallbacks: false/s//allow_fallbacks: true/'
+  run "$REPO/rapidselector.sh" restart gateway
+  echo "$output"
+  [ "$status" -eq 5 ]
+  grep -q "^FAIL classify: allow_fallbacks must be false" <<<"$output"
+  grep -q "gateway not restarted: gateway/config.yaml breaks a rule" <<<"$output"
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "restart with no service checks the rules too" {
+  rules_env '0,/allow_fallbacks: false/s//allow_fallbacks: true/'
+  run "$REPO/rapidselector.sh" restart
+  [ "$status" -eq 5 ]
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "restart chat is not checked" {
+  rules_env '0,/allow_fallbacks: false/s//allow_fallbacks: true/'
+  run "$REPO/rapidselector.sh" restart chat
+  [ "$status" -eq 0 ]
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart chat" ]
+}
