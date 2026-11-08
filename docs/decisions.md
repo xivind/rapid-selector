@@ -394,6 +394,9 @@ Claude recommended leaving the build cache, since it also held `portainer-agent-
 ### 2026-11-08: Scripts instead of tower, procedure A8, the management key renamed
 In OpenRouter's dashboard, Management API Keys: `rapidselector-tower` renamed `rapidselector-scripts`. Its expiry still reads Nov 7, 2027, 10:41 AM GMT+1, which is the 09:41 UTC recorded at creation and in `sandbox`'s `.env` (`OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=2027-11-07`). The value did not change, so the secret `rapidselector` needs nothing; no script uses the key's name. The inference key `rapidselector-gateway` was not touched. No value was shown to Claude. Nothing spent.
 
+### 2026-11-09: Scripts instead of tower, procedure A9, Prometheus and Grafana
+In Prometheus on `home-assistant` (`http://home-assistant:9090/targets`): the job `rapidselector-gateway` is `UP`, and there is no tower target; `production`'s `prometheus/prometheus.yml` on `main` has no tower job either. In Grafana, Alerting → Alert rules: the group `LLM` holds the gateway's 8 rules, and the owner saw nothing about tower. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
