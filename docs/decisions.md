@@ -373,6 +373,9 @@ On `sandbox`: `git fetch` brought `phase-0-walkthrough` up to `37f19d2` (records
 ### 2026-11-08: Scripts instead of tower, procedure A3, tower's secrets removed and `KEY_SCRIPTS` added
 On `sandbox`, on the host (run as `bash scripts/cleanup-tower-secrets.sh`, which is the same script; it is executable in git): the first run printed `stored.` and 11 names with lengths: the 9 from phase 0 unchanged in name and length (`POSTGRES_PASSWORD` 64, `LITELLM_MASTER_KEY` 51, `LITELLM_SALT_KEY` 64, `LITELLM_UI_PASSWORD` 32, `RAPIDSELECTOR_OPENROUTER_KEY` 73, `WEBUI_SECRET_KEY` 64, `KEY_CHAT` 51, `KEY_NODE_RED` 51, `KEY_SMOKE_TEST` 51), then `OPENROUTER_MANAGEMENT_KEY` 73 and the new `KEY_SCRIPTS` 51; no `TOWER_*` field. The second run printed `nothing to change.` and the same 11, so it is safe to run twice. The salt key's length is unchanged; its value cannot be compared without seeing it, but the script copies every field it does not remove, and the containers keep their loaded values until the next `up`. No value was shown to Claude. Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A4, `TOWER_PORT` removed from `.env`
+On `sandbox`: the first `grep -n '^TOWER_\|^OPENROUTER_' .env` showed `11:TOWER_PORT=4020`, `14:OPENROUTER_INFERENCE_KEY_NAME=rapidselector-gateway` and `17:OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=2027-11-07`; `TOWER_PORT` was the only `TOWER_` line. After deleting it with `nano`, the same `grep` showed only the two `OPENROUTER_` lines, each one line up (13 and 16), so exactly one line went. Nothing restarted. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
