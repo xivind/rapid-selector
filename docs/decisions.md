@@ -364,6 +364,9 @@ Asked by the owner while `ops-scripts`' cloud run was going: after tower had no 
 **The cloud Docker run** (Task 12, the owner's claude.ai/code session on `ops-scripts`, amd64, Docker 29.9.2, jq 1.7, bats 1.11.0, LiteLLM v1.106.6, fake upstream only): the first run failed 3 tests in `tests/ops-logic.bats`, which compared numbers as jq prints them (jq 1.7 keeps the input's form, `32.0` and `0.000001`; jq 1.6 prints `32` and `1e-06`). The reports were right, and screen output is the same on both, since amounts go through `money`; `--prometheus` may print `32.0` on jq 1.7, which Prometheus reads. Fixed by comparing values (`26d5b38`); confirmed here on jq 1.6 (48/48). **Final run: `tests/run.sh`, all 19 files, 199 tests passed.** `SCRIPTS_ROLE` stays `proxy_admin_viewer`: the scripts' key reads every key's daily activity, `/team/info` and `/global/spend`, and is refused on write routes and model calls (`provider-facts.md`). The fixtures' shapes matched fresh answers, so they were not refreshed. Docker Hub answered 429 once on the sandbox's shared connection; the session pulled the images by hand and ran again, with no change to the repository. Nothing spent.
 **Not yet verified:** anything on `sandbox` or with real OpenRouter figures: the owner's procedure, next.
 
+### 2026-11-08: Scripts instead of tower, procedure A1, tower's container removed
+On `sandbox`, with the clone still on `tower-part-1a`: `docker rm -f rapidselector-tower` printed the name once; `./rapidselector.sh ps` then showed `chat` (up 7 hours, after the 06:00 backup), `db` and `gateway` (up 2 days), all `healthy`, with their ports as before (`192.168.1.212:4010` and `:4000`; `db` none), and no tower. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
