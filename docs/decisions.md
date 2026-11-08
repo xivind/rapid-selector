@@ -370,6 +370,9 @@ On `sandbox`, with the clone still on `tower-part-1a`: `docker rm -f rapidselect
 ### 2026-11-08: Scripts instead of tower, procedure A2, the clone on `ops-scripts`
 On `sandbox`: `git fetch` brought `phase-0-walkthrough` up to `37f19d2` (records only; `ops-scripts` was already known there). `git switch ops-scripts` printed `branch 'ops-scripts' set up to track 'origin/ops-scripts'.` and `Switched to a new branch 'ops-scripts'`, with no complaint about local changes; `git log -1 --oneline` showed `26d5b38 (HEAD -> ops-scripts, origin/ops-scripts) ops-scripts: cloud Docker run: number checks work on jq 1.7, scripts' role confirmed`, the commit expected. The running stack was not touched. Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A3, tower's secrets removed and `KEY_SCRIPTS` added
+On `sandbox`, on the host (run as `bash scripts/cleanup-tower-secrets.sh`, which is the same script; it is executable in git): the first run printed `stored.` and 11 names with lengths: the 9 from phase 0 unchanged in name and length (`POSTGRES_PASSWORD` 64, `LITELLM_MASTER_KEY` 51, `LITELLM_SALT_KEY` 64, `LITELLM_UI_PASSWORD` 32, `RAPIDSELECTOR_OPENROUTER_KEY` 73, `WEBUI_SECRET_KEY` 64, `KEY_CHAT` 51, `KEY_NODE_RED` 51, `KEY_SMOKE_TEST` 51), then `OPENROUTER_MANAGEMENT_KEY` 73 and the new `KEY_SCRIPTS` 51; no `TOWER_*` field. The second run printed `nothing to change.` and the same 11, so it is safe to run twice. The salt key's length is unchanged; its value cannot be compared without seeing it, but the script copies every field it does not remove, and the containers keep their loaded values until the next `up`. No value was shown to Claude. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
