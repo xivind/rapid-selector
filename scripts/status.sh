@@ -33,21 +33,29 @@ esac
 [ "$#" -le 1 ] || die 2 "$USAGE"
 require_management_key status.sh
 require_env KEY_SCRIPTS RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
+expires="${OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT:-}"
+if [ -n "$expires" ] && { ! [[ "$expires" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || ! date -u -d "$expires" >/dev/null 2>&1; }; then
+  die 2 "OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT in .env must be a date like 2027-11-07, not: $expires"
+fi
 
 credits="$(or_read /credits)" || die 2 "cannot read OpenRouter's credits"
 keys="$(or_read '/keys?include_disabled=true')" || die 2 "cannot read OpenRouter's key list"
 key_name="${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}"
-hash="$(inference_key_hash "$keys")" || die 2 "no key named $key_name in OpenRouter's key list"
+hash="$(inference_key_hash "$keys")" || die 2 "cannot find the inference key $key_name (see above)"
 key="$(or_read "/keys/$hash")" || die 2 "cannot read OpenRouter's key $key_name"
 global="$(gw_read /global/spend)" || die 2 "cannot read the gateway's global spend"
 teams="[]"
 for team in "${TEAMS[@]}"; do
   info="$(gw_read "/team/info?team_id=$team")" || die 2 "cannot read the gateway's team $team"
+  # Only the fields status.jq reads, through stdin: the full answer holds the team's whole key
+  # list, which can pass the 128 KiB a command-line argument may hold.
+  info="$(jq -c '{team_info: (.team_info | {team_id, spend, max_budget, budget_reset_at})}' <<<"$info")" \
+    || die 2 "unexpected answer for team $team"
   teams="$(jq -c --argjson t "$info" '. + [$t]' <<<"$teams")" || die 2 "unexpected answer for team $team"
 done
 
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-report="$(jq -n --arg now "$now" --arg expires "${OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT:-}" --arg key_name "$key_name" \
+report="$(jq -n --arg now "$now" --arg expires "$expires" --arg key_name "$key_name" \
   --argjson credits "$credits" --argjson key "$key" --argjson global "$global" --argjson teams "$teams" \
   -f "$ROOT/scripts/jq/status.jq")" || die 2 "unexpected answer from OpenRouter or the gateway (see above)"
 

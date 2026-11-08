@@ -118,6 +118,7 @@ def default_gateway():
         "pages": [],  # GET /user/daily/activity?page=N answers pages[N-1], has_more while more follow
         "global": {"spend": 0, "max_budget": 32},
         "teams": {"permanent": 8, "experiments": 24},  # team id: max_budget
+        "team_keys": 0,  # how many key rows each /team/info answer carries in .keys, as the real one does
     }
 
 
@@ -238,7 +239,9 @@ class Handler(BaseHTTPRequestHandler):
                 if team not in gw["teams"]:
                     self._send_json(404, {"error": "team not found"})
                 else:
-                    self._send_json(200, {"team_id": team, "team_info": {
+                    keys = [{"token": f"{i:064x}", "key_alias": f"key-{i}", "team_id": team, "spend": 0,
+                             "models": [], "metadata": {"note": "x" * 200}} for i in range(gw["team_keys"])]
+                    self._send_json(200, {"team_id": team, "keys": keys, "team_info": {
                         "team_id": team, "team_alias": team, "spend": 0, "max_budget": gw["teams"][team],
                         "budget_duration": "30d", "budget_reset_at": next_month_start()}})
             else:

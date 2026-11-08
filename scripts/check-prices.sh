@@ -44,7 +44,7 @@ mapfile -t entries < <(awk '
   }
   function set(f, value) { if (f in v) dup[f] = 1; v[f] = (value == "" ? "-" : value) }
   function first(  s) { s = rest; sub(/^[ ]+/, "", s); split(s, w, /[ ]+/); return w[1] }
-  function list(  s) { s = rest; gsub(/[][" ]/, "", s); return s }
+  function list(  s) { s = rest; sub(/[ ]+#.*$/, "", s); gsub(/[][" ]/, "", s); return s }
   /^model_list:/ { inlist = 1; next }
   inlist && /^[^ #]/ { out(); inlist = 0 }
   !inlist || /^[ ]*(#|$)/ { next }

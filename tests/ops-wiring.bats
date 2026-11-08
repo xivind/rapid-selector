@@ -73,3 +73,19 @@ post_file() {
   [ -s "$dir/rapidselector_status.prom" ]
   [ -s "$dir/rapidselector_reconcile.prom" ]
 }
+
+@test "status.sh names a malformed expiry date" {
+  OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=07.11.2027 run_wired scripts/status.sh
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT"* ]]
+  [[ "$output" == *"07.11.2027"* ]]
+}
+
+@test "status.sh reads team answers larger than one argument" {
+  # 600 keys in each team's answer, about 200 KB each, as a busy gateway's /team/info could be.
+  curl -sS -X POST "$FAKE_UPSTREAM_URL/_gateway" -d '{"team_keys": 600}' >/dev/null
+  [ "$(curl -sS "$FAKE_UPSTREAM_URL/team/info?team_id=permanent" | wc -c)" -gt 131072 ]
+  run_wired scripts/status.sh
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Team permanent"* ]]
+}

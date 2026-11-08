@@ -43,7 +43,7 @@ last="$(date -u -d "$today - 1 day" +%F)"
 
 keys="$(or_read '/keys?include_disabled=true')" || die 2 "cannot read OpenRouter's key list"
 key_name="${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}"
-hash="$(inference_key_hash "$keys")" || die 2 "no key named $key_name in OpenRouter's key list"
+hash="$(inference_key_hash "$keys")" || die 2 "cannot find the inference key $key_name (see above)"
 activity="$(or_read "/activity?api_key_hash=$hash")" || die 2 "cannot read OpenRouter's activity"
 
 # The answers go to jq as files, not arguments: a month of them is far past the 128 KiB a single

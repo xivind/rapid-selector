@@ -212,3 +212,15 @@ reorder_summarise() {
   broken_config 's/^\(          \)zdr: true$/\1zdr: true\n\1zdr: false/'
   rules_fail "cannot read zdr"
 }
+
+@test "rules: a comment after order is ignored" {
+  broken_config 's@^\( *\)order: \["deepinfra/fp8"\]$@\1order: ["deepinfra/fp8"]  # pinned@'
+  [ "$(grep -c '# pinned' "$BATS_TEST_TMPDIR/config.yaml")" = "1" ]
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 0 ]
+  # The price part matches the same tag.
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 0 ]
+}

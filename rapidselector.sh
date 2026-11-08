@@ -15,7 +15,7 @@ export RAPIDSELECTOR_ROOT
 # shellcheck source=SCRIPTDIR/scripts/lib.sh
 . "$RAPIDSELECTOR_ROOT/scripts/lib.sh"
 
-load_settings_and_secrets
+if [ "${1:-}" = "run-script" ]; then load_settings_and_secrets with-optional; else load_settings_and_secrets; fi
 
 if [ "${1:-}" = "run-script" ]; then
   shift
@@ -49,9 +49,11 @@ if [ "${1:-}" = "restart" ]; then
     esac
   done
   if [ "${#named[@]}" -eq 0 ] || [[ " ${named[*]} " == *" gateway "* ]]; then
+    rules=0
     "$RAPIDSELECTOR_ROOT/scripts/check-prices.sh" --rules-only \
-      "${RAPIDSELECTOR_GATEWAY_CONFIG:-$RAPIDSELECTOR_ROOT/gateway/config.yaml}" \
-      || die 5 "gateway not restarted: gateway/config.yaml breaks a rule"
+      "${RAPIDSELECTOR_GATEWAY_CONFIG:-$RAPIDSELECTOR_ROOT/gateway/config.yaml}" || rules=$?
+    [ "$rules" -ne 1 ] || die 5 "gateway not restarted: gateway/config.yaml breaks a rule"
+    [ "$rules" -eq 0 ] || die 5 "gateway not restarted: the rules check could not read the config"
   fi
 fi
 

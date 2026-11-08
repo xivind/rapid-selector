@@ -16,23 +16,28 @@ mkdir -p "$ARTIFACTS"
 # shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$REPO/scripts/lib.sh"
 
-# Write tests/.artifacts/test.env with test settings and random secrets, unless it exists.
+# Write tests/.artifacts/test.env with test settings and random secrets. A file from an older
+# run keeps its values and gains any secret name added since, so the stack tests do not fail
+# on a missing value.
 ensure_test_env() {
-  [ -f "$TEST_ENV_FILE" ] && return 0
-  {
-    echo "RAPIDSELECTOR_LAN_ADDRESS=127.0.0.1"
-    echo "GATEWAY_PORT=${GATEWAY_PORT}"
-    echo "CHAT_PORT=4010"
-    echo "SECRETS_SOURCE=env"
-    local name
-    # The optional management key too: the scripts' tests and the fake OpenRouter need it.
-    for name in "${RAPIDSELECTOR_SECRETS[@]}" "${RAPIDSELECTOR_OPTIONAL_SECRETS[@]}"; do
-      case "$name" in
-        KEY_*) echo "$name=sk-test-$(openssl rand -hex 16)" ;;
-        *) echo "$name=$(openssl rand -hex 24)" ;;
-      esac
-    done
-  } > "$TEST_ENV_FILE"
+  local name
+  if [ ! -f "$TEST_ENV_FILE" ]; then
+    {
+      echo "RAPIDSELECTOR_LAN_ADDRESS=127.0.0.1"
+      echo "GATEWAY_PORT=${GATEWAY_PORT}"
+      echo "CHAT_PORT=4010"
+      echo "SECRETS_SOURCE=env"
+    } > "$TEST_ENV_FILE"
+  fi
+  # The optional management key too: the scripts' tests and the fake OpenRouter need it.
+  for name in "${RAPIDSELECTOR_SECRETS[@]}" "${RAPIDSELECTOR_OPTIONAL_SECRETS[@]}"; do
+    grep -q "^$name=." "$TEST_ENV_FILE" && continue
+    sed -i "/^$name=\$/d" "$TEST_ENV_FILE"
+    case "$name" in
+      KEY_*) echo "$name=sk-test-$(openssl rand -hex 16)" ;;
+      *) echo "$name=$(openssl rand -hex 24)" ;;
+    esac >> "$TEST_ENV_FILE"
+  done
 }
 
 # Read one value from the test env file.

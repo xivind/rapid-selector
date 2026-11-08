@@ -73,23 +73,29 @@ load_secrets_from_service() {
   http_status="${response##*$'\n'}"
   body="${response%$'\n'*}"
   [ "$http_status" = "200" ] || die 4 "secrets-service returned HTTP $http_status for the secret rapidselector"
+  jq -e '.blob | type == "object"' <<<"$body" >/dev/null 2>&1 \
+    || die 4 "secrets-service returned no fields for the secret rapidselector"
   for name in "${RAPIDSELECTOR_SECRETS[@]}"; do
     value="$(jq -r --arg k "$name" '.blob[$k] // empty' <<<"$body")"
     [ -n "$value" ] || die 3 "the secret rapidselector has no field $name"
     export "$name=$value"
   done
+  # Optional secrets only for run-script, the only command whose scripts use them.
+  [ "${1:-}" = "with-optional" ] || return 0
   for name in "${RAPIDSELECTOR_OPTIONAL_SECRETS[@]}"; do
     value="$(jq -r --arg k "$name" '.blob[$k] // empty' <<<"$body")"
     export "$name=$value"
   done
 }
 
-# load_settings_and_secrets: read the settings file, then the secrets from the configured source.
+# load_settings_and_secrets [with-optional]: read the settings file, then the secrets from the
+# configured source; the optional ones from secrets-service only with "with-optional" (in env
+# mode every line of .env is read anyway, and docker compose reads .env itself too).
 load_settings_and_secrets() {
   load_env_file "${RAPIDSELECTOR_ENV_FILE:-$RAPIDSELECTOR_ROOT/.env}"
   case "${SECRETS_SOURCE:-env}" in
     env) require_env "${RAPIDSELECTOR_SECRETS[@]}" ;;
-    secrets-service) load_secrets_from_service ;;
+    secrets-service) load_secrets_from_service "${1:-}" ;;
     *) die 2 "SECRETS_SOURCE must be env or secrets-service" ;;
   esac
 }
@@ -112,10 +118,22 @@ api() {
 }
 
 # inference_key_hash <GET /api/v1/keys answer>: print the hash of the key named
-# $OPENROUTER_INFERENCE_KEY_NAME (default rapidselector-gateway); return 1 if there is none.
+# $OPENROUTER_INFERENCE_KEY_NAME (default rapidselector-gateway). Returns 1, saying why on
+# stderr, when no key or more than one key has that name.
 inference_key_hash() {
-  NAME="${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}" \
-    jq -er '[.data[] | select(.name == env.NAME) | .hash] | if length == 1 then .[0] else empty end' <<<"$1" || return 1
+  local name="${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}" hashes count
+  hashes="$(NAME="$name" jq -r '.data[] | select(.name == env.NAME) | .hash' <<<"$1")" || return 1
+  count="$(grep -c . <<<"$hashes" || true)"
+  if [ "$count" -eq 1 ]; then
+    printf '%s\n' "$hashes"
+    return 0
+  fi
+  if [ "$count" -eq 0 ]; then
+    echo "rapidselector: no key named $name in OpenRouter's key list" >&2
+  else
+    echo "rapidselector: $count keys named $name in OpenRouter's key list: give the gateway's key a name of its own" >&2
+  fi
+  return 1
 }
 
 # read_url <url> <key> <source name>: GET with the key as a header file, so it is in no process

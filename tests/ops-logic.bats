@@ -46,6 +46,16 @@ warning_with() {
   [ "$(status_report | jq -c '.key | [.name, .limit_usd, .remaining_usd, .usage_month_usd, .limit_reset]')" = '["rapidselector-gateway",35,28,7,"monthly"]' ]
 }
 
+@test "status: two keys with the inference key's name are refused and named" {
+  keys="$(jq -c '.data += [.data[1] | .hash = "hash-copy"]' "$FX/openrouter-keys.json")"
+  run inference_key_hash "$keys"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"2 keys named rapidselector-gateway"* ]]
+  run inference_key_hash "$(cat "$FX/openrouter-keys.json")"
+  [ "$output" = "hash-gateway" ]
+}
+
 @test "status: forecast for the month" {
   # 7.00 used in the 14.5 days from 1 November 00:00 to 15 November 12:00, a 30-day month.
   [ "$(status_report | jq '.forecast_month_usd * 100 | round')" = "1448" ]
@@ -185,4 +195,14 @@ C2_GATEWAY='{"2026-11-06": {"openai/gpt-oss-120b": 0.001018, "qwen/qwen3.8-2.4t-
   # Lines: newest day first, then by model.
   [ "$(jq -c '[.lines[] | "\(.day) \(.model)"]' <<<"$report")" \
     = '["2026-11-06 openai/gpt-oss-120b","2026-11-06 qwen/qwen3.8-2.4t-a95b","2026-11-05 meta-llama/llama-3.2-1b-instruct","2026-11-05 openai/gpt-oss-120b"]' ]
+}
+
+@test "test settings gain the secret names added since they were written" {
+  TEST_ENV_FILE="$BATS_TEST_TMPDIR/test.env"
+  printf '%s\n' "RAPIDSELECTOR_LAN_ADDRESS=127.0.0.1" "KEY_CHAT=sk-test-old" > "$TEST_ENV_FILE"
+  ensure_test_env
+  grep -qx "KEY_CHAT=sk-test-old" "$TEST_ENV_FILE"
+  for name in "${RAPIDSELECTOR_SECRETS[@]}" "${RAPIDSELECTOR_OPTIONAL_SECRETS[@]}"; do
+    [ "$(grep -c "^$name=." "$TEST_ENV_FILE")" = "1" ] || { echo "not once: $name"; false; }
+  done
 }
