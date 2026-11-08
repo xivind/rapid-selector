@@ -1,8 +1,10 @@
 # Phase 0: where the walkthrough stands
 
-A handoff between sessions, written 2026-11-04 and last updated in the afternoon of 2026-11-07. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
+A handoff between sessions, written 2026-11-04 and last updated on 2026-11-08. Update "Next step" and the state tables as steps finish, and delete this file when phase 0 is verified. Results themselves go in `docs/decisions.md`; this file only says where we are.
 
-## Where we are (midday 2026-11-07)
+## Where we are (2026-11-08)
+
+- **Tower is dropped** (owner, 2026-11-07/08, `docs/decisions.md`: "Tower paused…" and "Scripts instead of tower, designed and approved"). It is replaced by operator scripts: design `docs/superpowers/specs/2026-11-08-scripts-instead-of-tower-design.md`, plan `docs/superpowers/plans/2026-11-08-scripts-instead-of-tower.md` (15 tasks). The two tower paragraphs below describe what is still on `sandbox`, in `production` and on this machine until the plan's cleanup removes it; tower keeps running read-only on `sandbox` until then.
 
 - **Phase 0:** A1–A3, B1a, B1–B6, C1–C5, D1–D8 and E1 are done and recorded in `docs/decisions.md`. **rapid-selector stays on `sandbox`** (owner). E2 moves to after tower part 1b. E3 (first real use from Node-RED) is open.
 - **D6:** the balance is not a hard stop: it went to −$0.19 across two drain runs; `CLAUDE.md` principle 1 now says "plus a small overshoot". On 2026-11-07 a line under the three layers says "hard" means enforced by OpenRouter, not exact to the cent (`docs/decisions.md`).
@@ -14,10 +16,10 @@ A handoff between sessions, written 2026-11-04 and last updated in the afternoon
 
 ## Next, in order (the owner picks)
 
-1. **Tower is paused; brainstorm its replacement** (`docs/decisions.md`, "Tower paused; its place to be reconsidered", and the entry before it with bug 2's cause in LiteLLM). Tower's test procedure stopped in C2 after A1–A4, B1–B4, C1, C3; neither per-day bug is fixed. The brainstorm covers the script set (cost, reconciliation, kill switch, maybe a guarded model change), promptfoo for benchmarking, the owner's middle way (a small container running the scripts behind one page), and what is archived or changed (`CLAUDE.md`, requirements, roadmap, `tower-part-1a`, the tower container on `sandbox`, `production`'s `rapidselector-tower` branch). Until it ends, tower keeps running read-only on `sandbox`.
-2. **Merging:** `phase-0-walkthrough` into `main`, then `tower-part-1a`, when the owner says; open the PRs then. `sandbox` is now on `tower-part-1a`.
+1. **Build the plan `docs/superpowers/plans/2026-11-08-scripts-instead-of-tower.md`, native** (the owner's choice, 2026-11-08): Claude implements every task in the session with `superpowers:executing-plans`, tests first, in a worktree `.worktrees/ops-scripts` on a new branch `ops-scripts` from `phase-0-walkthrough`; one fresh reviewer on the whole branch at the end (Task 13). Tasks 1–11 on this machine (no Docker: only `tests/ops-logic.bats`, `tests/checks.bats` and `bash -n` run here); Task 12 is a cloud Docker run in a claude.ai/code session the owner opens; then the owner's procedure `docs/test-procedures/ops-scripts.md` on `sandbox` (cleanup first, **only after the build is pushed and tested**), Grafana's alerts and dashboard from a `production` session (Task 14), and the onboarding to LiteLLM and OpenRouter together (Task 15). Records go on `phase-0-walkthrough`.
+2. **Merging:** `phase-0-walkthrough` into `main`, then `ops-scripts`, when the owner says; open the PRs then. `tower-part-1a` is never merged: it is deleted in the cleanup, with no tag. `sandbox` is on `tower-part-1a` until the cleanup's step A2.
 3. **After the merge:** the README dry run, and two-factor authentication on the OpenRouter account (both in `docs/roadmap.md`, phase 1).
-4. **Tower part 1b's plan**, after 1a has passed on `sandbox`.
+4. **Benchmarking:** Open WebUI's arena and promptfoo, a brainstorm of its own after the plan (`docs/roadmap.md`). Tower part 1b is dropped.
 
 ## Things to remember
 
