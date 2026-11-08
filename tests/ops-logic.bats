@@ -109,3 +109,80 @@ warning_with() {
   [ "$(jq -nc -L "$REPO/scripts/jq" 'include "common"; [19.3, 0.0012, 0.000001, -0.19, 0, null] | map(money)')" \
     = '["$19.30","$0.0012","$0.000001","-$0.19","$0.00","-"]' ]
 }
+
+# gateway_page <{"YYYY-MM-DD": {"<model id>": spend}}> [has_more]: a /user/daily/activity page
+# in the saved page's shape, with one result per day and these models' spend.
+gateway_page() {
+  jq -c --argjson days "$1" --argjson more "${2:-false}" '
+    .results[0] as $r | ($r.breakdown.models | to_entries[0].value) as $m
+    | .metadata.has_more = $more
+    | .results = [$days | to_entries[] | .key as $day | .value as $models
+        | $r | .date = $day
+        | .breakdown.models = ($models | with_entries(.value as $s | .key |= "openrouter/" + . | .value = ($m | .metrics.spend = $s)))]
+  ' "$FX/gateway-daily-activity.json"
+}
+
+# reconcile_report <gateway pages json> [activity data json] [first] [last]: reconcile.jq.
+reconcile_report() {
+  jq -n --argjson gateway "$1" --argjson activity "${2:-$(jq -c .data "$FX/openrouter-activity.json")}" \
+    --arg first "${3:-2026-11-01}" --arg last "${4:-2026-11-07}" -f "$REPO/scripts/jq/reconcile.jq"
+}
+
+# line <report> <day> <model>: that line of the report, compact, amounts rounded to 6 decimals.
+line() {
+  jq -c --arg d "$2" --arg m "$3" '.lines[] | select(.day == $d and .model == $m)
+    | (.gateway_usd, .openrouter_usd, .diff_usd) |= (. * 1e6 | round / 1e6)' <<<"$1"
+}
+
+C2_GATEWAY='{"2026-11-06": {"openai/gpt-oss-120b": 0.001018, "qwen/qwen3.8-2.4t-a95b": 5.10},
+  "2026-11-05": {"openai/gpt-oss-120b": 0.000020, "meta-llama/llama-3.2-1b-instruct": 0.000001}}'
+
+@test "reconcile: two hosts of one model meet the gateway's one line" {
+  report="$(reconcile_report "[$(gateway_page "$C2_GATEWAY")]")"
+  [ "$(line "$report" 2026-11-06 openai/gpt-oss-120b)" \
+    = '{"day":"2026-11-06","model":"openai/gpt-oss-120b","gateway_usd":0.001018,"openrouter_usd":0.001014,"diff_usd":4e-06,"flagged":false}' ]
+}
+
+@test "reconcile: a large difference is flagged" {
+  activity="$(jq -c '.data | map(if .model == "qwen/qwen3.8-2.4t-a95b" then .usage = 4.80 else . end)' "$FX/openrouter-activity.json")"
+  report="$(reconcile_report "[$(gateway_page "$C2_GATEWAY")]" "$activity")"
+  [ "$(line "$report" 2026-11-06 qwen/qwen3.8-2.4t-a95b | jq -c '[.diff_usd, .flagged]')" = "[0.3,true]" ]
+  [ "$(jq '.flagged' <<<"$report")" = "1" ]
+  [ "$(jq '.max_abs_diff_usd * 100 | round' <<<"$report")" = "30" ]
+}
+
+@test "reconcile: under the floor is not flagged" {
+  report="$(reconcile_report "[$(gateway_page '{"2026-11-04": {"openai/gpt-oss-20b": 0.04}}')]")"
+  [ "$(line "$report" 2026-11-04 openai/gpt-oss-20b | jq -c '[.gateway_usd, .openrouter_usd, .flagged]')" = "[0.04,0,false]" ]
+}
+
+@test "reconcile: a model on one side only keeps its line" {
+  report="$(reconcile_report "[$(gateway_page "$C2_GATEWAY")]")"
+  [ "$(line "$report" 2026-11-05 meta-llama/llama-3.2-1b-instruct | jq -c '[.gateway_usd, .openrouter_usd, .flagged]')" = "[1e-06,0,false]" ]
+  [ "$(jq '.flagged' <<<"$report")" = "0" ]
+}
+
+@test "reconcile: every page is added" {
+  page1="$(jq -c '.metadata.has_more = true' "$FX/gateway-daily-activity.json")"
+  report="$(reconcile_report "[$page1, $(cat "$FX/gateway-daily-activity-page2.json")]")"
+  [ "$(line "$report" 2026-11-06 meta-llama/llama-3.2-1b-instruct | jq '.gateway_usd')" = "1e-06" ]
+  [ "$(line "$report" 2026-11-06 mistralai/mistral-small-3.2-24b-instruct | jq '.gateway_usd')" = "3.5e-05" ]
+  # The same day and model on two pages is added up.
+  report="$(reconcile_report "[$page1, $page1]")"
+  [ "$(line "$report" 2026-11-06 mistralai/mistral-small-3.2-24b-instruct | jq '.gateway_usd')" = "7e-05" ]
+}
+
+@test "reconcile: rows outside the window are left out" {
+  report="$(reconcile_report "[$(gateway_page '{"2026-10-31": {"openai/gpt-oss-120b": 1}}')]")"
+  [ "$(jq -c '[.lines[].day] | unique' <<<"$report")" = '["2026-11-05","2026-11-06"]' ]
+}
+
+@test "reconcile: day totals add the lines" {
+  report="$(reconcile_report "[$(gateway_page "$C2_GATEWAY")]")"
+  [ "$(jq -c '[.days[].day]' <<<"$report")" = '["2026-11-06","2026-11-05"]' ]
+  [ "$(jq -c '.days[0] | (.gateway_usd, .openrouter_usd) |= (. * 1e6 | round / 1e6) | [.gateway_usd, .openrouter_usd, .flagged]' <<<"$report")" \
+    = "[5.101018,5.101014,false]" ]
+  # Lines: newest day first, then by model.
+  [ "$(jq -c '[.lines[] | "\(.day) \(.model)"]' <<<"$report")" \
+    = '["2026-11-06 openai/gpt-oss-120b","2026-11-06 qwen/qwen3.8-2.4t-a95b","2026-11-05 meta-llama/llama-3.2-1b-instruct","2026-11-05 openai/gpt-oss-120b"]' ]
+}
