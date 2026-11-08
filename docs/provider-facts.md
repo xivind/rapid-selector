@@ -47,6 +47,10 @@ Sources: https://openrouter.ai/docs/guides/overview/auth/management-api-keys, ht
 - **Account settings:** no endpoint for zero data retention, allowed providers, data training or auto top-up. `/api/v1/organization/settings` exists, but has only a model-catalog filter and returns 404 for a personal account.
 - **Expiry:** fixed at creation and cannot be changed; afterwards every request gets `401` "API key expired". A non-management key on these routes gets 403 "Only management keys can perform this operation".
 
+### Low balance and latency, 2026-11-08
+Source: the owner, then https://openrouter.ai/docs/features/latency-and-performance (credit balance section).
+- OpenRouter makes extra database checks when the balance is low ("single digit dollars") or a key is near its credit limit, and expires caches more aggressively, which adds latency until credits are added. Its suggested fix, auto top-up with a higher threshold, is ruled out here (`CLAUDE.md`, principle 1). No exact threshold is given beyond "single digit", so `status.sh` warns below $10 (planned, `2026-11-08-scripts-instead-of-tower-design.md`). Speed measured in these conditions is not comparable.
+
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
 - **$5.00 of credit cost $7.25** from Norway, and the balance showed exactly $5.00. The breakdown was not read from the receipt. ($5 + $0.80) × 1.25 gives exactly $7.25, while 5.5% and 25% VAT alone would give $6.59, so a minimum fee of about $0.80 is likely. The pricing page does not state one.

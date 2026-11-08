@@ -1,6 +1,6 @@
 # Scripts instead of tower
 
-A project that replaces `tower` with a small set of curated operator scripts, their documentation and procedures, and cleans up what tower leaves behind. Status: draft for the owner, 2026-11-08, after the builder check. Replaces `2026-11-05-tower-part-1a-design.md`, `2026-11-05-tower-part-1b-design.md` and `2026-11-07-tower-look-revision-design.md` (kept as history). Background: `docs/decisions.md`, "Tower paused; its place to be reconsidered" and the entry before it.
+A project that replaces `tower` with a small set of curated operator scripts, their documentation and procedures, and cleans up what tower leaves behind. Status: draft for the owner, 2026-11-08, after the builder check. Replaces tower's designs and plans, which are deleted (owner: no historic documents kept just to keep them). Background: `docs/decisions.md`, "Tower paused; its place to be reconsidered" and the entry before it.
 
 ## Why
 
@@ -53,7 +53,9 @@ Tower part 1a mostly showed again what LiteLLM's admin UI, OpenRouter's dashboar
 - Prometheus output and an hourly cron job feeding Grafana (owner: "That fits very well").
 - Model-change guard, option c: `restart gateway` refuses on a broken rule; prices stay a step.
 - Bare-bones and extended modes, both supported.
-- Cleanup approach A. `tower-part-1a` is deleted when done (Claude's call, open to the owner: tag its last commit `archive/tower-part-1a` first).
+- Cleanup approach A. `tower-part-1a` is deleted when done, with no archive tag, and no tower document is kept: only the facts we need are carried over.
+- `status.sh` warns below $10 of balance (see `status.sh`).
+- A line in `CLAUDE.md` that the chosen stack covers our needs, with a reference to principle 5.
 
 ## The design
 
@@ -89,7 +91,7 @@ Asked for by the owner, 2026-11-08: every part of this design works in both.
 
 Reads, with the management key: `GET /api/v1/credits` (balance = `total_credits` − `total_usage`) and the inference key's row (`GET /api/v1/keys?include_disabled=true`, matched by `OPENROUTER_INFERENCE_KEY_NAME`, then `GET /api/v1/keys/{hash}`): limit, remaining, usage today, this week and this month, `disabled`, and the limit's reset. With `KEY_SCRIPTS`: `/global/spend` (spend against the global budget) and `/team/info` for `permanent` and `experiments` (spend, budget, `budget_reset_at`). From `.env`: `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`.
 
-Prints one short screen in plain words: balance, key limit and usage, a month forecast (this month's usage ÷ days elapsed × days in the month), global and team spend against budget, reset dates, and the management key's days left. Exit `1` when: the balance is below $2 (tower's threshold; a variable at the top), the inference key is disabled, a team or the global budget is above 80% spent, OpenRouter's limit and LiteLLM's budgets do not reset on the same day (the requirement that a mismatch is visible), or the management key expires within 30 days. (Claude's calls: the 80% and 30 days.)
+Prints one short screen in plain words: balance, key limit and usage, a month forecast (this month's usage ÷ days elapsed × days in the month), global and team spend against budget, reset dates, and the management key's days left. Exit `1` when: the balance is below $10 (a variable at the top; owner, 2026-11-08: OpenRouter adds billing checks and expires caches more aggressively at a single-digit balance or a key near its limit, so calls get slower, `provider-facts.md`; the output says so, since it also makes speed comparisons unreliable), the inference key is disabled, a team or the global budget is above 80% spent, OpenRouter's limit and LiteLLM's budgets do not reset on the same day (the requirement that a mismatch is visible), or the management key expires within 30 days. (Claude's calls: the 80% and 30 days.)
 
 ### `reconcile.sh`
 
@@ -120,16 +122,15 @@ The README gets an optional-integration section: a cron line that runs both ever
 - `.env.example`: `OPENROUTER_INFERENCE_KEY_NAME`, `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`, `OPENROUTER_MANAGEMENT_KEY` (its comment rewritten: borrowed by the scripts), `KEY_SCRIPTS`. Not `TOWER_PORT`, `TOWER_PASSWORD`, `TOWER_SESSION_SECRET`.
 - `tests/`: the fake upstream's OpenRouter management API, `tests/gateway-api.bats` adapted to the scripts' key, and the changes in `helpers.bash`, `keys.bats`, `fakes.bats`, `compose.*.yml` that these need. Not `tests/tower.bats`.
 - `docs/provider-facts.md`: everything tower's branch added except "Tower dependencies" and "htmx"; plus bug 1 (activity's `provider_name` is the full tag) and bug 2 (LiteLLM's daily table merges names sharing a model id; its admin UI's usage view has the same limit).
-- Tower's documents that exist only on `tower-part-1a`, kept as history because `decisions.md` refers to them: `docs/test-procedures/tower-1a.md`, `docs/superpowers/specs/2026-11-07-tower-look-revision-design.md` and `docs/superpowers/plans/2026-11-07-tower-look-revision.md`, each with the "replaced" line. (Claude's call, after the builder check, so nothing depends on the archive tag.)
-- Not carried: `tower/`, tower's service in `docker-compose.yml`, `rapidselector.sh`'s tower build in `update`, `scripts/add-tower-secrets.sh`, `scripts/probe-key.sh`, tower's README sections, the `.gitignore` lines for tower.
+- Not carried: `tower/`, tower's service in `docker-compose.yml`, `rapidselector.sh`'s tower build in `update`, `scripts/add-tower-secrets.sh`, `scripts/probe-key.sh`, tower's README sections, its test procedure and every tower spec and plan (`decisions.md`'s entries stand on their own), the `.gitignore` lines for tower.
 
 ### Docs that change
 
-- `CLAUDE.md` (the owner's decision, made in this brainstorm): the architecture without `tower`; principle 2's exception becomes "the operator scripts borrow the management key from the secret store per run; no service holds it"; backups without tower's SQLite; the repo structure without `tower/`; "`tower` is the only interface we build" goes (we build none).
+- `CLAUDE.md` (the owner's decision, made in this brainstorm): the architecture without `tower`, with a line that the chosen stack (LiteLLM, Postgres, Open WebUI, and later promptfoo for benchmarks) covers our needs, so we build no service of our own (principle 5, reuse before build); principle 2's exception becomes "the operator scripts borrow the management key from the secret store per run; no service holds it"; backups without tower's SQLite; the repo structure without `tower/`; "`tower` is the only interface we build" goes (we build none).
 - `docs/requirements.md`: the `tower` section replaced by an "Operator scripts" section; general lines without tower.
 - `docs/roadmap.md`: phase 1 becomes the scripts and this cleanup; arena and benchmarks no longer "build in tower"; the parked "tower engaging the kill switch by itself" removed or reworded.
 - `README.md`: the `tower` port line removed; links to `scripts/README.md`.
-- The three tower specs and two plans get a line at the top: replaced by this design.
+- Deleted: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md`, `…/2026-11-05-tower-part-1b-design.md` and `docs/superpowers/plans/2026-11-06-tower-part-1a.md`. Tower's other documents exist only on `tower-part-1a` and go with it.
 
 ### Cleanup outside the repository (the owner's procedure)
 
@@ -138,7 +139,7 @@ The README gets an optional-integration section: a cron line that runs both ever
 3. LiteLLM: `setup-keys.sh` creates user and key `scripts`; the user `tower` and its key are removed once (a one-off step; the means are the builder's).
 4. `.env` on `sandbox`: `TOWER_PORT` removed; the two `OPENROUTER_*` lines stay.
 5. `production`: the local branch `rapidselector-tower` deleted (never pushed, behind `main`).
-6. This machine: the worktree `.worktrees/tower-part-1a` removed; `tower-part-1a` tagged `archive/tower-part-1a` (if the owner agrees) and deleted locally and on GitHub, after the carry-over is merged.
+6. This machine: the worktree `.worktrees/tower-part-1a` removed; `tower-part-1a` deleted locally and on GitHub, with no tag, once the carry-over is on `ops-scripts`.
 
 ## Testing
 
