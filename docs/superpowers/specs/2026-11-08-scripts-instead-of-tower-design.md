@@ -121,7 +121,7 @@ The README gets an optional-integration section: a cron line that runs both ever
 
 ### Carried over from `tower-part-1a`
 
-- `scripts/lib.sh`: `api()` sending the key as a header file and the body on stdin; `OPENROUTER_MANAGEMENT_KEY` and `KEY_SCRIPTS` in the secrets list (not `TOWER_*`).
+- `scripts/lib.sh`: `api()` sending the key as a header file and the body on stdin; `KEY_SCRIPTS` in the secrets list (not `TOWER_*`), and `OPENROUTER_MANAGEMENT_KEY` as an optional secret, loaded when set (owner, 2026-11-08, `decisions.md`: without it everything runs except `status.sh` and `reconcile.sh`, which exit 3).
 - `scripts/setup-keys.sh`: the key hash in URLs instead of the key value, the value through jq's environment, `auto_create_key: false`, and the read-only key (renamed).
 - `.env.example`: `OPENROUTER_INFERENCE_KEY_NAME`, `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`, `OPENROUTER_MANAGEMENT_KEY` (its comment rewritten: borrowed by the scripts), `KEY_SCRIPTS`. Not `TOWER_PORT`, `TOWER_PASSWORD`, `TOWER_SESSION_SECRET`.
 - `tests/`: the fake upstream's OpenRouter management API, `tests/gateway-api.bats` adapted to the scripts' key, and the changes in `helpers.bash`, `keys.bats`, `fakes.bats`, `compose.*.yml` that these need. Not `tests/tower.bats`.
