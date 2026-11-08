@@ -12,7 +12,7 @@ export REPO ARTIFACTS TEST_ENV_FILE FAKE_UPSTREAM_URL FAKE_SECRETS_URL GATEWAY_P
 
 mkdir -p "$ARTIFACTS"
 
-# RAPIDSELECTOR_SECRETS: the secret names the test env file gets random values for.
+# RAPIDSELECTOR_SECRETS and RAPIDSELECTOR_OPTIONAL_SECRETS: the names the test env file gets random values for.
 # shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$REPO/scripts/lib.sh"
 
@@ -25,7 +25,8 @@ ensure_test_env() {
     echo "CHAT_PORT=4010"
     echo "SECRETS_SOURCE=env"
     local name
-    for name in "${RAPIDSELECTOR_SECRETS[@]}"; do
+    # The optional management key too: the scripts' tests and the fake OpenRouter need it.
+    for name in "${RAPIDSELECTOR_SECRETS[@]}" "${RAPIDSELECTOR_OPTIONAL_SECRETS[@]}"; do
       case "$name" in
         KEY_*) echo "$name=sk-test-$(openssl rand -hex 16)" ;;
         *) echo "$name=$(openssl rand -hex 24)" ;;

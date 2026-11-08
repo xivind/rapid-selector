@@ -6,7 +6,8 @@
 # Run:     ./rapidselector.sh run-script scripts/status.sh [--prometheus]
 #          --prometheus prints Prometheus text format instead, for node_exporter's textfile
 #          collector (README, "Optional: cost figures in Prometheus").
-# Secrets: OPENROUTER_MANAGEMENT_KEY (read-only use: credits and keys), KEY_SCRIPTS.
+# Secrets: OPENROUTER_MANAGEMENT_KEY (read-only use: credits and keys; optional for the system,
+#          but without it this script exits 3), KEY_SCRIPTS.
 #          OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT and OPENROUTER_INFERENCE_KEY_NAME from .env.
 # Cost:    nothing (no model call).
 # Exit:    0 all well, 1 a warning (the output says what), 2 a source could not be read or
@@ -30,7 +31,8 @@ case "${1:-}" in
   *) die 2 "$USAGE" ;;
 esac
 [ "$#" -le 1 ] || die 2 "$USAGE"
-require_env KEY_SCRIPTS OPENROUTER_MANAGEMENT_KEY RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
+require_management_key status.sh
+require_env KEY_SCRIPTS RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
 
 credits="$(or_read /credits)" || die 2 "cannot read OpenRouter's credits"
 keys="$(or_read '/keys?include_disabled=true')" || die 2 "cannot read OpenRouter's key list"

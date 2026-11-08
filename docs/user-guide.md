@@ -16,6 +16,8 @@ Exit codes, in short: `0` all well, `1` read the output, `2` a source could not 
 
 **Cost:** nothing.
 
+**Without the management key** (it is optional), `status.sh` exits 3 and says so: read the balance and the key's limit and usage in OpenRouter's dashboard instead, and the budgets in LiteLLM's admin UI ([`scripts/README.md`](../scripts/README.md#without-the-management-key)).
+
 **If it fails:** exit 2 names the source that could not be read. `management key rejected (expired?)` means the management key has expired or is wrong: make a new one ([below](#a-warning-from-statussh-or-a-grafana-alert)). The gateway not answering: `./rapidselector.sh ps` and `./rapidselector.sh logs gateway`.
 
 ## The monthly check
@@ -27,7 +29,7 @@ Exit codes, in short: `0` all well, `1` read the output, `2` a source could not 
 ./rapidselector.sh run-script scripts/check-prices.sh
 ```
 
-Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today is never included: OpenRouter reports only completed days.
+Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today is never included: OpenRouter reports only completed days. Without the management key, `reconcile.sh` does not run (exit 3), and only `check-prices.sh` is left of this check; comparing LiteLLM's usage with OpenRouter's activity page by hand is then the only reconciliation.
 
 **You should see:** from `reconcile.sh`, a table of day, model, the gateway's recorded spend, OpenRouter's charge and the difference, a total per day, and `Nothing flagged.` (exit 0). Names that share a model (such as `chat` and `gpt-oss-120b@deepinfra`) are one line, because LiteLLM's daily table merges them. From `check-prices.sh`, `rules ok: 11 entries` and one `ok` line per entry (exit 0).
 

@@ -215,3 +215,31 @@ rules_env() {
   [ "$status" -eq 0 ]
   [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart chat" ]
 }
+
+@test "env source: no management key still runs docker" {
+  mapfile -t lines < <(all_secrets_lines | grep -v '^OPENROUTER_MANAGEMENT_KEY=')
+  write_env env "${lines[@]}" "OPENROUTER_MANAGEMENT_KEY="
+  run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -qx "ARGS=compose up -d" "$DOCKER_CALL_LOG"
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+}
+
+@test "secrets-service source: no management key field still runs docker" {
+  blob_json | jq 'del(.OPENROUTER_MANAGEMENT_KEY)' > "$ARTIFACTS/secrets.json"
+  secrets_service_env
+  run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+  grep -qx "KEY_SCRIPTS=v-KEY_SCRIPTS" "$DOCKER_CALL_LOG"
+}
+
+@test "secrets-service source: an empty management key field counts as not set" {
+  blob_json | jq '.OPENROUTER_MANAGEMENT_KEY = ""' > "$ARTIFACTS/secrets.json"
+  secrets_service_env
+  run "$REPO/rapidselector.sh" up
+  [ "$status" -eq 0 ]
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+}

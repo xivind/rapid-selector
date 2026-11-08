@@ -1,14 +1,15 @@
 # Shared helpers for rapidselector.sh and the scripts in scripts/: settings and secrets,
 # and calls to the gateway.
 # Run:     source it, do not run it (rapidselector.sh and every routine script do).
-# Secrets: RAPIDSELECTOR_SECRETS below is the only list of their names; they come from .env
-#          (SECRETS_SOURCE=env) or from the secret "rapidselector" in secrets-service.
+# Secrets: RAPIDSELECTOR_SECRETS and RAPIDSELECTOR_OPTIONAL_SECRETS below are the only lists of
+#          their names; they come from .env (SECRETS_SOURCE=env) or from the secret
+#          "rapidselector" in secrets-service.
 # Cost:    nothing.
 # Exit:    through die: 2 no settings file or a wrong SECRETS_SOURCE, 3 a missing value,
 #          4 secrets-service unreachable or refusing.
 # shellcheck shell=bash
 
-# The secrets every installation needs. The only list of their names.
+# The secrets every installation needs. Nothing starts without them.
 RAPIDSELECTOR_SECRETS=(
   POSTGRES_PASSWORD
   LITELLM_MASTER_KEY
@@ -19,8 +20,14 @@ RAPIDSELECTOR_SECRETS=(
   KEY_CHAT
   KEY_NODE_RED
   KEY_SMOKE_TEST
-  OPENROUTER_MANAGEMENT_KEY
   KEY_SCRIPTS
+)
+
+# Optional secrets: loaded when set, never required to start. The scripts that use one check
+# for it themselves. Without the management key, status.sh and reconcile.sh exit 3; the rest
+# of the system works (docs: scripts/README.md, "Without the management key").
+RAPIDSELECTOR_OPTIONAL_SECRETS=(
+  OPENROUTER_MANAGEMENT_KEY
 )
 
 # die <exit_code> <message>
@@ -69,6 +76,10 @@ load_secrets_from_service() {
   for name in "${RAPIDSELECTOR_SECRETS[@]}"; do
     value="$(jq -r --arg k "$name" '.blob[$k] // empty' <<<"$body")"
     [ -n "$value" ] || die 3 "the secret rapidselector has no field $name"
+    export "$name=$value"
+  done
+  for name in "${RAPIDSELECTOR_OPTIONAL_SECRETS[@]}"; do
+    value="$(jq -r --arg k "$name" '.blob[$k] // empty' <<<"$body")"
     export "$name=$value"
   done
 }
@@ -138,4 +149,11 @@ gw_read() {
 # OPENROUTER_MANAGEMENT_KEY; see read_url.
 or_read() {
   read_url "${OPENROUTER_API_BASE_URL:-https://openrouter.ai/api/v1}$1" "$OPENROUTER_MANAGEMENT_KEY" "OpenRouter"
+}
+
+# require_management_key <script name>: exit 3, saying what is lost and where to read more,
+# when the optional OPENROUTER_MANAGEMENT_KEY is not set.
+require_management_key() {
+  [ -n "${OPENROUTER_MANAGEMENT_KEY:-}" ] \
+    || die 3 "no OPENROUTER_MANAGEMENT_KEY: $1 needs the management key, which is optional; see scripts/README.md, \"Without the management key\""
 }

@@ -43,6 +43,9 @@ Bash with `jq`, in `scripts/`, documented in `scripts/README.md` for a person an
 - Names sharing a model id are one line, since LiteLLM's daily table merges them (`provider-facts.md`).
 - Sources: LiteLLM's API, and OpenRouter's management API with the management key, borrowed per run (`CLAUDE.md`, principle 2).
 
+### The management key is optional
+- Decided by the owner on 2026-11-08. Without it everything starts and runs, but `status.sh` and `reconcile.sh` stop with exit 3 and say why, and the Prometheus cost figures are not written. What that loses, and how to add the key later, is written out in `scripts/README.md` ("Without the management key") and pointed to from the README's first setup.
+
 ### A guarded model change
 - `check-prices.sh` checks the rules of `CLAUDE.md` principles 1 and 4 on every entry in `gateway/config.yaml` (offline), then the prices and hosts against OpenRouter's zero data retention list (online).
 - `./rapidselector.sh restart gateway`, and `restart` with no service, run the rules first and refuse to restart when one is broken. A reboot or `up` still starts whatever the config holds.

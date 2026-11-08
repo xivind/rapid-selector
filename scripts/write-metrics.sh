@@ -6,7 +6,9 @@
 # (rapidselector_status_last_run_timestamp_seconds); a warning (exit 1) still writes the file.
 # Run:     scripts/write-metrics.sh [directory]   (default /var/lib/node_exporter/textfile),
 #          on the host, hourly from cron (README, "Optional: cost figures in Prometheus").
-# Secrets: those of status.sh and reconcile.sh, loaded by rapidselector.sh.
+# Secrets: those of status.sh and reconcile.sh, loaded by rapidselector.sh. Without the optional
+#          management key both exit 3, so no file is written and this exits 2 every run: leave
+#          the cron line out then (scripts/README.md, "Without the management key").
 # Cost:    nothing (no model call).
 # Exit:    0 both files written, 2 one or both could not be written (the reason on stderr).
 set -uo pipefail

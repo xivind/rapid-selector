@@ -202,3 +202,14 @@ run_write_metrics() {
   [ "$(ls -A "$dir" | wc -l)" = "2" ]
   [[ "$output" == *"status.sh"* ]]
 }
+
+@test "status.sh and reconcile.sh without the management key exit 3 and say why" {
+  for script in status.sh reconcile.sh; do
+    OPENROUTER_MANAGEMENT_KEY= run_ops "$script"
+    [ "$status" -eq 3 ]
+    [[ "$output" == *"the management key, which is optional"* ]]
+    [[ "$output" == *'Without the management key'* ]]
+  done
+  # It never got as far as asking OpenRouter.
+  [ "$(openrouter_requests | jq length)" = "0" ]
+}

@@ -9,7 +9,8 @@
 #          --days: the N completed UTC days before today (default 7, at most 30, OpenRouter's
 #          limit). --prometheus prints Prometheus text format instead (README).
 #          RECONCILE_TODAY=YYYY-MM-DD sets "today", for tests only.
-# Secrets: OPENROUTER_MANAGEMENT_KEY (read-only use: keys and activity), KEY_SCRIPTS.
+# Secrets: OPENROUTER_MANAGEMENT_KEY (read-only use: keys and activity; optional for the system,
+#          but without it this script exits 3), KEY_SCRIPTS.
 #          OPENROUTER_INFERENCE_KEY_NAME from .env.
 # Cost:    nothing (no model call).
 # Exit:    0 nothing flagged, 1 a line flagged, 2 a source could not be read or wrong usage,
@@ -33,7 +34,8 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 [[ "$days" =~ ^[1-9][0-9]*$ ]] && [ "$days" -le 30 ] || die 2 "$USAGE"
-require_env KEY_SCRIPTS OPENROUTER_MANAGEMENT_KEY RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
+require_management_key reconcile.sh
+require_env KEY_SCRIPTS RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT
 
 today="${RECONCILE_TODAY:-$(date -u +%F)}"
 first="$(date -u -d "$today - $days days" +%F)" || die 2 "RECONCILE_TODAY must be a date (YYYY-MM-DD)"

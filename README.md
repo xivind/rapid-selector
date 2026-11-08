@@ -24,7 +24,7 @@ Containers have no memory limits (`docs/decisions.md`). On a host with little me
 
 ## First setup
 
-Run the commands on the host, one numbered step at a time. Most secrets are generated for you, and only the two OpenRouter keys have to be fetched by hand.
+Run the commands on the host, one numbered step at a time. Most secrets are generated for you, and only the OpenRouter keys have to be fetched by hand: the gateway's, and optionally a management key.
 
 ### 1. Prepare OpenRouter
 
@@ -33,7 +33,7 @@ In OpenRouter's dashboard:
 1. Turn **auto top-up off**.
 2. Turn off prompt logging and every opt-in to data collection, and require zero data retention for the account.
 3. Create an API key for the gateway with a **monthly credit limit**. $35 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). Name it `rapidselector-gateway` (or set `OPENROUTER_INFERENCE_KEY_NAME` in `.env` to its name). The key is shown only once, so keep it at hand for step 3.
-4. Under Management API Keys, create a **management key** named `rapidselector-scripts`, with an expiry of one year. `scripts/status.sh` and `scripts/reconcile.sh` borrow it to read the balance and activity. It cannot call models, but it can create and change keys: it is the most sensitive secret here. It is shown only once; note its expiry date for step 2.
+4. **Optional:** under Management API Keys, create a **management key** named `rapidselector-scripts`, with an expiry of one year. `scripts/status.sh` and `scripts/reconcile.sh` borrow it to read the balance and activity. It cannot call models, but it can create and change keys: it is the most sensitive secret here. Without it, everything else works, but those two scripts do not run: no balance check and no check that recorded spend matches what OpenRouter charged ([`scripts/README.md`](scripts/README.md#without-the-management-key) lists what you lose; you can add it later). It is shown only once; note its expiry date for step 2.
 5. Buy credits. The whole balance is the most you can lose, so keep it small.
 
 ### 2. Get the code and create the settings file
@@ -46,7 +46,7 @@ hostname -I
 nano .env
 ```
 
-`hostname -I` prints the host's addresses. Set `RAPIDSELECTOR_LAN_ADDRESS` in `.env` to its LAN address, usually starting with `192.168.`, and `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` to the management key's expiry date (e.g. `2027-11-07`). Addresses starting with `172.` belong to Docker. Write values without quotes, then save and exit with `Ctrl+O`, `Enter`, `Ctrl+X`.
+`hostname -I` prints the host's addresses. Set `RAPIDSELECTOR_LAN_ADDRESS` in `.env` to its LAN address, usually starting with `192.168.`, and, if you made a management key, `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` to its expiry date (e.g. `2027-11-07`). Addresses starting with `172.` belong to Docker. Write values without quotes, then save and exit with `Ctrl+O`, `Enter`, `Ctrl+X`.
 
 ### 3. Create the secrets
 
@@ -54,7 +54,7 @@ Use **option A** unless you already run the owner's `secrets-service`.
 
 #### Option A: in `.env` (the default)
 
-Generate everything except the two OpenRouter keys. This only fills empty lines, so running it again changes nothing:
+Generate everything except the OpenRouter keys. This only fills empty lines, so running it again changes nothing:
 
 ```bash
 set_secret() { sed -i "s|^$1=\$|$1=$2|" .env; }
@@ -70,7 +70,7 @@ set_secret KEY_SCRIPTS "sk-$(openssl rand -hex 24)"
 unset -f set_secret
 ```
 
-Then add the OpenRouter keys by hand: the gateway's after `RAPIDSELECTOR_OPENROUTER_KEY=`, the management key after `OPENROUTER_MANAGEMENT_KEY=`:
+Then add the OpenRouter keys by hand: the gateway's after `RAPIDSELECTOR_OPENROUTER_KEY=`, and the management key, if you made one, after `OPENROUTER_MANAGEMENT_KEY=` (otherwise leave it empty):
 
 ```bash
 nano .env
@@ -82,7 +82,7 @@ Check the result. This prints each name and the length of its value, never the v
 awk -F= '/^[A-Z_]+=/ {print $1, length($2)}' .env
 ```
 
-The 11 secrets must all have a length above 0: 64 for `POSTGRES_PASSWORD`, `LITELLM_SALT_KEY` and `WEBUI_SECRET_KEY`, 51 for `LITELLM_MASTER_KEY` and the four `KEY_*`, 32 for `LITELLM_UI_PASSWORD`, and about 70 for each OpenRouter key (73 seen). `SECRETS_SERVICE_TOKEN_FILE` stays empty.
+The 10 required secrets must all have a length above 0: 64 for `POSTGRES_PASSWORD`, `LITELLM_SALT_KEY` and `WEBUI_SECRET_KEY`, 51 for `LITELLM_MASTER_KEY` and the four `KEY_*`, 32 for `LITELLM_UI_PASSWORD`, and about 70 for the gateway's OpenRouter key (73 seen). `OPENROUTER_MANAGEMENT_KEY` is about 70 too if you made one, and 0 if not. `SECRETS_SERVICE_TOKEN_FILE` stays empty.
 
 **Keep a safe copy of `.env` away from the host,** for example in a password manager. It is the only copy of your secrets.
 
@@ -114,7 +114,7 @@ Do the same with the gateway's OpenRouter key:
 read -rs ORKEY
 ```
 
-And with the management key:
+And with the management key, if you made one. If not, just press Enter: an empty value counts as not set.
 
 ```bash
 read -rs MGMTKEY
@@ -151,7 +151,7 @@ curl -sS -X PUT -H "Authorization: Bearer $(cat $T)" -H 'Content-Type: applicati
 curl -sS -H "Authorization: Bearer $(cat $T)" "$SERVICE/secrets/rapidselector" | jq -r '.blob | to_entries[] | "\(.key) \(.value | length)"'
 ```
 
-Expect a line with `"status":"success"`, then 11 names with lengths above 0. Delete the temporary file only then:
+Expect a line with `"status":"success"`, then 11 names: all with lengths above 0, except `OPENROUTER_MANAGEMENT_KEY` at 0 if you made no management key. Delete the temporary file only then:
 
 ```bash
 rm ~/rapidselector-secrets.json
@@ -287,7 +287,7 @@ To stop one client but keep the rest, block its key in LiteLLM's admin UI (Virtu
 
 ## Optional: cost figures in Prometheus
 
-Off by default. With Prometheus and `node_exporter` already on the host (the owner's `production` repository runs it with `--collector.textfile.directory=/var/lib/node_exporter/textfile`), `status.sh` and `reconcile.sh` can feed Grafana. Each prints Prometheus text format with `--prometheus`, every metric prefixed `rapidselector_`:
+Off by default, and it needs the management key (`scripts/README.md`, "Without the management key"). With Prometheus and `node_exporter` already on the host (the owner's `production` repository runs it with `--collector.textfile.directory=/var/lib/node_exporter/textfile`), `status.sh` and `reconcile.sh` can feed Grafana. Each prints Prometheus text format with `--prometheus`, every metric prefixed `rapidselector_`:
 
 - `status.sh`: `openrouter_balance_usd`, `openrouter_key_limit_usd`, `openrouter_key_remaining_usd`, `openrouter_key_usage_month_usd`, `openrouter_key_disabled` (0 or 1), `management_key_days_left` (left out while `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` is empty), `status_warnings`, `status_last_run_timestamp_seconds`.
 - `reconcile.sh`: `reconcile_flagged_lines`, `reconcile_max_abs_diff_usd`, `reconcile_window_days`, `reconcile_last_run_timestamp_seconds`.

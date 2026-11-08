@@ -50,7 +50,7 @@ Facts about providers and tools go in `docs/provider-facts.md` with a date and a
 ### 2. Only the gateway holds provider keys
 All clients (chat, Node-RED, other apps, the operator scripts) talk to LiteLLM using their own virtual keys. No client gets a provider inference key, and no client calls a provider directly for inference.
 
-One deliberate exception: the operator scripts `scripts/status.sh` and `scripts/reconcile.sh` borrow OpenRouter's **management key** per run, from the secret store or `.env`, to read the balance, the inference key's limit and usage, and activity. No service holds it. The management key cannot be used for inference, but it can create, change and delete keys, so it is treated as the most sensitive secret in the system.
+One deliberate exception: the operator scripts `scripts/status.sh` and `scripts/reconcile.sh` borrow OpenRouter's **management key** per run, from the secret store or `.env`, where one is set up (it is optional), to read the balance, the inference key's limit and usage, and activity. No service holds it. The management key cannot be used for inference, but it can create, change and delete keys, so it is treated as the most sensitive secret in the system.
 
 ### 3. LAN only
 Nothing is exposed to the internet. No port forwarding. Services bind to the LAN interface. No remote login.
