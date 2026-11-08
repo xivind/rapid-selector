@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # OpenRouter's balance, the inference key's limit and usage, the gateway's global and team
-# spend against budget, and the management key's expiry, on one screen. Tower did this before;
-# no upstream tool shows both sides at once. Run it weekly, before a top-up, and when a Grafana
+# spend against budget, and the management key's expiry, on one screen: no upstream tool
+# shows both sides at once. Run it weekly, before a top-up, and when a Grafana
 # alert or a slow model makes you wonder.
 # Run:     ./rapidselector.sh run-script scripts/status.sh [--prometheus]
 #          --prometheus prints Prometheus text format instead, for node_exporter's textfile

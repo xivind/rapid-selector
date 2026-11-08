@@ -1,6 +1,6 @@
 # rapid-selector: overall design
 
-Date: 2026-11-03. Status: approved by the owner on 2026-11-03.
+Date: 2026-11-03. Status: approved by the owner on 2026-11-03. **Since 2026-11-08, `tower` is dropped** and replaced by operator scripts (`2026-11-08-scripts-instead-of-tower-design.md`, `CLAUDE.md`); what this design says about tower no longer applies.
 
 ## 1. What this spec is
 

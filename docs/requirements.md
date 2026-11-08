@@ -4,11 +4,11 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 
 ## General
 
-- The core (`gateway`, `db`, `chat`, `tower`) works with only Docker and secrets. Prometheus and Grafana, secrets-service, backup-orchestrator and Loki are optional integrations, off by default, switched on in configuration and documented.
+- The core (`gateway`, `db`, `chat`) works with only Docker and secrets. Prometheus and Grafana, secrets-service, backup-orchestrator and Loki are optional integrations, off by default, switched on in configuration and documented.
 - Secrets are environment variables with fixed names, listed in `.env.example`. They come from `.env` or from secrets-service, through `rapidselector.sh`. The Compose file refuses to run without them.
 - The Compose project, containers, volumes and the images we build are prefixed `rapidselector`.
 - Everything host-specific is in `.env`, so the system can move between hosts.
-- Backed up: Postgres, Open WebUI's data and tower's SQLite, through backup-orchestrator or by the README's fallback.
+- Backed up: Postgres and Open WebUI's data, through backup-orchestrator or by the README's fallback.
 
 ## `gateway` (LiteLLM)
 
@@ -18,7 +18,7 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 - Every model has a default `max_tokens` for calls that do not set one, large enough for reasoning models.
 - Two kinds of public names: **roles** for permanent use (e.g. `summarise`, `classify`, `code`, `chat`), each pointing to one model on one host, and **experiment names** in the form `model@host`.
 - Teams `permanent` and `experiments`, each with its own budget share. The team budgets add up to no more than LiteLLM's global budget, which is no more than the OpenRouter key's monthly limit.
-- Team `permanent`: one key per client (Node-RED, each app), allowed roles only, with a low cap and a rate limit. Team `experiments`: keys for `chat` and for tower's arena.
+- Team `permanent`: one key per client (Node-RED, each app), allowed roles only, with a low cap and a rate limit. Team `experiments`: keys for `chat` and for benchmark runs.
 - `/metrics` for Prometheus.
 - Does not start without its secrets, and waits for `db` to be healthy.
 - Spend log with a retention period.
@@ -29,42 +29,34 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 - The owner creates the admin account on first start. New sign-ups are then disabled.
 - Background model calls (titles, tags, suggestions, autocomplete) are disabled or pointed at the cheapest role. Check the current settings in the documentation.
 
-## `tower` (control tower)
+## Operator scripts
 
-### Access
-- Login with a single password from the environment. Plain HTTP on the LAN is accepted.
-- Holds OpenRouter's management key, and is the only service that does.
+Bash with `jq`, in `scripts/`, documented in `scripts/README.md` for a person and an agent alike, and task by task in `docs/user-guide.md`. No service: each script runs when called, through `./rapidselector.sh run-script`, and exits `0` all well, `1` something needs a look, `2` a source could not be read or wrong usage.
 
-### Cost summary
-- Always in tower, with or without Grafana: spent today, this week and this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
+### Status
+- `status.sh`, on one screen: OpenRouter's balance, the inference key's limit, what is left and its usage today, this week and this month, a month forecast, the gateway's global and team spend against budget with their reset dates, and the management key's days left.
+- Warns (exit `1`) when the balance is below $10 (OpenRouter's billing checks then slow calls, so speed comparisons are unreliable), the inference key is disabled, a budget is above 80% spent, OpenRouter's key limit and LiteLLM's budgets do not reset on the same day (both on the 1st at 00:00 UTC; a mismatch must be visible), or the management key expires within 30 days.
 - All amounts in USD, as OpenRouter and LiteLLM account in USD (decided 2026-11-05).
-- Shows when OpenRouter's key limit and LiteLLM's budgets next reset. Both are set to reset on the 1st of the month at 00:00 UTC, and a mismatch must be visible.
-- Grafana shows the same periods and longer ones, and the alerts, when that integration is on.
 
 ### Reconciliation
-- Compares LiteLLM's recorded spend with OpenRouter's actual usage. Discrepancies must be clearly visible.
-- Sources: LiteLLM's API, and OpenRouter's `GET /api/v1/credits` and key-management API with the management key. See `provider-facts.md`.
+- `reconcile.sh`: per completed UTC day (7 by default, at most 30) and per model id, LiteLLM's recorded spend against OpenRouter's activity for the inference key. A difference above $0.05 or 5% of OpenRouter's figure, whichever is larger, is flagged.
+- Names sharing a model id are one line, since LiteLLM's daily table merges them (`provider-facts.md`).
+- Sources: LiteLLM's API, and OpenRouter's management API with the management key, borrowed per run (`CLAUDE.md`, principle 2).
+
+### A guarded model change
+- `check-prices.sh` checks the rules of `CLAUDE.md` principles 1 and 4 on every entry in `gateway/config.yaml` (offline), then the prices and hosts against OpenRouter's zero data retention list (online).
+- `./rapidselector.sh restart gateway`, and `restart` with no service, run the rules first and refuse to restart when one is broken. A reboot or `up` still starts whatever the config holds.
+
+### Prometheus (optional)
+- `status.sh --prometheus` and `reconcile.sh --prometheus` print Prometheus text format, prefixed `rapidselector_`: balance, key limit, remaining and monthly usage, whether the key is disabled, the management key's days left, flagged lines and the largest difference, and the time of each run.
+- A cron job can write them to `node_exporter`'s textfile collector, for Grafana's alerts and dashboard (README). The alert rules and dashboard belong to the home's own repository.
+
+### Two modes
+- Bare-bones: secrets in `.env`, no Prometheus; the scripts are run by hand, as `scripts/README.md` says. The management key then sits in `.env` beside the other secrets.
+- Extended: secrets from secrets-service, and the Prometheus output fed to Grafana.
 
 ### Kill switch
-- Easy to find.
-- Two levels: (1) block all virtual keys in LiteLLM, (2) disable the OpenRouter inference key via the management API (`PATCH /api/v1/keys/{hash}` with `disabled: true`). Level 2 is what actually stops everything.
-- Shows which level is active. Releasing it is a deliberate action, and every change is logged.
-- Tower is not the only way to stop spending: the README describes the manual ways.
-
-### Metrics
-- `/metrics` for Prometheus, prefixed `rapidselector_`: OpenRouter balance, key limit and usage, reconciliation difference, kill switch state.
-
-### Own data
-- SQLite: benchmark runs, arena ratings, balance snapshots.
-
-### Visual quality
-- **Visual quality is a core requirement, not a finishing touch.** The whole interface, including the arena and benchmark results as well as the charts, must be visually appealing and distinctive, with creative visualisation. The visual direction is agreed with the owner during design, before the interface is built.
-- Tower holds the views for making decisions and comparing; Grafana holds operations over time.
-- The level of ambition is decided at the start of phase 1, together with the stack.
-- Clarity comes first where the two conflict. The cost summary and the kill switch must never be hard to read or find.
-
-### Stack
-- Not decided. The owner's production stack (FastAPI, Uvicorn, Jinja2, Bootstrap, Chart.js) is a strong candidate. The owner chooses (`CLAUDE.md`, way of working).
+- No script. Level 1: block the virtual keys in LiteLLM's admin UI. Level 2, which actually stops everything: disable the inference key in OpenRouter's dashboard. The README describes both.
 
 ## Arena and benchmarking
 
@@ -73,7 +65,7 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 - Prompt suites are built from the owner's actual task types, not generic benchmarks.
 - Every benchmark run shows its estimated cost before starting and requires confirmation.
 - **Methodological caveat:** a measurement measures the whole chain (model, upstream host, OpenRouter, gateway, load, network). Pin the upstream host when comparing speed, repeat measurements, and store timestamp, host and quantisation with every result. Quantisation varies between hosts, so the same model name is not always the same model. Check which host actually served each request against the pin.
-- Before building our own, evaluate existing tools such as Open WebUI's arena and promptfoo (`roadmap.md`, phase 2).
+- Open WebUI's arena and promptfoo do this; nothing of our own is built for it (`CLAUDE.md`, architecture; `roadmap.md`, phase 2).
 
 ## Programmatic access
 

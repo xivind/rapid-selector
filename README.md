@@ -11,7 +11,6 @@ Everything goes through one gateway ([LiteLLM](https://docs.litellm.ai/)): only 
 | `gateway` | `rapidselector-gateway` | `http://<host>:4000` | OpenAI-compatible API for every client. Admin UI at `http://<host>:4000/ui`, user `admin`, password `LITELLM_UI_PASSWORD` |
 | `chat` | `rapidselector-chat` | `http://<host>:4010` | Open WebUI |
 | `db` | `rapidselector-db` | none (internal only) | Postgres for the gateway's keys, budgets and spend |
-| `tower` | | `http://<host>:4020` | Reserved for the control tower (phase 1) |
 
 Ports bind only to the host's LAN address (`RAPIDSELECTOR_LAN_ADDRESS`), never to every interface. Give the host a fixed address with a DHCP reservation on the router, or the stack will not start after an address change.
 
@@ -25,7 +24,7 @@ Containers have no memory limits (`docs/decisions.md`). On a host with little me
 
 ## First setup
 
-Run the commands on the host, one numbered step at a time. Most secrets are generated for you, and only the OpenRouter key has to be fetched by hand.
+Run the commands on the host, one numbered step at a time. Most secrets are generated for you, and only the two OpenRouter keys have to be fetched by hand.
 
 ### 1. Prepare OpenRouter
 
@@ -33,8 +32,9 @@ In OpenRouter's dashboard:
 
 1. Turn **auto top-up off**.
 2. Turn off prompt logging and every opt-in to data collection, and require zero data retention for the account.
-3. Create an API key for the gateway with a **monthly credit limit**. $35 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). The key is shown only once, so keep it at hand for step 3.
-4. Buy credits. The whole balance is the most you can lose, so keep it small.
+3. Create an API key for the gateway with a **monthly credit limit**. $35 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). Name it `rapidselector-gateway` (or set `OPENROUTER_INFERENCE_KEY_NAME` in `.env` to its name). The key is shown only once, so keep it at hand for step 3.
+4. Under Management API Keys, create a **management key** named `rapidselector-scripts`, with an expiry of one year. `scripts/status.sh` and `scripts/reconcile.sh` borrow it to read the balance and activity. It cannot call models, but it can create and change keys: it is the most sensitive secret here. It is shown only once; note its expiry date for step 2.
+5. Buy credits. The whole balance is the most you can lose, so keep it small.
 
 ### 2. Get the code and create the settings file
 
@@ -46,7 +46,7 @@ hostname -I
 nano .env
 ```
 
-`hostname -I` prints the host's addresses. Set `RAPIDSELECTOR_LAN_ADDRESS` in `.env` to its LAN address, usually starting with `192.168.`. Addresses starting with `172.` belong to Docker. Write values without quotes, then save and exit with `Ctrl+O`, `Enter`, `Ctrl+X`.
+`hostname -I` prints the host's addresses. Set `RAPIDSELECTOR_LAN_ADDRESS` in `.env` to its LAN address, usually starting with `192.168.`, and `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` to the management key's expiry date (e.g. `2027-11-07`). Addresses starting with `172.` belong to Docker. Write values without quotes, then save and exit with `Ctrl+O`, `Enter`, `Ctrl+X`.
 
 ### 3. Create the secrets
 
@@ -54,7 +54,7 @@ Use **option A** unless you already run the owner's `secrets-service`.
 
 #### Option A: in `.env` (the default)
 
-Generate everything except the OpenRouter key. This only fills empty lines, so running it again changes nothing:
+Generate everything except the two OpenRouter keys. This only fills empty lines, so running it again changes nothing:
 
 ```bash
 set_secret() { sed -i "s|^$1=\$|$1=$2|" .env; }
@@ -66,10 +66,11 @@ set_secret WEBUI_SECRET_KEY "$(openssl rand -hex 32)"
 set_secret KEY_CHAT "sk-$(openssl rand -hex 24)"
 set_secret KEY_NODE_RED "sk-$(openssl rand -hex 24)"
 set_secret KEY_SMOKE_TEST "sk-$(openssl rand -hex 24)"
+set_secret KEY_SCRIPTS "sk-$(openssl rand -hex 24)"
 unset -f set_secret
 ```
 
-Then add the OpenRouter key by hand, after `RAPIDSELECTOR_OPENROUTER_KEY=`:
+Then add the OpenRouter keys by hand: the gateway's after `RAPIDSELECTOR_OPENROUTER_KEY=`, the management key after `OPENROUTER_MANAGEMENT_KEY=`:
 
 ```bash
 nano .env
@@ -81,7 +82,7 @@ Check the result. This prints each name and the length of its value, never the v
 awk -F= '/^[A-Z_]+=/ {print $1, length($2)}' .env
 ```
 
-The 9 secrets must all have a length above 0: 64 for `POSTGRES_PASSWORD`, `LITELLM_SALT_KEY` and `WEBUI_SECRET_KEY`, 51 for `LITELLM_MASTER_KEY` and the three `KEY_*`, 32 for `LITELLM_UI_PASSWORD`, and about 70 for the OpenRouter key. `SECRETS_SERVICE_TOKEN_FILE` stays empty.
+The 11 secrets must all have a length above 0: 64 for `POSTGRES_PASSWORD`, `LITELLM_SALT_KEY` and `WEBUI_SECRET_KEY`, 51 for `LITELLM_MASTER_KEY` and the four `KEY_*`, 32 for `LITELLM_UI_PASSWORD`, and about 70 for each OpenRouter key (73 seen). `SECRETS_SERVICE_TOKEN_FILE` stays empty.
 
 **Keep a safe copy of `.env` away from the host,** for example in a password manager. It is the only copy of your secrets.
 
@@ -107,10 +108,16 @@ read -rs TOKEN
 unset TOKEN
 ```
 
-Do the same with the OpenRouter key:
+Do the same with the gateway's OpenRouter key:
 
 ```bash
 read -rs ORKEY
+```
+
+And with the management key:
+
+```bash
+read -rs MGMTKEY
 ```
 
 Generate the other secrets into a temporary private file. Do this **only once**, because a second run followed by the upload below replaces every secret:
@@ -128,9 +135,11 @@ SECRET_ARGS=(
   --arg KEY_CHAT "sk-$(openssl rand -hex 24)"
   --arg KEY_NODE_RED "sk-$(openssl rand -hex 24)"
   --arg KEY_SMOKE_TEST "sk-$(openssl rand -hex 24)"
+  --arg OPENROUTER_MANAGEMENT_KEY "$MGMTKEY"
+  --arg KEY_SCRIPTS "sk-$(openssl rand -hex 24)"
 )
 jq -n "${SECRET_ARGS[@]}" '{blob: $ARGS.named}' > "$HOME/rapidselector-secrets.json"
-unset SECRET_ARGS ORKEY
+unset SECRET_ARGS ORKEY MGMTKEY
 ```
 
 Store them as the secret `rapidselector`, and read back the names and lengths. Replace `<secrets-service host>` first:
@@ -142,7 +151,7 @@ curl -sS -X PUT -H "Authorization: Bearer $(cat $T)" -H 'Content-Type: applicati
 curl -sS -H "Authorization: Bearer $(cat $T)" "$SERVICE/secrets/rapidselector" | jq -r '.blob | to_entries[] | "\(.key) \(.value | length)"'
 ```
 
-Expect a line with `"status":"success"`, then 9 names with lengths above 0. Delete the temporary file only then:
+Expect a line with `"status":"success"`, then 11 names with lengths above 0. Delete the temporary file only then:
 
 ```bash
 rm ~/rapidselector-secrets.json
@@ -201,6 +210,8 @@ Always go through `./rapidselector.sh`: it loads the settings and secrets, then 
 | `./rapidselector.sh update` | Pull the image versions in `docker-compose.yml` and recreate what changed |
 | `./rapidselector.sh run-script <script>` | Run one of the scripts in `scripts/` with the secrets loaded |
 
+Which script to run when, and what its output and exit codes mean: [`scripts/README.md`](scripts/README.md). The tasks done most often, step by step, such as checking cost, changing a model or a budget: [`docs/user-guide.md`](docs/user-guide.md).
+
 **Updating** means changing an image version in `docker-compose.yml` (in a commit), then on the host `git pull` and `./rapidselector.sh update`. Before upgrading LiteLLM or Open WebUI: read the release notes, take a backup, and run the smoke test afterwards.
 
 ## Teams, keys and budgets
@@ -214,10 +225,11 @@ All limits are in USD and reset on the 1st of the month at 00:00 UTC.
 | Team `experiments` | $24 | Every name |
 | Key `chat` (`KEY_CHAT`, used by Open WebUI) | the team's | Every name |
 | Key `smoke-test` (`KEY_SMOKE_TEST`) | $1 | Every name |
+| Key `scripts` (`KEY_SCRIPTS`, used by `status.sh` and `reconcile.sh`) | none | No model: it may only read spend and budgets |
 
 Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($35, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
-Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file.
+Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file. The restart first checks the config against the rules in `CLAUDE.md` (pinned host, no fallbacks, zero data retention, prices, `max_tokens`) and refuses if one is broken; the order of a model change is in `scripts/README.md`.
 
 ## Calling a model from Node-RED or an app
 
@@ -270,6 +282,8 @@ Two ways that do not depend on anything else running (not even secrets-service):
    docker stop rapidselector-gateway
    ```
    Start it again with `./rapidselector.sh up`.
+
+To stop one client but keep the rest, block its key in LiteLLM's admin UI (Virtual Keys). `scripts/status.sh` warns while the inference key is disabled.
 
 ## For developers
 
