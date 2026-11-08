@@ -68,7 +68,7 @@ These are the owner's instructions for this walkthrough, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on **`ops-scripts`** (`26d5b38`) since step A2 (2026-11-08). Tower's container was removed at A1 (2026-11-08); its image `rapidselector-tower:0.1.0`, volume `rapidselector_towerdata` and base images stay until A7, and `.env` still has `TOWER_PORT` until A4; tower's three fields left the secret `rapidselector` at A3, where `KEY_SCRIPTS` was added. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
+- Clone at `/home/pi/code/rapid-selector`, on **`ops-scripts`** (`26d5b38`) since step A2 (2026-11-08). Tower's container was removed at A1 (2026-11-08); its image `rapidselector-tower:0.1.0`, volume `rapidselector_towerdata` and base images stay until A7; `TOWER_PORT` left `.env` at A4; tower's three fields left the secret `rapidselector` at A3, where `KEY_SCRIPTS` was added. `.env` is filled in, and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`.
 - `jq` installed. Docker images downloaded (about 1.9 GB). `~/bats-core` holds bats 1.11.0, because `sandbox` has no Node, so `tests/run.sh` (which uses `npx`) does not work there. Use `~/bats-core/bin/bats tests/*.bats 2>&1 | tee ~/level1.log`.
 - The real stack started at B2. `/boot/firmware/cmdline.txt` was not changed: the kernel's memory control stays off by the owner's decision.
 - All 103 level 1 tests have passed there, across two runs (`docs/decisions.md`). Level 1 cannot run beside the real stack, because the container names clash.
