@@ -397,6 +397,9 @@ In OpenRouter's dashboard, Management API Keys: `rapidselector-tower` renamed `r
 ### 2026-11-09: Scripts instead of tower, procedure A9, Prometheus and Grafana
 In Prometheus on `home-assistant` (`http://home-assistant:9090/targets`): the job `rapidselector-gateway` is `UP`, and there is no tower target; `production`'s `prometheus/prometheus.yml` on `main` has no tower job either. In Grafana, Alerting → Alert rules: the group `LLM` holds the gateway's 8 rules, and the owner saw nothing about tower. Nothing spent.
 
+### 2026-11-09: Scripts instead of tower, procedure A10, `production`'s tower branch deleted
+Claude, in `~/code/production` on this machine, with the owner's go-ahead: the local branch `rapidselector-tower` (never pushed) held four commits not on `main`: `55b3781`, `8e86fae` and `8e36599`, tower's backup job, Prometheus target and alert rules, and `d12f563`, which changed the backup README's "eleven" to "twelve" backups because of tower's backup job; with tower gone, eleven on `main` is right. So nothing else was lost. `git branch -D rapidselector-tower` printed `Deleted branch rapidselector-tower (was 8e36599)`; the checkout stays on `main`, up to date with `origin`. **The search of `main` found one `tower`, not none as the procedure expected:** in `grafana/rapidselector-alerts.md`, the description of the rule **gateway down** says "so chat, Node-RED and tower cannot reach any model", and the same text was applied to the rule in Grafana on 2026-11-06. **Owner's choice (of fold into Task 14, fix the note now, or leave it):** fold it into Task 14, which edits that note and Grafana's rules anyway, as "chat, Node-RED and other apps cannot reach any model" (plan updated on `ops-scripts`, `e33f7da`). **Part A is done** (A11–A13 follow part B). Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
