@@ -177,3 +177,38 @@ rules_fail() {
   grep -q "^rules ok: 11 entries" <<<"$output"
   grep -q "^FAIL classify (deepinfra/fp8): price is now" <<<"$output"
 }
+
+@test "rules: max_tokens under model_info does not count" {
+  # LiteLLM applies a default max_tokens only from litellm_params.
+  broken_config '/max_tokens:/d; s/^\(      \)rapidselector_kind: role$/\1rapidselector_kind: role\n\1max_tokens: 1024/'
+  grep -A3 'model_info:' "$BATS_TEST_TMPDIR/config.yaml" | head -4
+  rules_fail "cannot read max_tokens"
+}
+
+# reorder_summarise <file>: summarise's entry written with litellm_params first, model_name
+# last (the same YAML).
+reorder_summarise() {
+  awk '/^  - model_name: summarise$/ { pending = 1; next }
+    pending && /^    litellm_params:$/ { print "  - litellm_params:"; next }
+    pending && /^    model_info:$/ { print "    model_name: summarise"; pending = 0 }
+    { print }' "$REPO/gateway/config.yaml" > "$1"
+}
+
+@test "rules: an entry with its keys in another order is read as its own entry" {
+  reorder_summarise "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+}
+
+@test "rules: a broken entry before a reordered one still fails" {
+  reorder_summarise "$BATS_TEST_TMPDIR/reordered.yaml"
+  sed '0,/zdr: true/s//zdr: false/' "$BATS_TEST_TMPDIR/reordered.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  rules_fail "zdr must be true"
+}
+
+@test "rules: a field written twice in one entry fails closed" {
+  broken_config 's/^\(          \)zdr: true$/\1zdr: true\n\1zdr: false/'
+  rules_fail "cannot read zdr"
+}

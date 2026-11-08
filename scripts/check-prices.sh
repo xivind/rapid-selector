@@ -16,9 +16,8 @@
 # Cost:    nothing.
 # Exit:    0 every entry passes, 1 an entry fails (one FAIL line each), 2 OpenRouter's list
 #          cannot be read (never with --rules-only).
-# The parser expects the layout of gateway/config.yaml: one "- model_name:" line per entry,
-# then its fields one per line (model, max_tokens, the two prices, and under provider: order,
-# only, allow_fallbacks, zdr, data_collection).
+# The parser reads block-style YAML as in gateway/config.yaml (one field per line, indented by
+# two spaces per level); anything it cannot place fails closed as "cannot read <field>".
 set -uo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 # The account's allowed providers in OpenRouter's settings (the tag before the "/").
@@ -29,23 +28,50 @@ if [ "${1:-}" = "--rules-only" ]; then rules_only=1; shift; fi
 config="${1:-$repo/gateway/config.yaml}"
 [ -r "$config" ] || { echo "cannot read $config"; exit 2; }
 
-# One line per entry: name model input output order only max_tokens allow_fallbacks zdr
-# data_collection. A field not found stays "-"; order and only lose brackets, quotes and spaces.
+# One line per entry under model_list: name model input output order only max_tokens
+# allow_fallbacks zdr data_collection. Blocks are followed by indentation, so a field counts only
+# in its own block: model, max_tokens and the prices directly under litellm_params, the rest
+# directly under its provider. A field not found, or found twice in one entry, stays "-" (fails
+# as "cannot read"); order and only lose brackets, quotes and spaces. Keys may come in any order.
 mapfile -t entries < <(awk '
-  function out() { if (name != "") print name, model, input, output, order, only, maxt, fb, zdr, dc }
-  function val() { return ($2 == "" ? "-" : $2) }
-  function list(  s) { s = $0; sub(/^[^:]*:/, "", s); gsub(/[][" ]/, "", s); return (s == "" ? "-" : s) }
-  /^[[:space:]]*- model_name:/ { out(); name = ($3 == "" ? "-" : $3); model = input = output = order = only = maxt = fb = zdr = dc = "-" }
-  /^[[:space:]]*model: openrouter\// { model = substr($2, 12) }
-  /^[[:space:]]*input_cost_per_token:/ { input = val() }
-  /^[[:space:]]*output_cost_per_token:/ { output = val() }
-  /^[[:space:]]*max_tokens:/ { maxt = val() }
-  /^[[:space:]]*order:/ { order = list() }
-  /^[[:space:]]*only:/ { only = list() }
-  /^[[:space:]]*allow_fallbacks:/ { fb = val() }
-  /^[[:space:]]*zdr:/ { zdr = val() }
-  /^[[:space:]]*data_collection:/ { dc = val() }
-  END { out() }
+  function indent() { match($0, /[^ ]/); return RSTART - 1 }
+  function out(  n, f, j, line) {
+    if (!started) return
+    n = split("name model input output order only maxt fb zdr dc", f, " ")
+    line = ""
+    for (j = 1; j <= n; j++) line = line (j > 1 ? " " : "") ((f[j] in v) && !(f[j] in dup) ? v[f[j]] : "-")
+    print line
+  }
+  function set(f, value) { if (f in v) dup[f] = 1; v[f] = (value == "" ? "-" : value) }
+  function first(  s) { s = rest; sub(/^[ ]+/, "", s); split(s, w, /[ ]+/); return w[1] }
+  function list(  s) { s = rest; gsub(/[][" ]/, "", s); return s }
+  /^model_list:/ { inlist = 1; next }
+  inlist && /^[^ #]/ { out(); inlist = 0 }
+  !inlist || /^[ ]*(#|$)/ { next }
+  {
+    i = indent(); item = ($0 ~ /^[ ]*- /)
+    if (item && (li == "" || i == li)) { out(); li = i; started = 1; split("", v); split("", dup); lp = pv = "" }
+    ki = item ? i + 2 : i
+    k = $0; sub(/^[ ]*(- )?/, "", k); rest = k; sub(/:.*/, "", k); sub(/^[^:]*:/, "", rest)
+    if (pv != "" && ki <= pv) pv = ""
+    if (lp != "" && ki <= lp) lp = ""
+    if (k == "litellm_params") { lp = ki; next }
+    if (k == "provider" && lp != "") { pv = ki; next }
+    if (k == "model_name" && ki == li + 2) set("name", first())
+    else if (lp != "" && pv == "" && ki == lp + 2) {
+      if (k == "model") set("model", first() ~ /^openrouter\// ? substr(first(), 12) : "")
+      else if (k == "max_tokens") set("maxt", first())
+      else if (k == "input_cost_per_token") set("input", first())
+      else if (k == "output_cost_per_token") set("output", first())
+    } else if (pv != "" && ki == pv + 2) {
+      if (k == "order") set("order", list())
+      else if (k == "only") set("only", list())
+      else if (k == "allow_fallbacks") set("fb", first())
+      else if (k == "zdr") set("zdr", first())
+      else if (k == "data_collection") set("dc", first())
+    }
+  }
+  END { if (inlist) out() }
 ' "$config")
 
 # rule_failures <entry fields...>: one reason per broken rule, or nothing.
@@ -85,6 +111,7 @@ failed=0
 [ "${#entries[@]}" -gt 0 ] || { echo "FAIL $config: no entries found"; exit 1; }
 for entry in "${entries[@]}"; do
   read -r -a fields <<<"$entry"
+  [ "${fields[0]}" != "-" ] || { echo "FAIL an entry: cannot read model_name"; failed=1; }
   while IFS= read -r reason; do
     [ -n "$reason" ] || continue
     echo "FAIL ${fields[0]}: $reason"

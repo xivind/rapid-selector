@@ -21,7 +21,9 @@ failed=0
 for name in status reconcile; do
   # The temporary name does not end in .prom, so node_exporter ignores it.
   tmp="$(mktemp "$dir/.rapidselector_$name.XXXXXX")" || { echo "rapidselector: cannot write to $dir" >&2; exit 2; }
-  "$ROOT/rapidselector.sh" run-script "scripts/$name.sh" --prometheus > "$tmp"
+  # The full path: rapidselector.sh runs the script from the current directory, which cron sets
+  # to the home directory.
+  "$ROOT/rapidselector.sh" run-script "$ROOT/scripts/$name.sh" --prometheus > "$tmp"
   code=$?
   if [ "$code" -le 1 ]; then
     chmod 644 "$tmp"

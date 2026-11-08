@@ -105,10 +105,26 @@ def default_openrouter():
     }
 
 
+def next_month_start():
+    t = time.gmtime()
+    year, month = (t.tm_year + 1, 1) if t.tm_mon == 12 else (t.tm_year, t.tm_mon + 1)
+    return f"{year:04d}-{month:02d}-01T00:00:00Z"
+
+
+def default_gateway():
+    """The gateway's read routes the operator scripts use, for tests that need large or odd
+    answers without the real gateway (tests/ops-wiring.bats). Set with POST /_gateway."""
+    return {
+        "pages": [],  # GET /user/daily/activity?page=N answers pages[N-1], has_more while more follow
+        "global": {"spend": 0, "max_budget": 32},
+        "teams": {"permanent": 8, "experiments": 24},  # team id: max_budget
+    }
+
+
 ZDR = zdr_from_config(GATEWAY_CONFIG)
 lock = threading.Lock()
 state = {"mode": dict(DEFAULT_MODE), "calls_since_mode": 0, "requests": [], "next_id": 1,
-         "openrouter": default_openrouter(), "or_requests": []}
+         "openrouter": default_openrouter(), "or_requests": [], "gateway": default_gateway()}
 
 
 def refused(mode, call_number, body):
@@ -203,8 +219,34 @@ class Handler(BaseHTTPRequestHandler):
         if not self._management("PATCH", self._read_json()):
             self._send_json(404, {"error": "not found"})
 
+    def _gateway_read(self):
+        """The gateway's read routes (default_gateway). Returns False for any other path."""
+        url = urlsplit(self.path)
+        query = parse_qs(url.query)
+        with lock:
+            gw = state["gateway"]
+            if url.path == "/user/daily/activity":
+                pages = gw["pages"]
+                n = int(query.get("page", ["1"])[0])
+                page = copy.deepcopy(pages[n - 1]) if 0 < n <= len(pages) else {"results": [], "metadata": {}}
+                page.setdefault("metadata", {}).update({"page": n, "has_more": n < len(pages)})
+                self._send_json(200, page)
+            elif url.path == "/global/spend":
+                self._send_json(200, gw["global"])
+            elif url.path == "/team/info":
+                team = query.get("team_id", [""])[0]
+                if team not in gw["teams"]:
+                    self._send_json(404, {"error": "team not found"})
+                else:
+                    self._send_json(200, {"team_id": team, "team_info": {
+                        "team_id": team, "team_alias": team, "spend": 0, "max_budget": gw["teams"][team],
+                        "budget_duration": "30d", "budget_reset_at": next_month_start()}})
+            else:
+                return False
+        return True
+
     def do_GET(self):
-        if self._management("GET"):
+        if self._management("GET") or self._gateway_read():
             return
         if self.path == "/_openrouter/requests":
             with lock:
@@ -232,6 +274,12 @@ class Handler(BaseHTTPRequestHandler):
                 state["mode"] = {**DEFAULT_MODE, **{k: v for k, v in body.items() if k in DEFAULT_MODE}}
                 state["calls_since_mode"] = 0
             self._send_json(200, state["mode"])
+            return
+        if self.path == "/_gateway":
+            with lock:
+                fresh = default_gateway()
+                state["gateway"] = {**fresh, **{k: v for k, v in body.items() if k in fresh}}
+            self._send_json(200, {"pages": len(state["gateway"]["pages"])})
             return
         if self.path == "/_openrouter":
             with lock:

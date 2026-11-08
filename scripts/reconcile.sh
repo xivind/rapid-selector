@@ -46,18 +46,22 @@ key_name="${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}"
 hash="$(inference_key_hash "$keys")" || die 2 "no key named $key_name in OpenRouter's key list"
 activity="$(or_read "/activity?api_key_hash=$hash")" || die 2 "cannot read OpenRouter's activity"
 
-pages="[]"
+# The answers go to jq as files, not arguments: a month of them is far past the 128 KiB a single
+# command-line argument may hold. One JSON document per line; --slurpfile reads them as arrays.
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+jq -c '.data[]' <<<"$activity" > "$work/activity" || die 2 "unexpected answer from OpenRouter's activity"
 page=1
 while :; do
   body="$(gw_read "/user/daily/activity?start_date=$first&end_date=$last&page=$page")" \
     || die 2 "cannot read the gateway's daily activity (page $page)"
-  pages="$(jq -c --argjson p "$body" '. + [$p]' <<<"$pages")" || die 2 "unexpected answer from the gateway (page $page)"
+  jq -c . <<<"$body" >> "$work/pages" || die 2 "unexpected answer from the gateway (page $page)"
   [ "$(jq -r '.metadata.has_more // false' <<<"$body")" = "true" ] || break
   page=$((page + 1))
   [ "$page" -le "$MAX_PAGES" ] || die 2 "the gateway's daily activity has more than $MAX_PAGES pages"
 done
 
-report="$(jq -n --argjson gateway "$pages" --argjson activity "$(jq -c '.data' <<<"$activity")" \
+report="$(jq -n --slurpfile gateway "$work/pages" --slurpfile activity "$work/activity" \
   --arg first "$first" --arg last "$last" -f "$ROOT/scripts/jq/reconcile.jq")" \
   || die 2 "unexpected answer from OpenRouter or the gateway (see above)"
 
