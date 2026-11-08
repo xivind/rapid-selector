@@ -1,6 +1,6 @@
 # rapid-selector gateway (LiteLLM). The only list of models: every entry is pinned to one
 # OpenRouter endpoint, with fallbacks off and zero data retention required.
-# Prices are the pinned endpoint's (USD per token), checked with tests/check-prices.sh.
+# Prices are the pinned endpoint's (USD per token), checked with scripts/check-prices.sh.
 # LiteLLM records the cost OpenRouter reports when a response carries one; these prices
 # are the fallback that keeps spend above zero if it does not.
 

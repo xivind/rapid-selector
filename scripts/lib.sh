@@ -1,4 +1,11 @@
-# Shared helpers for rapidselector.sh and the scripts in scripts/. Source, do not run.
+# Shared helpers for rapidselector.sh and the scripts in scripts/: settings and secrets,
+# and calls to the gateway.
+# Run:     source it, do not run it (rapidselector.sh and every routine script do).
+# Secrets: RAPIDSELECTOR_SECRETS below is the only list of their names; they come from .env
+#          (SECRETS_SOURCE=env) or from the secret "rapidselector" in secrets-service.
+# Cost:    nothing.
+# Exit:    through die: 2 no settings file or a wrong SECRETS_SOURCE, 3 a missing value,
+#          4 secrets-service unreachable or refusing.
 # shellcheck shell=bash
 
 # The secrets every installation needs. The only list of their names.

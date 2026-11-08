@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 # Compare every entry in the gateway config with OpenRouter's public list of zero data
 # retention endpoints: the pinned endpoint must exist, not be in the flex tier, not use Safety
-# Retention (the list includes those), and have the configured input and output price. Free; run before every change to the allowlist.
-# Usage: tests/check-prices.sh [config file]  (default: gateway/config.yaml)
+# Retention (the list includes those), and have the configured input and output price. Run it
+# before every change to the allowlist; prices at a host change without notice.
+# Run:     scripts/check-prices.sh [config file]  (default: gateway/config.yaml), on the host
+# Secrets: none (OpenRouter's list is public).
+# Cost:    nothing.
+# Exit:    0 every entry passes, 1 an entry fails (one FAIL line each), 2 OpenRouter's list
+#          cannot be read.
 # The parser expects the layout of gateway/config.yaml: model_name, then litellm_params with
 # model, the two prices and provider.order, in that order within each entry.
 set -uo pipefail

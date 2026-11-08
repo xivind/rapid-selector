@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Level 1: scripts/drain-balance.sh (tests A and B) against the fake upstream.
+# Level 1: tests/drain-balance.sh (tests A and B) against the fake upstream.
 # Fake answers report 100 prompt and 1000 completion tokens, so one call to
 # qwen3.8-2.4t-a95b@siliconflow costs 100 x $2/M + 1000 x $6/M = $0.0062.
 
@@ -26,7 +26,7 @@ drain() {
   local input="$1"
   shift
   (cd "$REPO" && printf '%s\n' "$input" | RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" \
-    ./rapidselector.sh run-script scripts/drain-balance.sh "$@")
+    ./rapidselector.sh run-script tests/drain-balance.sh "$@")
 }
 
 # fake_mode <json>: set the fake upstream's mode, with this file's token counts.
@@ -264,7 +264,7 @@ drain_keys_left() {
 @test "TERM during a round stops the calls and deletes the temporary key" {
   fake_mode '{"delay_ms":20000}'
   (cd "$REPO" && printf 'drain\n' | RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" \
-    ./rapidselector.sh run-script scripts/drain-balance.sh --max-usd 1 > "$BATS_TEST_TMPDIR/out" 2>&1) &
+    ./rapidselector.sh run-script tests/drain-balance.sh --max-usd 1 > "$BATS_TEST_TMPDIR/out" 2>&1) &
   pid=$!
   for _ in $(seq 1 30); do [ "$(calls_received)" = "5" ] && break; sleep 1; done
   [ "$(calls_received)" = "5" ]

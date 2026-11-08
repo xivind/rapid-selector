@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
-# Create or update the teams and virtual keys in the gateway. Safe to run again: it creates
-# what is missing and resets budgets, allowed names, rate limits and routes to the values here.
-# Run with the secrets loaded:   ./rapidselector.sh run-script scripts/setup-keys.sh
+# Create or update the teams and virtual keys in the gateway, so that budgets, allowed names,
+# rate limits and routes are what this file says. Safe to run again: it creates what is
+# missing and resets the rest to the values here. Run it at first setup and after a name is
+# added to or removed from gateway/config.yaml.
+# Run:     ./rapidselector.sh run-script scripts/setup-keys.sh
+# Secrets: LITELLM_MASTER_KEY, KEY_CHAT, KEY_NODE_RED, KEY_SMOKE_TEST, KEY_SCRIPTS.
+# Cost:    nothing (no model call).
+# Exit:    0 done (prints the teams and keys), 1 the gateway refused or could not be read,
+#          3 a missing value.
 #
 # Budgets (USD, reset on the 1st of the month, 00:00 UTC). The BUDGET_* overrides exist only
 # for tests (level 1, and step D8 of the phase 0 procedure); normal use never sets them.

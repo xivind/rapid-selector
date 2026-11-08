@@ -281,5 +281,5 @@ Code and tests are developed in a cloud sandbox without access to the Pi. The le
   ```
   In the cloud sandbox, start Docker first: `dockerd > /tmp/dockerd.log 2>&1 &`.
 - **Before changing an image version:** `tests/check-arm64.sh` checks that every pinned image exists for the Pi.
-- **Before changing the model list:** `tests/check-prices.sh` compares each entry's price, host and tier with OpenRouter's public API. It costs nothing.
+- **Before changing the model list:** `scripts/check-prices.sh` compares each entry's price, host and tier with OpenRouter's public API. It costs nothing.
 - Anything that needs the Pi or real money is verified with the owner by following `docs/test-procedures/phase-0.md`.

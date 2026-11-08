@@ -34,7 +34,7 @@ STUB
 }
 
 @test "check-prices passes when every entry matches" {
-  run "$REPO/tests/check-prices.sh"
+  run "$REPO/scripts/check-prices.sh"
   echo "$output"
   [ "$status" -eq 0 ]
   [ "$(grep -c '^ok ' <<<"$output")" = "11" ]
@@ -42,28 +42,28 @@ STUB
 
 @test "check-prices fails when a configured price differs" {
   sed 's/output_cost_per_token: 0.0000002$/output_cost_per_token: 0.0000009/' "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
-  run "$REPO/tests/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   [ "$status" -eq 1 ]
   grep -q "^FAIL classify" <<<"$output"
 }
 
 @test "check-prices fails when a pinned endpoint does not exist" {
   sed 's/order: \["cloudflare"\]/order: ["nowhere\/fp8"]/' "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
-  run "$REPO/tests/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   [ "$status" -eq 1 ]
   grep -q "^FAIL llama-3.2-1b-instruct@cloudflare" <<<"$output"
 }
 
 @test "check-prices fails for an endpoint in the flex tier" {
   jq '.data[0].service_tier = "flex"' "$ZDR_ENDPOINTS_FILE" > "$BATS_TEST_TMPDIR/flex.json"
-  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/flex.json" run "$REPO/tests/check-prices.sh"
+  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/flex.json" run "$REPO/scripts/check-prices.sh"
   [ "$status" -eq 1 ]
   grep -q "flex tier" <<<"$output"
 }
 
 @test "check-prices fails for an endpoint with Safety Retention" {
   jq '.data[0].safety_retention = true' "$ZDR_ENDPOINTS_FILE" > "$BATS_TEST_TMPDIR/retention.json"
-  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/retention.json" run "$REPO/tests/check-prices.sh"
+  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/retention.json" run "$REPO/scripts/check-prices.sh"
   [ "$status" -eq 1 ]
   grep -q "Safety Retention" <<<"$output"
 }
