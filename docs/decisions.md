@@ -376,6 +376,9 @@ On `sandbox`, on the host (run as `bash scripts/cleanup-tower-secrets.sh`, which
 ### 2026-11-08: Scripts instead of tower, procedure A4, `TOWER_PORT` removed from `.env`
 On `sandbox`: the first `grep -n '^TOWER_\|^OPENROUTER_' .env` showed `11:TOWER_PORT=4020`, `14:OPENROUTER_INFERENCE_KEY_NAME=rapidselector-gateway` and `17:OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=2027-11-07`; `TOWER_PORT` was the only `TOWER_` line. After deleting it with `nano`, the same `grep` showed only the two `OPENROUTER_` lines, each one line up (13 and 16), so exactly one line went. Nothing restarted. Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A5, `up` from `ops-scripts`
+On `sandbox`, at 23:28: `./rapidselector.sh up` printed `up 3/3`: `rapidselector-chat` `Running`, `rapidselector-db` and `rapidselector-gateway` `Healthy` (the two that others wait on), each in 0.0s. No orphan warning, nothing recreated, built or pulled. `./rapidselector.sh ps` at 23:30: `chat` up 18 hours, `db` and `gateway` up 2 days, all `healthy`, the same images (`open-webui:v0.13.0-slim`, `postgres:17.11-alpine`, `litellm-database:v1.106.6`) and ports as at A1 (`192.168.1.212:4010` and `:4000`; `db` shows only its unpublished `5432/tcp`), no tower. So the compose file without tower, and the secret without tower's fields, gave the three services exactly what they already had. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
