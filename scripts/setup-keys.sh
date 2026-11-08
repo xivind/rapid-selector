@@ -33,7 +33,8 @@ ALLOWED_ROUTES='["/v1/chat/completions","/chat/completions","/v1/models","/model
 #   /user/daily/activity   reconcile.sh, spend per day and model (every user's, so the role must see them all)
 # LiteLLM also lets a key call routes under these (prefix match, e.g. /global/spend/reset), which it
 # refuses separately as master-key-only (docs/provider-facts.md).
-# The role is proxy_admin_viewer if level 1 shows it can read every user's daily activity, else proxy_admin.
+# The role is proxy_admin_viewer: level 1 showed on 2026-11-08 that it reads every user's daily activity
+# (docs/provider-facts.md, "The scripts' routes"). proxy_admin would be the fallback.
 SCRIPTS_ROLE=proxy_admin_viewer
 SCRIPTS_ROUTES='["/global/spend","/team/info","/user/daily/activity"]'
 

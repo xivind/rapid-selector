@@ -65,7 +65,8 @@ warning_with() {
   report="$(status_report)"
   echo "$report"
   [ "$(jq -c '.warnings' <<<"$report")" = "[]" ]
-  [ "$(jq -c '[.gateway.spend_usd, .gateway.budget_usd]' <<<"$report")" = "[1.23,32]" ]
+  # Numbers are compared as values: jq 1.7 prints them as written in the input (32.0), 1.6 does not.
+  jq -e '[.gateway.spend_usd, .gateway.budget_usd] == [1.23, 32]' <<<"$report"
   [ "$(jq -c '[.teams[] | .id] | sort' <<<"$report")" = '["experiments","permanent"]' ]
   [ "$(jq -r '.teams[] | select(.id == "experiments") | .reset_at' <<<"$report")" = "2026-12-01T00:00:00Z" ]
 }
@@ -168,18 +169,18 @@ C2_GATEWAY='{"2026-11-06": {"openai/gpt-oss-120b": 0.001018, "qwen/qwen3.8-2.4t-
 
 @test "reconcile: a model on one side only keeps its line" {
   report="$(reconcile_report "[$(gateway_page "$C2_GATEWAY")]")"
-  [ "$(line "$report" 2026-11-05 meta-llama/llama-3.2-1b-instruct | jq -c '[.gateway_usd, .openrouter_usd, .flagged]')" = "[1e-06,0,false]" ]
+  line "$report" 2026-11-05 meta-llama/llama-3.2-1b-instruct | jq -e '[.gateway_usd, .openrouter_usd, .flagged] == [0.000001, 0, false]'
   [ "$(jq '.flagged' <<<"$report")" = "0" ]
 }
 
 @test "reconcile: every page is added" {
   page1="$(jq -c '.metadata.has_more = true' "$FX/gateway-daily-activity.json")"
   report="$(reconcile_report "[$page1, $(cat "$FX/gateway-daily-activity-page2.json")]")"
-  [ "$(line "$report" 2026-11-06 meta-llama/llama-3.2-1b-instruct | jq '.gateway_usd')" = "1e-06" ]
-  [ "$(line "$report" 2026-11-06 mistralai/mistral-small-3.2-24b-instruct | jq '.gateway_usd')" = "3.5e-05" ]
+  line "$report" 2026-11-06 meta-llama/llama-3.2-1b-instruct | jq -e '.gateway_usd == 0.000001'
+  line "$report" 2026-11-06 mistralai/mistral-small-3.2-24b-instruct | jq -e '.gateway_usd == 0.000035'
   # The same day and model on two pages is added up.
   report="$(reconcile_report "[$page1, $page1]")"
-  [ "$(line "$report" 2026-11-06 mistralai/mistral-small-3.2-24b-instruct | jq '.gateway_usd')" = "7e-05" ]
+  line "$report" 2026-11-06 mistralai/mistral-small-3.2-24b-instruct | jq -e '.gateway_usd == 0.00007'
 }
 
 @test "reconcile: rows outside the window are left out" {
