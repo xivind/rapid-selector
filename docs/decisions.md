@@ -388,6 +388,9 @@ On `sandbox`: `docker ps -a --format '{{.Image}}' | sort -u` listed only `ghcr.i
 ### 2026-11-08: Scripts instead of tower, procedure A7b, tower's image and volume removed; the full Open WebUI image too
 On `sandbox`, at 23:35: `docker image rm rapidselector-tower:0.1.0` printed `Untagged` and one `Deleted: sha256:28ac8d91…`. At 23:41, `docker volume rm rapidselector_towerdata` printed its name, and `docker volume ls` shows only `rapidselector_chatdata` and `rapidselector_pgdata`; `docker container ls` shows the three services and `portainer-agent-custom`, all healthy. **By the owner's choice, outside the procedure:** the unused full image `ghcr.io/open-webui/open-webui:v0.13.0` (5.83 GB, what `chat` ran before the slim image) was removed too; the slim decision of 2026-11-06 stands, and a pull would bring it back. `docker builder du`: 29 entries, 612.7 MB reclaimable in total, from two builds: about 230 MB last used 36–37 hours ago (tower's builds) and about 380 MB last used 4 weeks ago, when `portainer-agent-custom` was built. **So the build cache is not only tower's**, and the procedure's `docker builder prune -f` would also drop the owner's other build's cache; Docker has no filter that keeps only the older entries. Left to the owner (next entry). Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A7b, the build cache pruned
+Claude recommended leaving the build cache, since it also held `portainer-agent-custom`'s; the owner chose to prune it anyway (`docker builder prune -f`), so the whole 612.7 MB went, and the next build of that image starts without cache. Its `Total reclaimed space` line was not reported. Running images and containers are not touched by a prune. **A7b is done.** Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
