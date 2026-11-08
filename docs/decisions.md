@@ -391,6 +391,9 @@ On `sandbox`, at 23:35: `docker image rm rapidselector-tower:0.1.0` printed `Unt
 ### 2026-11-08: Scripts instead of tower, procedure A7b, the build cache pruned
 Claude recommended leaving the build cache, since it also held `portainer-agent-custom`'s; the owner chose to prune it anyway. `docker builder prune -f` at 23:42 removed 26 entries, `Total: 404MB`: the cache's private part, from both builds. The three entries `builder du` marked as shared (208.6 MB: `mr26…` 187 MB, `lj8p…` 13.5 MB, `os3i…` 8.165 MB, all 4 weeks old) were left, as a prune keeps cache that images still use. The next build of `portainer-agent-custom` may be slower. Running images and containers are not touched by a prune. **A7b is done.** Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A8, the management key renamed
+In OpenRouter's dashboard, Management API Keys: `rapidselector-tower` renamed `rapidselector-scripts`. Its expiry still reads Nov 7, 2027, 10:41 AM GMT+1, which is the 09:41 UTC recorded at creation and in `sandbox`'s `.env` (`OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT=2027-11-07`). The value did not change, so the secret `rapidselector` needs nothing; no script uses the key's name. The inference key `rapidselector-gateway` was not touched. No value was shown to Claude. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
