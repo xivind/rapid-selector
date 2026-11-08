@@ -1,7 +1,8 @@
 """Fake secrets-service for level 1 tests of rapidselector.sh.
 
 Standard library only. Serves GET /secrets/rapidselector from the JSON file at
-$FAKE_SECRETS_FILE for the bearer token "test-token".
+$FAKE_SECRETS_FILE for the bearer token "test-token"; PUT /secrets/rapidselector with
+{"blob": {...}} writes that file (for the one-off cleanup script, tests/cleanup.bats).
 """
 
 import json
@@ -40,6 +41,22 @@ class Handler(BaseHTTPRequestHandler):
         with open(os.environ["FAKE_SECRETS_FILE"], encoding="utf-8") as f:
             blob = json.load(f)
         self._send_json(200, {"name": "rapidselector", "blob": blob})
+
+    def do_PUT(self):
+        if self.path != "/secrets/rapidselector":
+            self._send_json(404, {"detail": "unknown secret"})
+            return
+        if self.headers.get("Authorization") != f"Bearer {TOKEN}":
+            self._send_json(401, {"detail": "invalid token"})
+            return
+        length = int(self.headers.get("Content-Length") or 0)
+        blob = json.loads(self.rfile.read(length) or b"{}").get("blob")
+        if not isinstance(blob, dict):
+            self._send_json(422, {"detail": "blob must be an object"})
+            return
+        with open(os.environ["FAKE_SECRETS_FILE"], "w", encoding="utf-8") as f:
+            json.dump(blob, f)
+        self._send_json(200, {"name": "rapidselector"})
 
     def do_POST(self):
         if self.path != "/_status":
