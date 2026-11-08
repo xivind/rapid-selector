@@ -367,6 +367,9 @@ Asked by the owner while `ops-scripts`' cloud run was going: after tower had no 
 ### 2026-11-08: Scripts instead of tower, procedure A1, tower's container removed
 On `sandbox`, with the clone still on `tower-part-1a`: `docker rm -f rapidselector-tower` printed the name once; `./rapidselector.sh ps` then showed `chat` (up 7 hours, after the 06:00 backup), `db` and `gateway` (up 2 days), all `healthy`, with their ports as before (`192.168.1.212:4010` and `:4000`; `db` none), and no tower. Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A2, the clone on `ops-scripts`
+On `sandbox`: `git fetch` brought `phase-0-walkthrough` up to `37f19d2` (records only; `ops-scripts` was already known there). `git switch ops-scripts` printed `branch 'ops-scripts' set up to track 'origin/ops-scripts'.` and `Switched to a new branch 'ops-scripts'`, with no complaint about local changes; `git log -1 --oneline` showed `26d5b38 (HEAD -> ops-scripts, origin/ops-scripts) ops-scripts: cloud Docker run: number checks work on jq 1.7, scripts' role confirmed`, the commit expected. The running stack was not touched. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
