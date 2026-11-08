@@ -19,7 +19,7 @@ Tower part 1a mostly showed again what LiteLLM's admin UI, OpenRouter's dashboar
 8. **User documentation** for the tasks done most often (owner, 2026-11-08), task by task.
 9. **Onboarding to LiteLLM's admin UI**, and to OpenRouter's dashboard where something there needs changing, as the very last part, once everything else is done (owner, 2026-11-08).
 
-**Non-goals:** a web page or a service of any kind; a kill switch script (the owner uses OpenRouter's dashboard for level 2 and LiteLLM's admin UI for level 1, as the README's "Stopping all spending" describes); per-name usage views (LiteLLM's admin UI and Grafana); benchmarking (promptfoo and Open WebUI's arena, a later brainstorm); the Grafana dashboard and alert rules themselves (`production`, after this).
+**Non-goals:** a web page or a service of any kind; a kill switch script (the owner uses OpenRouter's dashboard for level 2 and LiteLLM's admin UI for level 1, as the README's "Stopping all spending" describes); per-name usage views (LiteLLM's admin UI and Grafana); benchmarking (promptfoo and Open WebUI's arena, a later brainstorm); the Grafana dashboard and alert rules are built in `production`, not here, though the plan includes them as its last-but-one task (owner, 2026-11-08).
 
 **Anti-goals:**
 - Scripts that grow into tower again: a script does one job; logic that needs more than a few hundred lines of bash is a sign to stop and ask.

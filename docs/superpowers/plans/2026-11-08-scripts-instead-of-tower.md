@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace `tower` with `scripts/status.sh` and `scripts/reconcile.sh` (screen and Prometheus output), a rules check that guards `./rapidselector.sh restart gateway`, task-oriented documentation, and a complete cleanup procedure for everything tower left behind.
+**Goal:** Replace `tower` with `scripts/status.sh` and `scripts/reconcile.sh` (screen and Prometheus output), a rules check that guards `./rapidselector.sh restart gateway`, task-oriented documentation, and a complete cleanup procedure for everything tower left behind; then Grafana's new alerts and LLM dashboard (extended mode), and an onboarding to LiteLLM and OpenRouter done together.
 
 **Architecture:** Bash scripts with `jq`, like the existing ones. Each new script fetches with small helpers in `scripts/lib.sh` and hands the raw JSON to one `jq` program in `scripts/jq/`, which returns a report object; the script renders that as text or Prometheus format and sets the exit code from it. The `jq` programs are tested locally against fixtures; the wiring is tested at level 1 against real LiteLLM and the fake upstream.
 
@@ -258,4 +258,22 @@ The owner opens a claude.ai/code session on `ops-scripts` (no real secrets, fake
 
 - [ ] **Step 1:** A fresh reviewer reads the whole branch against the spec, with this plan's Review focus. Fix what it finds, test first.
 - [ ] **Step 2:** Push `ops-scripts`. Update `docs/test-procedures/phase-0-status.md` on `phase-0-walkthrough` (what was built, the owner's procedure next) and record the build in `docs/decisions.md`.
-- [ ] **Step 3:** Walk the owner through `docs/test-procedures/ops-scripts.md`, one step at a time, recording each result. After it passes: Claude does A11–A13, then the onboarding (`docs/onboarding.md`, the spec's "Onboarding, last"), which is outside this plan.
+- [ ] **Step 3:** Walk the owner through `docs/test-procedures/ops-scripts.md`, one step at a time, recording each result in `docs/decisions.md`. After it passes, Claude does A11–A13.
+
+### Task 14: Grafana alerts and the LLM dashboard (extended mode, `production` repository)
+
+After B6, once the cron job writes both `.prom` files on `sandbox` and Prometheus scrapes them through job `sandbox` (`sandbox:9100`). Done from a local Claude Code session in the `production` repository, through its Grafana MCP, as the gateway's 8 rules were. Pushing to `production`'s `main` needs the owner's permission each time.
+
+- [ ] **Step 1:** In `production`, the cron entry for `sandbox` in its place (the README's example, or `scripts/write-metrics.sh`), committed.
+- [ ] **Step 2:** `grafana/rapidselector-alerts.md` gains four rules, each with summary and description like the existing 8, in group `LLM`: **balance below $10** (`rapidselector_openrouter_balance_usd < 10`), **cost figures stale** (`time() - rapidselector_status_last_run_timestamp_seconds > 3 * 3600`, no data: alerting), **a day does not reconcile** (`rapidselector_reconcile_flagged_lines > 0`), **management key expiring** (`rapidselector_management_key_days_left < 30`). The owner confirms the thresholds before they are created.
+- [ ] **Step 3:** A dashboard note `grafana/rapidselector-dashboard.md`, agreed with the owner before it is built: one row for money (balance, key usage this month against its limit, forecast, team budgets left from `litellm_remaining_team_budget_metric`), one for use (calls, tokens and spend per name from the gateway's metrics, which keep `model_group` apart; whether `litellm_spend_metric_total` carries it is checked on the live `/metrics` first and noted in `provider-facts.md`), one for health (failure rate per role, latency, reconciliation flags, the scripts' last run). The dataviz skill is used for the panels.
+- [ ] **Step 4:** Create the rules and the dashboard through the MCP; the owner checks them in Grafana; a rule is tested by lowering its threshold for a moment, as at D8, and restoring it. Recorded in `docs/decisions.md`.
+- [ ] **Step 5:** Nothing here applies in bare-bones mode; `scripts/README.md` says so.
+
+### Task 15: Onboarding to LiteLLM and OpenRouter, together
+
+Last, after Task 14 (or after Task 13 in bare-bones mode). The spec's "Onboarding, last".
+
+- [ ] **Step 1:** Check LiteLLM v1.106.6's admin UI docs and OpenRouter's dashboard docs as they are then; note anything new in `provider-facts.md`.
+- [ ] **Step 2:** Write `docs/onboarding.md`: a guided tour in short steps. LiteLLM's admin UI: logging in (finding 41's warning explained), usage and its known limit (names sharing a model id merged), keys, teams and budgets (and that `setup-keys.sh` is the source of truth: what an edit in the UI does and why to avoid it), models (read-only here: they come from `config.yaml`), logs. OpenRouter's dashboard: balance and top-up, the keys and their limits (and disabling the inference key, level 2), activity, the privacy, zero data retention and provider settings, two-factor authentication (from the roadmap). Each step: where to click, what to look for, what not to change.
+- [ ] **Step 3:** Walk through it with the owner one step at a time, in the owner's browser by the owner (subagents never use it). Anything that should change in either is raised with the owner before it is changed, and recorded in `docs/decisions.md`. Corrections to the tour go into `docs/onboarding.md`, and it is linked from the README and the user guide.
