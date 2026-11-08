@@ -169,3 +169,36 @@ activity_for_today() {
   [ "$status" -eq 2 ]
   no_secret_in_output
 }
+
+# run_write_metrics <directory>: scripts/write-metrics.sh with the test settings and the fake.
+run_write_metrics() {
+  run env RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" OPENROUTER_API_BASE_URL="$FAKE_UPSTREAM_URL/api/v1" \
+    "$REPO/scripts/write-metrics.sh" "$1"
+  echo "$output"
+}
+
+@test "write-metrics.sh writes both .prom files, and nothing else is left" {
+  dir="$BATS_TEST_TMPDIR/textfile"
+  mkdir -p "$dir"
+  openrouter_state '{"credits":{"total_credits":20,"total_usage":15}}'
+  run_write_metrics "$dir"
+  # A warning (exit 1 from status.sh) still writes the figures: they are what Grafana alerts on.
+  [ "$status" -eq 0 ]
+  [ "$(ls -A "$dir" | sort | tr '\n' ' ')" = "rapidselector_reconcile.prom rapidselector_status.prom " ]
+  grep -q "^rapidselector_openrouter_balance_usd 5$" "$dir/rapidselector_status.prom"
+  grep -q "^rapidselector_reconcile_window_days 7$" "$dir/rapidselector_reconcile.prom"
+}
+
+@test "write-metrics.sh keeps the old file when a script cannot run" {
+  dir="$BATS_TEST_TMPDIR/textfile"
+  mkdir -p "$dir"
+  run_write_metrics "$dir"
+  [ "$status" -eq 0 ]
+  before="$(cat "$dir/rapidselector_status.prom")"
+  openrouter_state '{"fail":"credits"}'
+  run_write_metrics "$dir"
+  [ "$status" -eq 2 ]
+  [ "$(cat "$dir/rapidselector_status.prom")" = "$before" ]
+  [ "$(ls -A "$dir" | wc -l)" = "2" ]
+  [[ "$output" == *"status.sh"* ]]
+}

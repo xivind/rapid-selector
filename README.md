@@ -285,6 +285,27 @@ Two ways that do not depend on anything else running (not even secrets-service):
 
 To stop one client but keep the rest, block its key in LiteLLM's admin UI (Virtual Keys). `scripts/status.sh` warns while the inference key is disabled.
 
+## Optional: cost figures in Prometheus
+
+Off by default. With Prometheus and `node_exporter` already on the host (the owner's `production` repository runs it with `--collector.textfile.directory=/var/lib/node_exporter/textfile`), `status.sh` and `reconcile.sh` can feed Grafana. Each prints Prometheus text format with `--prometheus`, every metric prefixed `rapidselector_`:
+
+- `status.sh`: `openrouter_balance_usd`, `openrouter_key_limit_usd`, `openrouter_key_remaining_usd`, `openrouter_key_usage_month_usd`, `openrouter_key_disabled` (0 or 1), `management_key_days_left` (left out while `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` is empty), `status_warnings`, `status_last_run_timestamp_seconds`.
+- `reconcile.sh`: `reconcile_flagged_lines`, `reconcile_max_abs_diff_usd`, `reconcile_window_days`, `reconcile_last_run_timestamp_seconds`.
+
+`scripts/write-metrics.sh` runs both and moves their output into the textfile directory, so `node_exporter` never reads half a file. First check that your user may write there:
+
+```bash
+ls -ld /var/lib/node_exporter/textfile
+```
+
+Then add one line with `crontab -e`, with your clone's path, to run it at 17 minutes past every hour:
+
+```
+17 * * * * $HOME/code/rapid-selector/scripts/write-metrics.sh 2>&1 | logger -t rapidselector-metrics
+```
+
+Its messages go to the system log (`journalctl -t rapidselector-metrics`). When a script cannot run, its old file stays and its `*_last_run_timestamp_seconds` stops moving, which is what an alert on stale figures watches. The alert rules (balance low, figures stale, a day that does not reconcile, the management key expiring) and the dashboard belong to the home's own repository, not to this one.
+
 ## For developers
 
 Code and tests are developed in a cloud sandbox without access to the Pi. The level 1 tests run the real images against a fake OpenRouter, cost nothing, and must not run on a host where rapid-selector is running.
