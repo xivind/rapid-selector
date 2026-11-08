@@ -83,3 +83,97 @@ STUB
   [ "$status" -eq 1 ]
   grep -q "MISSING linux/arm64: example/amd64-only:1.0" <<<"$output"
 }
+
+# broken_config <sed expression>: $BATS_TEST_TMPDIR/config.yaml is gateway/config.yaml with the
+# expression applied to the first entry (classify) only.
+broken_config() {
+  local second
+  second="$(grep -n -- '- model_name:' "$REPO/gateway/config.yaml" | sed -n 2p | cut -d: -f1)"
+  sed -e "1,$((second - 1)){" -e "$1" -e "}" "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  ! cmp -s "$REPO/gateway/config.yaml" "$BATS_TEST_TMPDIR/config.yaml"
+}
+
+# rules_fail <text>: the rules check failed on classify with a FAIL line holding <text>.
+rules_fail() {
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^FAIL classify: .*$1" <<<"$output"
+}
+
+@test "rules: the real config passes" {
+  # No network: a curl that is called leaves a mark, and no saved endpoint list is given.
+  unset ZDR_ENDPOINTS_FILE
+  printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
+  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+  run "$REPO/scripts/check-prices.sh" --rules-only
+  echo "$output"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^FAIL' <<<"$output")" = "0" ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+  [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
+}
+
+@test "rules: fallbacks on" {
+  broken_config 's/allow_fallbacks: false/allow_fallbacks: true/'
+  rules_fail "allow_fallbacks must be false"
+}
+
+@test "rules: zero data retention off" {
+  broken_config 's/zdr: true/zdr: false/'
+  rules_fail "zdr must be true"
+}
+
+@test "rules: data collection allowed" {
+  broken_config 's/data_collection: deny/data_collection: allow/'
+  rules_fail "data_collection must be deny"
+}
+
+@test "rules: order and only differ" {
+  broken_config 's#only: \["deepinfra/fp8"\]#only: ["deepinfra/bf16"]#'
+  rules_fail "only must equal order"
+}
+
+@test "rules: more than one host in order" {
+  broken_config 's#order: \["deepinfra/fp8"\]#order: ["deepinfra/bf16", "coreweave/fp4"]#'
+  rules_fail "order must name exactly one endpoint"
+}
+
+@test "rules: host not allowed" {
+  broken_config 's#deepinfra/fp8#novita/fp8#g'
+  rules_fail "host novita is not an allowed provider"
+}
+
+@test "rules: price zero" {
+  broken_config 's/input_cost_per_token: .*/input_cost_per_token: 0/'
+  rules_fail "input_cost_per_token must be above zero"
+}
+
+@test "rules: no max_tokens" {
+  broken_config '/max_tokens:/d'
+  rules_fail "cannot read max_tokens"
+}
+
+@test "rules: a :free model" {
+  broken_config 's#model: openrouter/\(.*\)$#model: openrouter/\1:free#'
+  rules_fail ":free model"
+}
+
+@test "rules: a wildcard model" {
+  broken_config 's#model: openrouter/.*$#model: openrouter/*#'
+  rules_fail "wildcard"
+}
+
+@test "rules: a field that cannot be read fails closed" {
+  broken_config '/only:/d'
+  rules_fail "cannot read only"
+}
+
+@test "prices still checked after the rules" {
+  broken_config 's/output_cost_per_token: .*/output_cost_per_token: 0.0000009/'
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+  grep -q "^FAIL classify (deepinfra/fp8): price is now" <<<"$output"
+}
