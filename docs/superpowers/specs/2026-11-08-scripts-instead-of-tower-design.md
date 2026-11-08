@@ -13,9 +13,11 @@ Tower part 1a mostly showed again what LiteLLM's admin UI, OpenRouter's dashboar
 2. `scripts/reconcile.sh`: per day and per model, LiteLLM's recorded spend against OpenRouter's activity, flagging days that are off.
 3. Both can print Prometheus text format, so a cron job can feed `node_exporter`'s textfile collector and Grafana can show and alert on the balance and the reconciliation.
 4. A guarded model change: the rules from `CLAUDE.md` principle 1 and 4 checked on `gateway/config.yaml` before the gateway is restarted, with the existing price check.
-7. Everything works in a bare-bones mode (`.env`, no Grafana) and an extended mode (secrets-service, Prometheus and Grafana).
 5. Routine scripts in `scripts/`, test-only scripts in `tests/`, each with a header saying what it does and why, and `scripts/README.md` explaining how they fit together.
 6. Tower removed everywhere: repository, `sandbox`, LiteLLM, secrets-service, `production`, this machine. What is worth keeping from `tower-part-1a` is carried over first.
+7. Everything works in a bare-bones mode (`.env`, no Grafana) and an extended mode (secrets-service, Prometheus and Grafana).
+8. **User documentation** for the tasks done most often (owner, 2026-11-08), task by task.
+9. **Onboarding to LiteLLM's admin UI**, and to OpenRouter's dashboard where something there needs changing, as the very last part, once everything else is done (owner, 2026-11-08).
 
 **Non-goals:** a web page or a service of any kind; a kill switch script (the owner uses OpenRouter's dashboard for level 2 and LiteLLM's admin UI for level 1, as the README's "Stopping all spending" describes); per-name usage views (LiteLLM's admin UI and Grafana); benchmarking (promptfoo and Open WebUI's arena, a later brainstorm); the Grafana dashboard and alert rules themselves (`production`, after this).
 
@@ -55,7 +57,9 @@ Tower part 1a mostly showed again what LiteLLM's admin UI, OpenRouter's dashboar
 - Bare-bones and extended modes, both supported.
 - Cleanup approach A. `tower-part-1a` is deleted when done, with no archive tag, and no tower document is kept: only the facts we need are carried over.
 - `status.sh` warns below $10 of balance (see `status.sh`).
-- A line in `CLAUDE.md` that the chosen stack covers our needs, with a reference to principle 5.
+- A line in `CLAUDE.md` that the chosen stack covers our needs, with a reference to principle 5. The stack includes Open WebUI's arena and promptfoo for comparing models (both to be set up in a later piece of work).
+- User documentation for the most frequent tasks, and an onboarding to LiteLLM (and OpenRouter where needed) at the very end.
+- The cleanup must cover everything tower left anywhere. It is run by the owner only after the build is done, tested and pushed.
 
 ## The design
 
@@ -126,25 +130,45 @@ The README gets an optional-integration section: a cron line that runs both ever
 
 ### Docs that change
 
-- `CLAUDE.md` (the owner's decision, made in this brainstorm): the architecture without `tower`, with a line that the chosen stack (LiteLLM, Postgres, Open WebUI, and later promptfoo for benchmarks) covers our needs, so we build no service of our own (principle 5, reuse before build); principle 2's exception becomes "the operator scripts borrow the management key from the secret store per run; no service holds it"; backups without tower's SQLite; the repo structure without `tower/`; "`tower` is the only interface we build" goes (we build none).
+- `CLAUDE.md` (the owner's decision, made in this brainstorm): the architecture without `tower`, with a line that the chosen stack (LiteLLM, Postgres, Open WebUI with its arena, and promptfoo for benchmarks) covers our needs, so we build no service of our own (principle 5, reuse before build); principle 2's exception becomes "the operator scripts borrow the management key from the secret store per run; no service holds it"; backups without tower's SQLite; the repo structure without `tower/`; "`tower` is the only interface we build" goes (we build none).
 - `docs/requirements.md`: the `tower` section replaced by an "Operator scripts" section; general lines without tower.
 - `docs/roadmap.md`: phase 1 becomes the scripts and this cleanup; arena and benchmarks no longer "build in tower"; the parked "tower engaging the kill switch by itself" removed or reworded.
 - `README.md`: the `tower` port line removed; links to `scripts/README.md`.
 - Deleted: `docs/superpowers/specs/2026-11-05-tower-part-1a-design.md`, `…/2026-11-05-tower-part-1b-design.md` and `docs/superpowers/plans/2026-11-06-tower-part-1a.md`. Tower's other documents exist only on `tower-part-1a` and go with it.
 
-### Cleanup outside the repository (the owner's procedure)
+### User documentation
 
-1. On `sandbox`: stop and remove tower's container, image and SQLite volume; switch the clone to `ops-scripts`.
-2. Secrets: a one-off committed script, like `add-tower-secrets.sh`, adds `KEY_SCRIPTS` and removes `TOWER_PASSWORD`, `TOWER_SESSION_SECRET` and `TOWER_GATEWAY_KEY` from the secret `rapidselector`, keeping every other field and printing names and lengths only. Deleted from the repository once run (Claude's call).
-3. LiteLLM: `setup-keys.sh` creates user and key `scripts`; the user `tower` and its key are removed once (a one-off step; the means are the builder's).
-4. `.env` on `sandbox`: `TOWER_PORT` removed; the two `OPENROUTER_*` lines stay.
-5. `production`: the local branch `rapidselector-tower` deleted (never pushed, behind `main`).
-6. This machine: the worktree `.worktrees/tower-part-1a` removed; `tower-part-1a` deleted locally and on GitHub, with no tag, once the carry-over is on `ops-scripts`.
+`docs/user-guide.md`, linked from the README, organised by task rather than by script, for the owner and an agent alike. Each task: when you need it, the commands in short lines, what you should see, what it costs, and what to do if it fails. At least: check cost and balance (`status.sh`); the monthly check (`reconcile.sh`); add a model or experiment name; point a role at another model; add, rename or remove a role, and what that means for Node-RED and other clients; add a key for a new client; change a budget, and the order of limits it must keep; top up the balance; stop all spending (the README's manual kill switch, both levels); update the stack's images; back up and restore; what a warning from `status.sh` or a Grafana alert means and what to do. `scripts/README.md` stays the reference for the scripts themselves and points to the guide for tasks; the README keeps first setup and the address table. (Claude's calls: the file, and the task list, which the owner can extend.)
+
+### Onboarding, last
+
+After the cleanup and the procedure have passed: `docs/onboarding.md`, a guided tour of LiteLLM's admin UI on the real stack (where to see usage, keys, teams, budgets, models and logs; what it shows that the scripts do not, and its known limits, such as names sharing a model id merged in its usage view), and of the parts of OpenRouter's dashboard the owner uses (balance, the keys and their limits, activity, the privacy and provider settings). It is walked through together, one step at a time, and anything found that should change in either is raised with the owner before it is changed. Its content is checked against the current docs and versions at the time, not written ahead.
+
+### Cleanup: everything tower left behind
+
+**Not yet.** The owner runs it only after `ops-scripts` is built, tested and pushed. It is the first part of the procedure `docs/test-procedures/ops-scripts.md`, in this order, because `ops-scripts` no longer knows tower's secrets and needs `KEY_SCRIPTS` before `run-script` can start.
+
+On `sandbox`:
+1. Stop and remove tower's container while the clone is still on `tower-part-1a`.
+2. Switch the clone to `ops-scripts`.
+3. Secrets: a one-off committed script, run on the host without `rapidselector.sh`, adds `KEY_SCRIPTS` and removes `TOWER_PASSWORD`, `TOWER_SESSION_SECRET` and `TOWER_GATEWAY_KEY` from the secret `rapidselector`, keeping every other field and printing names and lengths only; in bare-bones mode it prints which `.env` lines to add and remove. Deleted from the repository once run (Claude's call).
+4. `.env`: `TOWER_PORT` and any other `TOWER_*` line removed; `OPENROUTER_INFERENCE_KEY_NAME` and `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` stay.
+5. `./rapidselector.sh up`: the stack starts without tower and with no warning about an orphan container.
+6. LiteLLM: `setup-keys.sh` creates user and key `scripts`; then the user `tower` and its key are removed once (the means are the builder's), and `/key/list` shows no key with alias `tower`.
+7. Docker: tower's image (`rapidselector-tower:0.1.0`), its volume (`rapidselector_towerdata`) and its build cache are removed; the base images it was built from (`python:3.14.7-alpine3.24`, `ghcr.io/astral-sh/uv:0.13.5`) too, after checking that no other container on `sandbox` uses them.
+
+Elsewhere:
+8. OpenRouter: the management key's name `rapidselector-tower` changed to `rapidselector-scripts` in the dashboard (its value and expiry do not change).
+9. Extended mode: Prometheus in `production` has no `rapidselector-tower` target and Grafana's group `LLM` has the gateway's 8 rules and nothing of tower's (tower's were only on the unmerged branch).
+10. `production`: the local branch `rapidselector-tower` deleted (never pushed); `main` searched for `tower` under rapid-selector's files.
+11. GitHub: `tower-part-1a` deleted on `origin` (no pull request exists), with no tag.
+12. This machine: the worktree `.worktrees/tower-part-1a` (with its `.superpowers/sdd` ledger and `tower/.venv`) and the local branch removed; tower's mockups in `.superpowers/brainstorm/` deleted; Claude's memory notes about tower updated.
+13. The repository: a final search for `tower` finds it only in `docs/decisions.md`'s dated entries and in this design. Finding 42 (the pull warning for tower's image) is closed as moot. `docs/test-procedures/phase-0-status.md` is rewritten.
 
 ## Testing
 
 - **Level 1** (`tests/`, real images, fake upstream): `status.sh` and `reconcile.sh` against the fake's management API and the real gateway, each exit code shown by a test, `--prometheus` output parsed; the rules check against good and broken configs (one per rule); the scripts' key refused on every write route; `proxy_admin_viewer` tried first. A guessed response shape is what caused bug 1: the fake's activity rows use the shape seen on the real system (`provider_name` with the tag), and any shape not yet seen live is marked so in the test.
-- **The owner's procedure on `sandbox`** (`docs/test-procedures/ops-scripts.md`), one step at a time: the cleanup steps above; `setup-keys.sh`; `status.sh` beside OpenRouter's dashboard (balance, limit, usage match); `reconcile.sh` for the last 7 days (the 11-05 and 11-06 lines for `gpt-oss-120b` now match); `check-prices.sh` on the live config; the smoke test (under $0.01); the textfile collector checked on `sandbox`. Nothing else costs money.
+- **The owner's procedure on `sandbox`** (`docs/test-procedures/ops-scripts.md`), one step at a time, once the build is pushed: the cleanup above; `setup-keys.sh`; `status.sh` beside OpenRouter's dashboard (balance, limit, usage match); `reconcile.sh` for the last 7 days (the 11-05 and 11-06 lines for `gpt-oss-120b` now match); `check-prices.sh` on the live config; the smoke test (under $0.01); the textfile collector checked on `sandbox`. Nothing else costs money.
 
 ## Left to the builder
 
