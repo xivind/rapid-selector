@@ -99,3 +99,43 @@ api() {
     return 1
   fi
 }
+
+# inference_key_hash <GET /api/v1/keys answer>: print the hash of the key named
+# $OPENROUTER_INFERENCE_KEY_NAME (default rapidselector-gateway); return 1 if there is none.
+inference_key_hash() {
+  NAME="${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}" \
+    jq -er '[.data[] | select(.name == env.NAME) | .hash] | if length == 1 then .[0] else empty end' <<<"$1" || return 1
+}
+
+# read_url <url> <key> <source name>: GET with the key as a header file, so it is in no process
+# list or URL; print the body. Returns 1 on no answer or HTTP >= 400, saying so on stderr.
+read_url() {
+  local response http_status
+  response="$(curl -sS --max-time 30 -w '\n%{http_code}' -H @<(printf 'Authorization: Bearer %s\n' "$2") "$1" 2>/dev/null)" \
+    || response=$'\n000'
+  http_status="${response##*$'\n'}"
+  if [ "$http_status" = "000" ]; then
+    echo "rapidselector: $3 did not answer (${1%%\?*})" >&2
+    return 1
+  fi
+  if [ "$http_status" = "401" ] && [ "$3" = "OpenRouter" ]; then
+    echo "rapidselector: OpenRouter: management key rejected (expired?)" >&2
+    return 1
+  fi
+  if [ "$http_status" -ge 400 ]; then
+    echo "rapidselector: $3 answered HTTP $http_status for ${1%%\?*}" >&2
+    return 1
+  fi
+  printf '%s\n' "${response%$'\n'*}"
+}
+
+# gw_read <path>: GET on the gateway with KEY_SCRIPTS; see read_url.
+gw_read() {
+  read_url "http://${RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT}$1" "$KEY_SCRIPTS" "the gateway"
+}
+
+# or_read <path>: GET on OpenRouter's API (OPENROUTER_API_BASE_URL, for tests) with
+# OPENROUTER_MANAGEMENT_KEY; see read_url.
+or_read() {
+  read_url "${OPENROUTER_API_BASE_URL:-https://openrouter.ai/api/v1}$1" "$OPENROUTER_MANAGEMENT_KEY" "OpenRouter"
+}
