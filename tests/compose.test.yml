@@ -1,5 +1,5 @@
 # Level 1 overlay for the full stack: docker-compose.yml + tests/compose.fakes.yml + this file.
-# Points the gateway at the fake upstream.
+# Points the gateway at the fake upstream, which also fakes OpenRouter's management API for the scripts.
 name: rapidselector-test
 
 services:
@@ -9,3 +9,9 @@ services:
     depends_on:
       fake-upstream:
         condition: service_healthy
+
+  fake-upstream:
+    environment:
+      FAKE_MANAGEMENT_KEY: ${OPENROUTER_MANAGEMENT_KEY}
+      FAKE_INFERENCE_KEY_NAME: ${OPENROUTER_INFERENCE_KEY_NAME:-rapidselector-gateway}
+

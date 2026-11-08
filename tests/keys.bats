@@ -132,3 +132,21 @@ all_state() {
   [ "$output" = "got-secrets arg1" ]
   [ ! -e "$BATS_TEST_TMPDIR/docker-called" ]
 }
+
+@test "scripts key exists with only its routes" {
+  state="$(key_info "$(test_env KEY_SCRIPTS)" | jq -c '.info')"
+  [ "$(jq -r '.key_alias' <<<"$state")" = "scripts" ]
+  [ "$(jq -r '.user_id' <<<"$state")" = "scripts" ]
+  [ "$(jq '.team_id == null and .max_budget == null' <<<"$state")" = "true" ]
+  # The route list and the role are read from setup-keys.sh, the one place they are defined.
+  routes="$(sed -n "s/^SCRIPTS_ROUTES='\(.*\)'$/\1/p" "$REPO/scripts/setup-keys.sh")"
+  role="$(sed -n 's/^SCRIPTS_ROLE=//p' "$REPO/scripts/setup-keys.sh")"
+  [ -n "$routes" ] && [ -n "$role" ]
+  [ "$(jq -c '.allowed_routes' <<<"$state")" = "$(jq -c . <<<"$routes")" ]
+  user="$(curl -sS -G -H "Authorization: Bearer $(test_env LITELLM_MASTER_KEY)" \
+    --data-urlencode "user_id=scripts" "$GATEWAY_URL/user/info")"
+  [ "$(jq -r '.user_info.user_role' <<<"$user")" = "$role" ]
+  # After several runs, the user scripts still owns exactly one key: no key created by /user/new.
+  [ "$(jq '.keys | length' <<<"$user")" = "1" ]
+  [[ "$(cat "$ARTIFACTS/setup-keys-first.txt")" != *"$(test_env KEY_SCRIPTS)"* ]]
+}

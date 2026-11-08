@@ -134,3 +134,89 @@ post_with_refusal() {
   [ "$output" = "423" ]
   curl -sS -X POST "$FAKE_SECRETS_URL/_status" -d '{"status":200}' >/dev/null
 }
+
+# or_get <path> [key]: GET a fake OpenRouter management route; prints the body, then the status.
+or_get() {
+  curl -sS -w '\n%{http_code}' -H "Authorization: Bearer ${2:-test-management-key}" "$FAKE_UPSTREAM_URL/api/v1$1"
+}
+
+@test "fake openrouter lists keys and needs the management key" {
+  openrouter_state '{}'
+  run or_get /keys
+  [ "${lines[-1]}" = "200" ]
+  body="$(sed '$d' <<<"$output")"
+  [ "$(jq -r '.data[0].name' <<<"$body")" = "rapidselector-gateway" ]
+  [ "$(jq -r '.data[0].disabled' <<<"$body")" = "false" ]
+  hash="$(jq -r '.data[0].hash' <<<"$body")"
+  run or_get "/keys/$hash"
+  [ "${lines[-1]}" = "200" ]
+  body="$(sed '$d' <<<"$output")"
+  for field in limit limit_remaining limit_reset usage usage_daily usage_weekly usage_monthly disabled expires_at; do
+    [ "$(jq --arg f "$field" '.data | has($f)' <<<"$body")" = "true" ] || { echo "missing $field"; false; }
+  done
+  run or_get /credits
+  [ "${lines[-1]}" = "200" ]
+  [ "$(sed '$d' <<<"$output" | jq '.data | has("total_credits") and has("total_usage")')" = "true" ]
+  for path in /keys "/keys/$hash" /credits "/activity?api_key_hash=$hash"; do
+    run or_get "$path" wrong-key
+    [ "${lines[-1]}" = "401" ] || { echo "$path: ${lines[-1]}"; false; }
+  done
+  run curl -sS -o /dev/null -w '%{http_code}' "$FAKE_UPSTREAM_URL/api/v1/credits"
+  [ "$output" = "401" ]
+  run openrouter_requests
+  [ "$(jq '[.[] | select(.path == "/api/v1/credits")] | length' <<<"$output")" -ge 2 ]
+}
+
+@test "fake openrouter disables a key and chat calls get 401" {
+  openrouter_state '{}'
+  hash="$(or_get /keys | sed '$d' | jq -r '.data[0].hash')"
+  run curl -sS -o /dev/null -w '%{http_code}' -X PATCH -H 'Authorization: Bearer test-management-key' \
+    -H 'Content-Type: application/json' -d '{"disabled":true}' "$FAKE_UPSTREAM_URL/api/v1/keys/$hash"
+  [ "$output" = "200" ]
+  [ "$(or_get "/keys/$hash" | sed '$d' | jq -r '.data.disabled')" = "true" ]
+  # Disabled keys are left out of the list unless asked for (the docs' example is include_disabled=false).
+  [ "$(or_get /keys | sed '$d' | jq '.data | length')" = "0" ]
+  [ "$(or_get '/keys?include_disabled=true' | sed '$d' | jq -r '.data[0].disabled')" = "true" ]
+  run curl -sS -w '\n%{http_code}' -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","messages":[]}'
+  [ "${lines[-1]}" = "401" ]
+  [ "$(sed '$d' <<<"$output" | jq -r '.error.code')" = "401" ]
+  curl -sS -X PATCH -H 'Authorization: Bearer test-management-key' -d '{"disabled":false}' \
+    "$FAKE_UPSTREAM_URL/api/v1/keys/$hash" >/dev/null
+  run curl -sS -o /dev/null -w '%{http_code}' -X POST "$FAKE_UPSTREAM_URL/v1/chat/completions" -d '{"model":"m","messages":[]}'
+  [ "$output" = "200" ]
+}
+
+@test "fake openrouter fails on demand" {
+  openrouter_state '{"fail":"keys"}'
+  run or_get /keys
+  [ "${lines[-1]}" = "500" ]
+  run or_get /credits
+  [ "${lines[-1]}" = "200" ]
+  openrouter_state '{"fail":"credits"}'
+  run or_get /credits
+  [ "${lines[-1]}" = "500" ]
+  run or_get /keys
+  [ "${lines[-1]}" = "200" ]
+  openrouter_state '{"credits":{"total_credits":5,"total_usage":1.25},"activity":[{"date":"2026-11-05","model":"m","provider_name":"P","requests":3,"usage":0.5}]}'
+  [ "$(or_get /credits | sed '$d' | jq -r '.data.total_usage')" = "1.25" ]
+  [ "$(or_get '/activity?api_key_hash=x' | sed '$d' | jq -r '.data[0].requests')" = "3" ]
+  openrouter_state '{}'
+}
+
+@test "fake openrouter zdr list matches the config" {
+  # The same list tests/checks.bats builds from gateway/config.yaml.
+  expected="$(awk '
+    /^[[:space:]]*- model_name:/ { if (m != "") print m, i, o, s; m = i = o = s = "" }
+    /^[[:space:]]*model: openrouter\// { m = substr($2, 12) }
+    /^[[:space:]]*input_cost_per_token:/ { i = $2 }
+    /^[[:space:]]*output_cost_per_token:/ { o = $2 }
+    /^[[:space:]]*order:/ { s = $2; gsub(/[\[\]"]/, "", s) }
+    END { print m, i, o, s }
+  ' "$REPO/gateway/config.yaml" \
+    | jq -R 'split(" ") | [.[0], .[3], (.[1] | tonumber), (.[2] | tonumber)]' | jq -sc 'sort')"
+  run curl -sS -w '\n%{http_code}' "$FAKE_UPSTREAM_URL/api/v1/endpoints/zdr"
+  [ "${lines[-1]}" = "200" ]
+  actual="$(sed '$d' <<<"$output" \
+    | jq -c '[.data[] | [.model_id, .tag, (.pricing.prompt | tonumber), (.pricing.completion | tonumber)]] | sort')"
+  [ "$actual" = "$expected" ] || { echo "expected $expected"; echo "actual   $actual"; false; }
+}

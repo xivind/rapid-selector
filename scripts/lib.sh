@@ -12,6 +12,8 @@ RAPIDSELECTOR_SECRETS=(
   KEY_CHAT
   KEY_NODE_RED
   KEY_SMOKE_TEST
+  OPENROUTER_MANAGEMENT_KEY
+  KEY_SCRIPTS
 )
 
 # die <exit_code> <message>
@@ -76,11 +78,13 @@ load_settings_and_secrets() {
 
 # api <method> <path> [json]: call the gateway with the master key; print the body.
 # Returns non-zero on HTTP >= 400 and prints the status to stderr.
+# The key goes in as a header file and the body on stdin, so neither is in the process list.
 api() {
   local method="$1" path="$2" data="${3:-}" response http_status
-  local args=(-sS -X "$method" -w '\n%{http_code}' -H "Authorization: Bearer $LITELLM_MASTER_KEY")
-  [ -n "$data" ] && args+=(-H 'Content-Type: application/json' -d "$data")
-  response="$(curl "${args[@]}" "http://${RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT}${path}")" || return 1
+  local args=(-sS -X "$method" -w '\n%{http_code}')
+  [ -n "$data" ] && args+=(-H 'Content-Type: application/json' --data-binary @-)
+  response="$(printf '%s' "$data" | curl "${args[@]}" -H @<(printf 'Authorization: Bearer %s\n' "$LITELLM_MASTER_KEY") \
+    "http://${RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT}${path}")" || return 1
   http_status="${response##*$'\n'}"
   printf '%s\n' "${response%$'\n'*}"
   if [ "$http_status" -ge 400 ]; then
