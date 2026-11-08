@@ -379,6 +379,9 @@ On `sandbox`: the first `grep -n '^TOWER_\|^OPENROUTER_' .env` showed `11:TOWER_
 ### 2026-11-08: Scripts instead of tower, procedure A5, `up` from `ops-scripts`
 On `sandbox`, at 23:28: `./rapidselector.sh up` printed `up 3/3`: `rapidselector-chat` `Running`, `rapidselector-db` and `rapidselector-gateway` `Healthy` (the two that others wait on), each in 0.0s. No orphan warning, nothing recreated, built or pulled. `./rapidselector.sh ps` at 23:30: `chat` up 18 hours, `db` and `gateway` up 2 days, all `healthy`, the same images (`open-webui:v0.13.0-slim`, `postgres:17.11-alpine`, `litellm-database:v1.106.6`) and ports as at A1 (`192.168.1.212:4010` and `:4000`; `db` shows only its unpublished `5432/tcp`), no tower. So the compose file without tower, and the secret without tower's fields, gave the three services exactly what they already had. Nothing spent.
 
+### 2026-11-08: Scripts instead of tower, procedure A6, the scripts' key created and tower's user removed
+On `sandbox`, at 23:31, `./rapidselector.sh run-script scripts/setup-keys.sh` printed the teams and keys as after D8: `team:permanent` 8.0 (30d, 4 names), `team:experiments` 24.0 (30d, 11 names), `node-red` on `permanent` 4.0 (30d, 4 names, RPM 30), `chat` on `experiments` with the team's budget (11 names), `smoke-test` on `experiments` 1.0 (30d, 11 names), and the new row `scripts` with team `-`, budget `none`, `0` names; no `tower` row. At 23:33, `scripts/cleanup-tower-user.sh` through `run-script` printed `removed: 1 key(s) with alias tower` and `removed: user tower`; the second run, `nothing to remove: no key with alias tower and no user tower`. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
