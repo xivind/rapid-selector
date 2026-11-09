@@ -4,6 +4,8 @@ We go through this together, one step at a time: Claude says what to run or clic
 
 **Start only when** `ops-scripts` is built, pushed and has passed its cloud Docker run.
 
+**Done on 2026-11-08 and 09**, and kept as a record: the results, and where the steps below turned out wrong (A7's image names, B6's unit name and the textfile flag), are in `docs/decisions.md`. The one-off scripts of A3 and A6 were deleted at A13.
+
 **Cost ceiling:** under **$0.01**, all of it in B5's smoke test. **Stop rule:** if anything shows more spent than a step's stated cost, or a step's output differs from "You should see", stop and tell Claude before the next step.
 
 **Where:** on `sandbox`, in `~/code/rapid-selector`, unless the step says otherwise. Never paste a secret value to Claude: names, lengths and statuses only.

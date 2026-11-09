@@ -17,8 +17,6 @@ Run every script from the repository on the host. Scripts that need secrets run 
 | `lib.sh` | Shared helpers and the only list of secret names. Sourced, not run | | | | 2, 3, 4 (below) |
 | `jq/` | The jq programs that turn the raw answers into `status.sh`'s and `reconcile.sh`'s reports | | | | |
 
-**One-off, to be deleted** once the owner has run them in `docs/test-procedures/ops-scripts.md`: `cleanup-tower-secrets.sh` (on the host, not through `run-script`) and `cleanup-tower-user.sh`.
-
 `./rapidselector.sh` itself: `restart gateway`, and `restart` with no service, run `check-prices.sh --rules-only` first and exit `5` without restarting if a rule is broken.
 
 ## Exit codes
@@ -79,4 +77,4 @@ To add the key later: create it in OpenRouter's dashboard (Management API Keys, 
 
 ## Tests
 
-Test-only scripts live in `tests/`, not here: the bats suites, the fakes, `check-arm64.sh`, and `drain-balance.sh` (phase 0's balance test, which spends real money). The jq programs are tested without Docker in `tests/ops-logic.bats`; the scripts themselves at level 1 in `tests/ops-scripts.bats`, `tests/checks.bats`, `tests/rapidselector.bats` and `tests/cleanup.bats` (README, "For developers").
+Test-only scripts live in `tests/`, not here: the bats suites, the fakes, `check-arm64.sh`, and `drain-balance.sh` (phase 0's balance test, which spends real money). The jq programs are tested without Docker in `tests/ops-logic.bats`; the scripts themselves at level 1 in `tests/ops-scripts.bats`, `tests/checks.bats` and `tests/rapidselector.bats` (README, "For developers").

@@ -26,8 +26,7 @@ services:
       FAKE_SECRETS_FILE: /data/secrets.json
     volumes:
       - ./tests/fakes:/app:ro
-      # Writable: PUT /secrets/rapidselector writes secrets.json (tests/cleanup.bats).
-      - ./tests/.artifacts:/data
+      - ./tests/.artifacts:/data:ro
     ports:
       - "127.0.0.1:18002:8002"
     healthcheck:
