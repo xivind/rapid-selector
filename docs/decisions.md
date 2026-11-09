@@ -409,6 +409,9 @@ On `sandbox`, at 23:20 UTC on 2026-11-08, `./rapidselector.sh run-script scripts
 ### 2026-11-09: Scripts instead of tower, procedure B3, `check-prices.sh`
 On `sandbox`, on the host, at about 23:35 UTC on 2026-11-08: `scripts/check-prices.sh` printed `rules ok: 11 entries`, then 11 `ok` lines: `classify` (`deepinfra/fp8`), `summarise` (`coreweave/bf16`), `code` (`siliconflow/fp8`), `chat` (`deepinfra/bf16`), `llama-3.2-1b-instruct@cloudflare` (`cloudflare`), `llama-3.1-8b-instruct@deepinfra` (`deepinfra/fp8`), `gpt-oss-20b@deepinfra` (`deepinfra/bf16`), `gpt-oss-120b@deepinfra` (`deepinfra/bf16`), `gpt-oss-120b@coreweave` (`coreweave/fp4`), `deepseek-v4.1-flash@deepinfra` (`deepinfra/fp8`) and `qwen3.8-2.4t-a95b@siliconflow` (`siliconflow/fp8`). So every entry keeps the rules, and every pinned endpoint is still on OpenRouter's zero data retention list at the configured prices. Nothing spent.
 
+### 2026-11-09: Scripts instead of tower, procedure B4, the gateway restarted through the rules check
+On `sandbox`, at 07:07: `./rapidselector.sh restart gateway` printed `rules ok: 11 entries`, then Compose restarting `rapidselector-gateway` (5.0s). `./rapidselector.sh ps` shortly after: `gateway` `Up 2 minutes (healthy)`, `db` `Up 2 days (healthy)`, `chat` `Up About an hour (healthy)`, ports as before. Chat's hour is the 06:00 backup, which restarts it (as at A1), not the restart. So the guard lets a valid config through, and the gateway came back within the minute or two. Nothing spent.
+
 ## Open
 
 ### Settle during design or phase 0
