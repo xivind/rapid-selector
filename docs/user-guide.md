@@ -160,11 +160,11 @@ The README's "Backups" section has the commands for a backup without the integra
 
 | Warning or alert | What it means | What to do |
 |---|---|---|
-| Balance below $10 | Little credit left. OpenRouter then adds billing checks, so calls get slower and speed comparisons are unreliable | [Top up](#top-up-the-balance), or wait with speed comparisons |
+| Balance below $10 (`status.sh`, or the Grafana alert) | Little credit left. OpenRouter then adds billing checks, so calls get slower and speed comparisons are unreliable | [Top up](#top-up-the-balance), or wait with speed comparisons |
 | The inference key is disabled | Every model call fails | If you disabled it, enable it when ready; if not, look at OpenRouter's dashboard first |
 | A budget above 80% spent | The global budget or a team's is close to its limit; calls are refused once it is reached | Look at what spent it (LiteLLM's admin UI, Usage); [raise the budget](#change-a-budget) only deliberately |
 | A team resets on another day, or the key's limit does not reset monthly | OpenRouter's key limit and LiteLLM's budgets no longer reset together on the 1st | Check the key's reset in OpenRouter's dashboard (monthly), then run `setup-keys.sh` |
-| The management key expires within 30 days, or has expired | `status.sh` and `reconcile.sh` will stop working (exit 2) | Make a new management key in OpenRouter's dashboard with a one-year expiry; put it in secrets-service or `.env` (`OPENROUTER_MANAGEMENT_KEY`) and its date in `.env` (`OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`); delete the old key |
+| The management key expires within 30 days, or has expired (`status.sh`, or the Grafana alert) | `status.sh` and `reconcile.sh` will stop working (exit 2) | Make a new management key in OpenRouter's dashboard with a one-year expiry; put it in secrets-service or `.env` (`OPENROUTER_MANAGEMENT_KEY`) and its date in `.env` (`OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT`); delete the old key |
 | A day does not reconcile (`reconcile.sh`, or the Grafana alert) | A model's recorded spend differs from what OpenRouter charged | [The monthly check](#the-monthly-check), "If it fails" |
-| Cost figures stale (Grafana) | `write-metrics.sh` has not written for hours | Run `status.sh` by hand to see why; check the cron line and `journalctl -t rapidselector-metrics` |
-| Gateway alerts (Grafana, group `LLM`) | Budgets, failures or latency in the gateway, as set up in phase 0 | Each alert's description says what to do |
+| Cost figures stale (Grafana) | `write-metrics.sh` has not updated `status.sh`'s or `reconcile.sh`'s figures for over 3 hours | Run `status.sh` by hand to see why; check the cron line and `journalctl -t rapidselector-metrics` |
+| Gateway alerts (Grafana, group `LLM`) | A team budget nearly spent, failing calls, the gateway down, calls recorded without spend or at $0, database failures, or refused keys, as set up in phase 0 | Each alert's description says what to do |
