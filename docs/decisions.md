@@ -420,6 +420,7 @@ The procedure's command (`systemctl list-units --type=service | grep -i node`) w
 
 ### 2026-11-09: `sandbox`'s node_exporter gets the textfile collector, as in `production`
 **Decided by the owner** (option 1 of 2; the other was to leave the Prometheus part out and run the scripts by hand). Reason: only this puts OpenRouter's side (balance, key limit and usage, reconciliation, the management key's expiry) into Prometheus and Grafana; the gateway's own `/metrics` cover only LiteLLM's side. It brings `sandbox` up to `production`'s unit file rather than inventing anything. The look first, on `sandbox`: the installed unit differs from `production`'s only in that flag (`diff` against `~/code/production/prometheus/prometheusexporter-pi.service`: line 8 only), same `User=root` and `Restart=on-failure`; `/var/lib/node_exporter/textfile` did not exist. **One difference from `production`:** the folder is made owned by `pi`, because on `sandbox` the writer is `pi`'s cron job (`scripts/write-metrics.sh`), not a root service as backup-orchestrator is on `home-assistant`; node_exporter, as root, reads it either way.
+Applied on `sandbox`, step 1, at 07:22: `sudo install -d -o pi -g pi /var/lib/node_exporter/textfile`; `ls -ld` shows `drwxr-xr-x 2 pi pi … /var/lib/node_exporter/textfile`.
 
 ## Open
 
