@@ -412,6 +412,9 @@ On `sandbox`, on the host, at about 23:35 UTC on 2026-11-08: `scripts/check-pric
 ### 2026-11-09: Scripts instead of tower, procedure B4, the gateway restarted through the rules check
 On `sandbox`, at 07:07: `./rapidselector.sh restart gateway` printed `rules ok: 11 entries`, then Compose restarting `rapidselector-gateway` (5.0s). `./rapidselector.sh ps` shortly after: `gateway` `Up 2 minutes (healthy)`, `db` `Up 2 days (healthy)`, `chat` `Up About an hour (healthy)`, ports as before. Chat's hour is the 06:00 backup, which restarts it (as at A1), not the restart. So the guard lets a valid config through, and the gateway came back within the minute or two. Nothing spent.
 
+### 2026-11-09: Scripts instead of tower, procedure B5, the smoke test after the restart
+On `sandbox`, at 07:11: `./rapidselector.sh run-script scripts/smoke-test.sh` printed `chat` 200 $0.00000494, `classify` 200 $0.00000108, `code` 200 $0.00000126, `summarise` 200 $0.00000250; `refused: openai/gpt-4o (403)` and `refused: /openrouter/v1/chat/completions (403)`; `total_usd 0.00000978`; `OK`. The same four costs, to the last digit, as at D8 and B6 of phase 0, so the same short answers at unchanged prices. **Spent: $0.00000978**, within the procedure's ceiling of $0.01.
+
 ## Open
 
 ### Settle during design or phase 0
