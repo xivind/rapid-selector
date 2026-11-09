@@ -415,6 +415,9 @@ On `sandbox`, at 07:07: `./rapidselector.sh restart gateway` printed `rules ok: 
 ### 2026-11-09: Scripts instead of tower, procedure B5, the smoke test after the restart
 On `sandbox`, at 07:11: `./rapidselector.sh run-script scripts/smoke-test.sh` printed `chat` 200 $0.00000494, `classify` 200 $0.00000108, `code` 200 $0.00000126, `summarise` 200 $0.00000250; `refused: openai/gpt-4o (403)` and `refused: /openrouter/v1/chat/completions (403)`; `total_usd 0.00000978`; `OK`. The same four costs, to the last digit, as at D8 and B6 of phase 0, so the same short answers at unchanged prices. **Spent: $0.00000978**, within the procedure's ceiling of $0.01.
 
+### 2026-11-09: Scripts instead of tower, procedure B6, `sandbox`'s node_exporter has no textfile collector
+The procedure's command (`systemctl list-units --type=service | grep -i node`) would have found nothing: `production` installs node_exporter as the unit **`prometheusexporter-pi`** ("Prometheus Exporter", `prometheus/setup-prometheusexporter-pi.sh`), so Claude gave `systemctl is-active prometheusexporter-pi` and `systemctl cat prometheusexporter-pi | grep textfile` instead. On `sandbox`, at 07:14: `active`; the `grep` found **nothing**. So `sandbox`'s node_exporter runs without `--collector.textfile.directory`, and the `.prom` files that B6b's cron job would write would never reach Prometheus. The cause, in `production`: the flag was added to the repository's unit file on 2026-11-01 (`4008907`, for backup-orchestrator), to be applied on `home-assistant`, "so new hosts get it too, and is harmless where the directory is empty" (its design); `sandbox` was set up before that and its unit was never updated. Nothing spent. What to do is the owner's choice (next entry).
+
 ## Open
 
 ### Settle during design or phase 0
