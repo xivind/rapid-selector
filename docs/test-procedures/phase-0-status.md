@@ -79,7 +79,7 @@ These are the owner's instructions for walkthroughs, on top of `CLAUDE.md`:
 
 ## Deferred, for the owner to decide
 
-Findings 20–25, 30, 32–36, 38, 39 and 41 in `docs/decisions.md` (42 is moot; 40 and 43 were fixed on 2026-11-10). None blocks the plan. If finding 33's timing checks fail on the Pi in a later run, widen them.
+Findings 20–25, 30, 32–36, 38, 39, 41 and 44 in `docs/decisions.md` (42 is moot; 40 and 43 were fixed on 2026-11-10). None blocks the plan. If finding 33's timing checks fail on the Pi in a later run, widen them.
 
 ## For developers on this machine
 
