@@ -13,8 +13,8 @@ A handoff between sessions, written 2026-11-04 and rewritten on 2026-11-09, when
 ## Next, in order (the owner picks)
 
 1. **Finish the plan** (executed natively with `superpowers:executing-plans`; ledger `.worktrees/ops-scripts/.superpowers/sdd/2026-11-08-scripts-instead-of-tower/progress.md`, not in git; worktree `.worktrees/ops-scripts`):
-   - **Task 14, under way:** the four new alerts, Title Case for every rule title, and the dashboard **LLM** (uid `adn22rk`) are done and pushed (`docs/decisions.md`, "Task 14 part 1" and "part 2"; `production` up to `c8a0494`). **Still to do, plan step 4: the threshold test.** Proposed by Claude, not yet agreed: lower "Rapid-selector: Balance Below $10" to `< 40` (the balance is $34.81), see it fire on the next evaluation (no pending period) and the email arrive, restore `< 10`, see it clear; as at D8. It needs Grafana: from a `production` session (its Grafana MCP; rapid-selector's sessions have none), or by the owner in Grafana's UI (Alerting, edit the rule's threshold). Costs nothing. Then record it, tick Task 14 in the ledger. **Open, for the owner: finding 43**, five LLM rules miss first calls (`increase()`); the dashboard's counting would fix them, also from a `production` session. Pushing to `production`'s `main` needs the owner's permission each time.
-   - **Task 15, last:** `docs/onboarding.md`, a guided tour of LiteLLM's admin UI and OpenRouter's dashboard, walked through together in the owner's browser by the owner (no subagent uses it).
+   - **Task 14 is done** (2026-11-10, ticked in the ledger): the four new alerts, Title Case for every rule title, the dashboard **LLM** (uid `adn22rk`), and the threshold test on "Balance Below $10" (fired, emailed, cleared, emailed again). Finding 43 is fixed too: the five LLM rules that count events count as the dashboard does, and "Many Refused Keys" watches model routes only. All in `docs/decisions.md` ("Task 14 part 1", "part 2", "part 3" and "Finding 43 fixed"); `production` up to `6d76e18`, pushed.
+   - **Task 15, next and last:** `docs/onboarding.md`, a guided tour of LiteLLM's admin UI and OpenRouter's dashboard, walked through together in the owner's browser by the owner (no subagent uses it).
    - **When the plan is done:** give the owner every `Ruling:` line from the ledger, delete the ledger's directory, and use `superpowers:finishing-a-development-branch`. A cloud Docker run of `ops-scripts` before the merge covers A13's deletions.
 2. **Merging:** `phase-0-walkthrough` into `main`, then `ops-scripts`, when the owner says; open the PRs then. `sandbox` is on `ops-scripts` at `26d5b38` and can `git pull` any time (docs, and the deleted one-off scripts).
 3. **After the merge:** the README dry run, and two-factor authentication on the OpenRouter account (both in `docs/roadmap.md`, phase 1).
@@ -70,7 +70,7 @@ These are the owner's instructions for walkthroughs, on top of `CLAUDE.md`:
 ### Repositories
 
 - **`rapid-selector`:** PR #2 is merged to `main`. Branch **`phase-0-walkthrough`** is pushed, with no PR yet; it holds the records. This machine's checkout is on it. Branch **`ops-scripts`** (from `phase-0-walkthrough`, pushed) holds the scripts; its worktree is `.worktrees/ops-scripts`. `tower-part-1a` is deleted, locally and on GitHub (A11, A12).
-- **`production`:** this machine's checkout (`~/code/production`) is on `main`, up to date, with graphify files modified by its hook, not by us. Its local branch `rapidselector-alert-note` tracks `origin`. Pushed to `main` on 2026-11-09 with the owner's permission: `1abfa10`, the note in `prometheus/CLAUDE.md` on `sandbox`'s textfile folder. GitHub reports 8 Dependabot alerts on `production`'s default branch (seen at that push; not ours).
+- **`production`:** this machine's checkout (`~/code/production`) is on `main`, up to date, with graphify files modified by its hook, not by us. Its local branch `rapidselector-alert-note` tracks `origin`. Pushed to `main` on 2026-11-09 with the owner's permission: `1abfa10`, the note in `prometheus/CLAUDE.md` on `sandbox`'s textfile folder. Task 14's commits followed the same way, last `6d76e18` on 2026-11-10 (the alert rules' counting). GitHub reports 8 Dependabot alerts on `production`'s default branch (seen at that push; not ours).
 
 ## To do before particular steps
 
@@ -78,7 +78,7 @@ These are the owner's instructions for walkthroughs, on top of `CLAUDE.md`:
 
 ## Deferred, for the owner to decide
 
-Findings 20–25, 30, 32–36 and 38–41 in `docs/decisions.md` (42 is moot). None blocks the plan. If finding 33's timing checks fail on the Pi in a later run, widen them.
+Findings 20–25, 30, 32–36, 38, 39 and 41 in `docs/decisions.md` (42 is moot; 40 and 43 were fixed on 2026-11-10). None blocks the plan. If finding 33's timing checks fail on the Pi in a later run, widen them.
 
 ## For developers on this machine
 
