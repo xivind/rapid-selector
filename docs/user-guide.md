@@ -77,7 +77,7 @@ Edit that role's entry in `gateway/config.yaml` (model, prices, `max_tokens`, th
 **When:** a new kind of task needs its own stable name, or a role is no longer used.
 
 - **Add:** a new entry with `rapidselector_kind: role`, then steps 2 to 4 above. `setup-keys.sh` adds the role to team `permanent`, so Node-RED's key may call it.
-- **Rename or remove:** every client that calls the old name gets an error from the moment the gateway restarts. First find who calls it: in LiteLLM's admin UI, the usage of that name per key; in Node-RED, every flow that calls it. Change them all at the same time as the gateway, or add the new name first, move the clients, and remove the old name last. Then run `setup-keys.sh`, which takes the old name off the keys' lists.
+- **Rename or remove:** every client that calls the old name gets an error from the moment the gateway restarts. First find who calls it: Grafana's LLM dashboard, which counts per name, or LiteLLM's Logs page, one row per call (not the admin UI's usage view, which merges names sharing a model id); in Node-RED, every flow that calls it. Change them all at the same time as the gateway, or add the new name first, move the clients, and remove the old name last. Then run `setup-keys.sh`, which takes the old name off the keys' lists.
 - Record the change in `docs/decisions.md` (a role is part of the clients' contract).
 
 **Cost:** the smoke test call.
