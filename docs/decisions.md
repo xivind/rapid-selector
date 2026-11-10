@@ -461,6 +461,7 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 `docs/onboarding.md` (`ops-scripts`, `cbce229`), checked against both sites' docs first (`provider-facts.md`, 2026-11-10), walked through in the owner's browser by the owner, one step at a time.
 - **L1, login:** the owner logged in as `admin` at `http://192.168.1.212:4000/ui` and landed on a **home page** (the tour had expected Virtual Keys or Usage). The environment-credential warning (finding 41) shows, as before; the owner closes it.
 - **L2, Usage:** November's total spend $5.19, as `status.sh` showed at B1; breakdowns per virtual key and per model. `gpt-oss-20b` shows as one row (it has one name, so nothing to merge there).
+- **L3, Virtual Keys:** exactly `chat`, `node-red`, `smoke-test` and `scripts`; no `tower`, and the UI's session key is not listed (as found at level 1, `provider-facts.md`). `node-red` and `smoke-test` show their own budgets, `chat` none: it is capped by team `experiments`' $24.
 
 ## Open
 
