@@ -469,6 +469,7 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 
 ### 2026-11-10: The config owns `store_prompts_in_spend_logs`, set to false
 **Decided by the owner**, on Claude's proposal during the tour. The admin UI's switch stores every call's prompt and answer in the spend logs, and so in Postgres and its nightly backups; in v1.106.6 a value saved there applies to every new call, unless `config.yaml` declares the setting (`owned_by_config`, read in the version's source; `provider-facts.md`). Our file did not, so one click would have broken principle 4. Now `general_settings` has `store_prompts_in_spend_logs: false` (`ops-scripts`, `febf6b0`), guarded by a test in `tests/checks.bats` (failed first, then passed; 71/71 of the suites that run here). The alternative, leaving it to care, was rejected: a principle should not hang on nobody clicking. To apply on `sandbox`: `git pull`, `./rapidselector.sh restart gateway`, then check that the gateway reports the setting as the file's.
+**Applied on `sandbox`, 2026-11-11 at about 00:20:** `git pull` (the clone now at the head of `ops-scripts`), `./rapidselector.sh restart gateway`, then through `run-script` with the master key, `GET /config/field/info?field_name=store_prompts_in_spend_logs`: `{"field_name":"store_prompts_in_spend_logs","field_value":false,"source":"config","editable":false}`. The file owns it. Nothing spent.
 
 ## Open
 
