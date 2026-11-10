@@ -464,6 +464,7 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 - **L3, Virtual Keys:** exactly `chat`, `node-red`, `smoke-test` and `scripts`; no `tower`, and the UI's session key is not listed (as found at level 1, `provider-facts.md`). `node-red` and `smoke-test` show their own budgets, `chat` none: it is capped by team `experiments`' $24.
   Each key lists the names it may call: `node-red` the 4 roles, `chat` and `smoke-test` all 11. **`scripts` shows "All Proxy Models"**: its model list is empty, which LiteLLM reads as no model restriction. What keeps it from calling models is its `allowed_routes` (the three read routes), tested at level 1 on 2026-11-08 and in every Docker run since (`provider-facts.md`); behind that, the global budget, the key limit and the balance. One lock, tested; left as it is.
 - **L4, Teams:** `experiments` $24 and `permanent` $8, spend as `status.sh` showed. The page shows the budget's **duration, `30d`, not a reset date**; the next reset is a separate field (`budget_reset_at`, 2026-12-01 at B1), which `status.sh` prints. To confirm on 2026-12-01: both teams and the key limit start over that day.
+- **L5, Models:** 11 models, each with the `config` badge and "Defined in config" as their creator; no edit option. Read-only by two causes: LiteLLM never edits models from `config.yaml` in the UI, and our `store_model_in_db: false` turns off models in the database, so nothing can be added there either.
 
 ## Open
 
