@@ -460,6 +460,7 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 ### 2026-11-10: Task 15, the onboarding tour, walked through with the owner
 `docs/onboarding.md` (`ops-scripts`, `cbce229`), checked against both sites' docs first (`provider-facts.md`, 2026-11-10), walked through in the owner's browser by the owner, one step at a time.
 - **L1, login:** the owner logged in as `admin` at `http://192.168.1.212:4000/ui` and landed on a **home page** (the tour had expected Virtual Keys or Usage). The environment-credential warning (finding 41) shows, as before; the owner closes it.
+- **L2, Usage:** November's total spend $5.19, as `status.sh` showed at B1; breakdowns per virtual key and per model. `gpt-oss-20b` shows as one row (it has one name, so nothing to merge there).
 
 ## Open
 
