@@ -114,6 +114,13 @@ rules_fail() {
   [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
 }
 
+@test "the config owns store_prompts_in_spend_logs, set to false" {
+  # Declared in the file, the setting is the file's: LiteLLM v1.106.6 ignores the admin UI's
+  # "Store Prompts in Spend Logs" switch (owned_by_config), so no click stores chat contents.
+  run sed -n '/^general_settings:/,/^[^ #]/p' "$REPO/gateway/config.yaml"
+  grep -qx '  store_prompts_in_spend_logs: false' <<<"$output"
+}
+
 @test "rules: fallbacks on" {
   broken_config 's/allow_fallbacks: false/allow_fallbacks: true/'
   rules_fail "allow_fallbacks must be false"

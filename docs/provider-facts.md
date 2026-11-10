@@ -166,6 +166,7 @@ For `docs/onboarding.md`; read through a fetch helper, not yet seen on v1.106.6 
 - **Models:** models from `config.yaml` carry a `config` badge and "cannot be edited or deleted from the UI". With `store_model_in_db` declared in the file, the UI's toggle for it answers 400.
 - **Usage:** a global view for proxy admins and proxy admin viewers. Whether it groups by public name or by model id is not said; our source reading (2026-11-07, above) says names sharing a model id are merged.
 - **Enterprise or Premium:** organizations, team and organization roles, team admins and member permissions, and key rotation. Not marked: usage, virtual keys (block and unblock), models, logs.
+- **In v1.106.6 itself, read in the wheel from PyPI on 2026-11-10:** the switch is not on the Logs page but in **Admin Settings, "Logging Settings"** ("Store Prompts in Spend Logs", with "Save Settings"); the owner found it there, off. The server applies a saved value for every new call, unless the file declares the setting: `_apply_boolean_settings` in `proxy_server.py` skips any key `owned_by_config` (the same for `disable_auto_add_proxy_admin_to_teams` and `apply_user_budget_to_team_keys`). So `store_prompts_in_spend_logs: false` in `config.yaml` makes the switch inert (decided 2026-11-10).
 
 ### Models through the API, checked in the docs 2026-11-05
 Sources: https://docs.litellm.ai/docs/proxy/model_management, .../configs, .../prod. Not yet tried on v1.106.6; nothing on these pages is marked Enterprise.
