@@ -55,6 +55,15 @@ Sources: https://openrouter.ai/docs/guides/overview/auth/management-api-keys, ht
 Source: the owner, then https://openrouter.ai/docs/features/latency-and-performance (credit balance section).
 - OpenRouter makes extra database checks when the balance is low ("single digit dollars") or a key is near its credit limit, and expires caches more aggressively, which adds latency until credits are added. Its suggested fix, auto top-up with a higher threshold, is ruled out here (`CLAUDE.md`, principle 1). No exact threshold is given beyond "single digit", so `status.sh` warns below $10 (planned, `2026-11-08-scripts-instead-of-tower-design.md`). Speed measured in these conditions is not comparable.
 
+### Dashboard and settings, checked in the docs 2026-11-10
+For `docs/onboarding.md`; read through a fetch helper. The dashboard's own pages need a sign-in, so their layout is checked in the walkthrough, not here. Sources: https://openrouter.ai/docs/faq, `/docs/guides/overview/auth/management-api-keys.md`, `/docs/guides/privacy/data-collection.md`, `/docs/guides/features/zdr.md`, `/docs/guides/routing/provider-selection.md`.
+- **Credits:** topped up by hand or by auto top-up below a threshold. A refund can be asked for within 24 hours of a purchase, from `/settings/credits`. "We reserve the right to expire unused credits after one year of purchase", another reason to keep the balance small.
+- **Activity:** usage can be filtered "by model, provider and api key".
+- **Two places for logging and training:** the privacy settings hold "OpenRouter Use of Inputs/Outputs", off by default, which gives "a 1% discount on all model usage" when on; and a separate **"Private Input & Output Logging"**, off by default, now lives under Observability (`/workspaces/default/observability`). The FAQ ties the discount to a prompt-logging opt-in at `/settings/preferences`; the pages disagree, so both places are checked in the walkthrough.
+- **Zero data retention** is set per model group at `/settings/privacy` (Anthropic, OpenAI, Google, SpaceXAI, All other models). The account-wide allowed-provider list "acts as a ceiling"; a request no provider satisfies fails with 404.
+- **Management keys** are listed at `/settings/management-keys`; the expiry is fixed at creation, and the docs recommend setting one. Expired keys stay listed until deleted.
+- **Two-factor authentication:** not found in the docs read. Account deletion is under Settings, Manage Account, Security, the likely place.
+
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
 - **$5.00 of credit cost $7.25** from Norway, and the balance showed exactly $5.00. The breakdown was not read from the receipt. ($5 + $0.80) × 1.25 gives exactly $7.25, while 5.5% and 25% VAT alone would give $6.59, so a minimum fee of about $0.80 is likely. The pricing page does not state one.
@@ -149,6 +158,14 @@ Sources: https://docs.litellm.ai/docs/proxy/cost_tracking, .../virtual_keys, ...
 Source: tower's level 1 tests ("LiteLLM's admin UI while level 1 is engaged", since removed), fake upstream, nothing spent.
 - Logging in to `/ui` as `admin` (`POST /login`) creates a virtual key with no alias, `user_id` `default_user_id`, `team_id` `litellm-dashboard`, `max_budget` 1.0, no model list (all models), expiring after 24 hours. The `token` cookie is a JWT that carries the key.
 - That key is **not** returned by `/key/list`, neither to the master key nor to tower's key, so tower never sees it and level 1 does not block it. After 70 seconds at level 1 it is still unblocked, the UI's own calls with it answer 200, and a model call with it reaches the upstream (200 from the fake). Level 2 still stops it, since every call goes through the one OpenRouter key. For the owner to decide.
+
+### The admin UI, checked in the docs 2026-11-10
+For `docs/onboarding.md`; read through a fetch helper, not yet seen on v1.106.6 except where the walkthrough confirms it. Sources: https://docs.litellm.ai/docs/proxy/ui, `/proxy/ui_logs`, `/proxy/customer_usage`, `/proxy/access_control`, `/proxy/model_management`, `/proxy/virtual_keys`.
+- **Login:** `UI_USERNAME` (default `admin`) and `UI_PASSWORD`. `general_settings.disable_env_credential_login: true` then refuses both and the master key (401); only database users, created as proxy admins under Internal Users, Invite User, can sign in. Turning it on before such a user exists locks the UI. More than 10 failed logins from one source in 60 seconds block it for 5 minutes. Not marked Enterprise. Bears on finding 41.
+- **Logs: metadata only by default** ("By default LiteLLM does not track the request and response content"). Content is stored with `store_prompts_in_spend_logs: true`, **or from the UI, Logs, Settings, "Store Prompts in Spend Logs"**, which "takes effect immediately and overrides config". Our `config.yaml` does not declare the setting, so the UI's switch would work: one click would put chat contents into Postgres and its backups (principle 4). A setting declared in `config.yaml` is "owned by the file", and the UI then refuses to change it (400).
+- **Models:** models from `config.yaml` carry a `config` badge and "cannot be edited or deleted from the UI". With `store_model_in_db` declared in the file, the UI's toggle for it answers 400.
+- **Usage:** a global view for proxy admins and proxy admin viewers. Whether it groups by public name or by model id is not said; our source reading (2026-11-07, above) says names sharing a model id are merged.
+- **Enterprise or Premium:** organizations, team and organization roles, team admins and member permissions, and key rotation. Not marked: usage, virtual keys (block and unblock), models, logs.
 
 ### Models through the API, checked in the docs 2026-11-05
 Sources: https://docs.litellm.ai/docs/proxy/model_management, .../configs, .../prod. Not yet tried on v1.106.6; nothing on these pages is marked Enterprise.
