@@ -462,6 +462,7 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 - **L1, login:** the owner logged in as `admin` at `http://192.168.1.212:4000/ui` and landed on a **home page** (the tour had expected Virtual Keys or Usage). The environment-credential warning (finding 41) shows, as before; the owner closes it.
 - **L2, Usage:** November's total spend $5.19, as `status.sh` showed at B1; breakdowns per virtual key and per model. `gpt-oss-20b` shows as one row (it has one name, so nothing to merge there).
 - **L3, Virtual Keys:** exactly `chat`, `node-red`, `smoke-test` and `scripts`; no `tower`, and the UI's session key is not listed (as found at level 1, `provider-facts.md`). `node-red` and `smoke-test` show their own budgets, `chat` none: it is capped by team `experiments`' $24.
+  Each key lists the names it may call: `node-red` the 4 roles, `chat` and `smoke-test` all 11. **`scripts` shows "All Proxy Models"**: its model list is empty, which LiteLLM reads as no model restriction. What keeps it from calling models is its `allowed_routes` (the three read routes), tested at level 1 on 2026-11-08 and in every Docker run since (`provider-facts.md`); behind that, the global budget, the key limit and the balance. One lock, tested; left as it is.
 
 ## Open
 
