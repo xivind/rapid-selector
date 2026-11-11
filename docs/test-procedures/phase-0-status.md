@@ -12,10 +12,9 @@ A handoff between sessions, written 2026-11-04 and rewritten on 2026-11-09, when
 
 ## Next, in order (the owner picks)
 
-1. **`sandbox` from `ops-scripts` to `main`**, the owner's step: `git fetch --prune`, `git switch main`, `git pull`, then `git branch -d ops-scripts`. `main` holds the same code and config as `sandbox`'s `ops-scripts` (only docs changed since), so no restart is needed. The cron line runs the script by path, not by branch.
-2. **A `production` session:** the Grafana panel **"Calls per day, per name"** on the dashboard **LLM** (uid `adn22rk`), in row **Use (the selected range)**, full width, below the row of "Calls per name", "Tokens per name" and "Spend per name": stacked bars over time, counted like "Spend per day, per name" but on answered calls, each name in its colour (owner, 2026-11-11). Update `grafana/rapidselector-dashboard.md` with it; pushing to `production`'s `main` needs the owner's permission. In the same session: **finding 44**, "Team budgets left" shows No data after a gateway restart until a team's first call (`docs/decisions.md`); still to check, whether the team-budget alerts are blind then too.
-3. **The README dry run** (`docs/roadmap.md`, phase 1).
-4. **Benchmarking:** Open WebUI's arena and promptfoo, a brainstorm of its own (`docs/roadmap.md`). Search and documents in chat for selected roles are parked there too (2026-11-08).
+1. **A `production` session:** the Grafana panel **"Calls per day, per name"** on the dashboard **LLM** (uid `adn22rk`), in row **Use (the selected range)**, full width, below the row of "Calls per name", "Tokens per name" and "Spend per name": stacked bars over time, counted like "Spend per day, per name" but on answered calls, each name in its colour (owner, 2026-11-11). Update `grafana/rapidselector-dashboard.md` with it; pushing to `production`'s `main` needs the owner's permission. In the same session: **finding 44**, "Team budgets left" shows No data after a gateway restart until a team's first call (`docs/decisions.md`); still to check, whether the team-budget alerts are blind then too.
+2. **The README dry run** (`docs/roadmap.md`, phase 1).
+3. **Benchmarking:** Open WebUI's arena and promptfoo, a brainstorm of its own (`docs/roadmap.md`). Search and documents in chat for selected roles are parked there too (2026-11-08).
 
 ## Things to remember
 
@@ -59,7 +58,7 @@ These are the owner's instructions for walkthroughs, on top of `CLAUDE.md`:
 
 ### `sandbox`
 
-- Clone at `/home/pi/code/rapid-selector`, on **`ops-scripts`** (pulled 2026-11-11 at 16:30, at `449297d`; the branch is now merged and deleted on GitHub, so the clone moves to `main`: Next, step 1). `.env` is filled in (no `TOWER_` lines), and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`. The secret `rapidselector` has 11 fields: the 9 from phase 0, `OPENROUTER_MANAGEMENT_KEY` and `KEY_SCRIPTS`.
+- Clone at `/home/pi/code/rapid-selector`, on **`main`** (switched by the owner on 2026-11-11 in the evening, at `fd56dd3`; the local `ops-scripts` deleted; no restart needed, as only docs changed since `449297d`). `.env` is filled in (no `TOWER_` lines), and the secrets-service token is in `~/.config/rapidselector/secrets-service.token`. The secret `rapidselector` has 11 fields: the 9 from phase 0, `OPENROUTER_MANAGEMENT_KEY` and `KEY_SCRIPTS`.
 - Running: `chat`, `db` and `gateway`, all healthy; volumes `rapidselector_chatdata` and `rapidselector_pgdata`. Unused images and the build cache were removed at A7b.
 - node_exporter (`prometheusexporter-pi`) runs with the textfile flag; `pi`'s crontab runs `scripts/write-metrics.sh` at :17 every hour, logging to `journalctl -t rapidselector-metrics`.
 - `jq` installed. `~/bats-core` holds bats 1.11.0 (`sandbox` has no Node). Level 1 cannot run beside the real stack, because the container names clash.
@@ -67,7 +66,7 @@ These are the owner's instructions for walkthroughs, on top of `CLAUDE.md`:
 
 ### Repositories
 
-- **`rapid-selector`:** PRs #3 and #4 merged on 2026-11-11 (`f4b760d`). This machine's checkout is on `main`, with no worktrees; records are committed to `main` directly (owner). A local branch `drain-test-fixes` (PR #2, merged) is still here, untouched. `tower-part-1a` is deleted, locally and on GitHub (A11, A12).
+- **`rapid-selector`:** PRs #3 and #4 merged on 2026-11-11 (`f4b760d`). This machine's checkout is on `main`, with no worktrees; records are committed to `main` directly (owner). `main` is the only branch, here and on GitHub (`drain-test-fixes`, PR #2's, deleted 2026-11-11). `tower-part-1a` is deleted, locally and on GitHub (A11, A12).
 - **`production`:** this machine's checkout (`~/code/production`) is on `main`, up to date, with graphify files modified by its hook, not by us. Its local branch `rapidselector-alert-note` tracks `origin`. Pushed to `main` on 2026-11-09 with the owner's permission: `1abfa10`, the note in `prometheus/CLAUDE.md` on `sandbox`'s textfile folder. Task 14's commits followed the same way, last `6d76e18` on 2026-11-10 (the alert rules' counting). GitHub reports 8 Dependabot alerts on `production`'s default branch (seen at that push; not ours).
 
 ## To do before particular steps
