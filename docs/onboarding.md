@@ -79,6 +79,7 @@ At openrouter.ai, signed in.
 
 - **Where:** **Activity**.
 - **Look for:** usage per day, filterable by model, provider and key. This is the other side of `reconcile.sh`: a day it flags is the day to look at here.
+- **Good to know:** the filters also list routers (Auto Router, Auto Code, Jev Router). A router picks the model for a call that names it as its model. None of the gateway's names is a router, so rapid-selector uses none (`provider-facts.md`).
 
 ### O5. Privacy and providers
 
