@@ -63,6 +63,7 @@ For `docs/onboarding.md`; read through a fetch helper. The dashboard's own pages
 - **Zero data retention** is set per model group at `/settings/privacy` (Anthropic, OpenAI, Google, SpaceXAI, All other models). The account-wide allowed-provider list "acts as a ceiling"; a request no provider satisfies fails with 404.
 - **Management keys** are listed at `/settings/management-keys`; the expiry is fixed at creation, and the docs recommend setting one. Expired keys stay listed until deleted.
 - **Two-factor authentication:** not found in the docs read. Account deletion is under Settings, Manage Account, Security, the likely place.
+- **Workspaces, 2026-11-11** (https://openrouter.ai/docs/guides/features/workspaces, and the owner's dashboard): "Every API key lives in a workspace", and inference keys are listed under Workspace in the menu. Privacy settings and allowed providers are account-level, a ceiling on every workspace. The guide says nothing on renaming; the owner renamed the Default workspace, and the address still starts with `default` and carries an id. Deleting the Default workspace is permanent and "immediately disables every unscoped inference API key on the account".
 
 ### Credit purchase, 2026-11-04
 Sources: the owner's first top-up, and https://openrouter.ai/pricing.
