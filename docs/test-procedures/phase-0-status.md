@@ -12,7 +12,7 @@ A handoff between sessions, written 2026-11-04 and rewritten on 2026-11-09, when
 
 ## Next, in order (the owner picks)
 
-1. **`production`'s three commits** (`194cc00`, `eb0fbbf`, `605ae6d`: the panel "Calls per day, per name", the colour rules, finding 44) wait for the owner's permission to push to its `main`. The panel and finding 44 are done (`docs/decisions.md`, 2026-11-11).
+1. **The `config/` folder** (designing, 2026-11-11): `docs/superpowers/specs/2026-11-11-config-folder-design.md`; then the docs cleanup, the `CLAUDE.md` cleanup and the user guide's upgrade section, in that order (the spec's "Next projects"). The Grafana panel and finding 44 are done, and `production` is pushed (`605ae6d`; `docs/decisions.md`).
 2. **The README dry run** (`docs/roadmap.md`, phase 1).
 3. **Benchmarking:** Open WebUI's arena and promptfoo, a brainstorm of its own (`docs/roadmap.md`). Search and documents in chat for selected roles are parked there too (2026-11-08).
 
