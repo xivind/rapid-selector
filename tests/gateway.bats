@@ -14,7 +14,8 @@ gpt-oss-20b@deepinfra|openai/gpt-oss-20b|deepinfra/bf16|0.00000003|0.00000014|81
 gpt-oss-120b@deepinfra|openai/gpt-oss-120b|deepinfra/bf16|0.000000037|0.00000017|8192|experiment|true
 gpt-oss-120b@coreweave|openai/gpt-oss-120b|coreweave/fp4|0.00000003|0.00000017|8192|experiment|true
 deepseek-v4.1-flash@deepinfra|deepseek/deepseek-v4.1-flash|deepinfra/fp8|0.00000014|0.00000042|8192|experiment|true
-qwen3.8-2.4t-a95b@siliconflow|qwen/qwen3.8-2.4t-a95b|siliconflow/fp8|0.000002|0.000006|8192|experiment|true'
+qwen3.8-2.4t-a95b@siliconflow|qwen/qwen3.8-2.4t-a95b|siliconflow/fp8|0.000002|0.000006|8192|experiment|true
+gemma-4-31b@deepinfra|google/gemma-4-31b-it|deepinfra/fp8|0.0000002|0.0000004|4096|experiment|false'
 
 FINDINGS="$ARTIFACTS/findings.txt"
 
@@ -110,7 +111,7 @@ finding() {
 
 @test "model info lists every name with its kind and reasoning flag" {
   info="$(curl -sS -H "Authorization: Bearer $MASTER" "$GATEWAY_URL/model/info")"
-  [ "$(jq '[.data[].model_name] | unique | length' <<<"$info")" = "11" ]
+  [ "$(jq '[.data[].model_name] | unique | length' <<<"$info")" = "12" ]
   [ "$(jq '[.data[] | select(.model_info.rapidselector_kind == "role")] | length' <<<"$info")" = "4" ]
   while IFS='|' read -r name _ _ _ _ _ kind reasoning; do
     entry="$(jq -c --arg n "$name" '.data[] | select(.model_name == $n) | .model_info' <<<"$info")"

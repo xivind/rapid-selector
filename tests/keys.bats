@@ -41,7 +41,7 @@ all_state() {
   [ "$(team_state permanent | jq '.max_budget == 8 and .budget_duration == "30d"')" = "true" ]
   [ "$(team_state experiments | jq '.max_budget == 24')" = "true" ]
   [ "$(key_state "$(test_env KEY_CHAT)" | jq -c '.allowed_routes')" = '["/v1/chat/completions","/chat/completions","/v1/models","/models"]' ]
-  [ "$(team_state experiments | jq '.models | length')" = "11" ]
+  [ "$(team_state experiments | jq '.models | length')" = "12" ]
 }
 
 @test "setup-keys prints a summary without key values" {

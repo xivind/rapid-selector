@@ -189,7 +189,7 @@ rules_env() {
   run "$REPO/rapidselector.sh" restart gateway
   echo "$output"
   [ "$status" -eq 0 ]
-  grep -q "^rules ok: 11 entries" <<<"$output"
+  grep -q "^rules ok: 12 entries" <<<"$output"
   [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart gateway" ]
 }
 
