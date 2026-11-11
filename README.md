@@ -210,7 +210,7 @@ Always go through `./rapidselector.sh`: it loads the settings and secrets, then 
 | `./rapidselector.sh update` | Pull the image versions in `docker-compose.yml` and recreate what changed |
 | `./rapidselector.sh run-script <script>` | Run one of the scripts in `scripts/` with the secrets loaded |
 
-Which script to run when, and what its output and exit codes mean: [`scripts/README.md`](scripts/README.md). The tasks done most often, step by step, such as checking cost, changing a model or a budget: [`docs/user-guide.md`](docs/user-guide.md).
+Which script to run when, and what its output and exit codes mean: [`scripts/README.md`](scripts/README.md). The tasks done most often, step by step, such as checking cost, changing a model or a budget: [`docs/user-guide.md`](docs/user-guide.md). A guided tour of LiteLLM's admin UI and OpenRouter's dashboard, what to look at and what to leave alone: [`docs/onboarding.md`](docs/onboarding.md).
 
 **Updating** means changing an image version in `docker-compose.yml` (in a commit), then on the host `git pull` and `./rapidselector.sh update`. Before upgrading LiteLLM or Open WebUI: read the release notes, take a backup, and run the smoke test afterwards.
 

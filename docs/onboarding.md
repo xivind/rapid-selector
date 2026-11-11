@@ -1,6 +1,6 @@
 # Onboarding: LiteLLM's admin UI and OpenRouter's dashboard
 
-A guided tour of the two web pages that sit beside rapid-selector's own tools: what each shows, what to look for, and what to leave alone. Do it in order, one step at a time. Checked against both sites' docs on 2026-11-10 (`docs/provider-facts.md`); Part 1 walked through with the owner on the real stack (LiteLLM v1.106.6) the same day, and corrected where the version differs from the docs.
+A guided tour of the two web pages that sit beside rapid-selector's own tools: what each shows, what to look for, and what to leave alone. Do it in order, one step at a time. Checked against both sites' docs on 2026-11-10 (`docs/provider-facts.md`); Part 1 walked through with the owner on the real stack (LiteLLM v1.106.6) the same day, Parts 2 and 3 on 2026-11-11, and corrected where reality differs from the docs.
 
 **The one rule:** look here, change elsewhere. Budgets, keys and models are set by files and scripts in this repository (`scripts/setup-keys.sh`, `gateway/config.yaml`), and the next run of those puts back whatever was changed by hand. OpenRouter's settings are the exception: they live only in its dashboard, and every change there is recorded in `docs/decisions.md`.
 

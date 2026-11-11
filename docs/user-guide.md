@@ -1,6 +1,6 @@
 # User guide
 
-The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`). Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: `docs/onboarding.md` will.
+The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`). Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
 
 Exit codes, in short: `0` all well, `1` read the output, `2` a source could not be read, `3` a missing setting or secret, `4` secrets-service, `5` `restart gateway` refused.
 
