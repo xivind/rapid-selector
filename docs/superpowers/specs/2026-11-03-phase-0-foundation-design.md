@@ -25,7 +25,7 @@ Follows the overall design (`2026-11-03-rapid-selector-overall-design.md`) and t
 A Prometheus scrape target, Grafana alert rules, backup jobs for Postgres and Open WebUI, and Node-RED's host entry for `llm` (section 7).
 
 ### Not in phase 0
-Tower, the Grafana dashboard, container logs to Loki, web search in Open WebUI, and the move to `webserver`.
+The Grafana dashboard, container logs to Loki, web search in Open WebUI, and the move to `webserver`.
 
 ## 2. Decisions
 
@@ -39,7 +39,7 @@ Tower, the Grafana dashboard, container logs to Loki, web search in Open WebUI, 
 | Budget windows | `30d`, which LiteLLM resets on the 1st of the month at 00:00 UTC, in step with OpenRouter |
 | Prepaid balance | One month's top-up at a time |
 | Free models | None (`CLAUDE.md`, principle 1) |
-| Ports | Gateway 4000, `chat` 4010, tower 4020 (reserved) |
+| Ports | Gateway 4000, `chat` 4010 |
 | Open WebUI background calls | Titles on, using `llama-3.1-8b-instruct@deepinfra`; tags, follow-ups, autocomplete, search and retrieval query generation off |
 | Web search | Off; parked in `docs/roadmap.md` |
 | Container logs | Not shipped to Loki; rotated locally |
