@@ -36,10 +36,10 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 - Holds OpenRouter's management key, and is the only service that does.
 
 ### Cost summary
-- Always in tower, with or without Grafana: spent today, this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
-- Displays amounts in NOK using an exchange rate from `.env`. Limits themselves are in USD.
+- Always in tower, with or without Grafana: spent today, this week and this month, remaining balance, forecast, readable at a glance and placed next to the kill switch.
+- All amounts in USD, as OpenRouter and LiteLLM account in USD (decided 2026-11-05).
 - Shows when OpenRouter's key limit and LiteLLM's budgets next reset. Both are set to reset on the 1st of the month at 00:00 UTC, and a mismatch must be visible.
-- History over time and alerts are in Grafana, when that integration is on.
+- Grafana shows the same periods and longer ones, and the alerts, when that integration is on.
 
 ### Reconciliation
 - Compares LiteLLM's recorded spend with OpenRouter's actual usage. Discrepancies must be clearly visible.
@@ -77,7 +77,7 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 
 ## Programmatic access
 
-- The gateway's OpenAI-compatible HTTP API is the default. A Docker app uses any OpenAI-compatible client with the gateway's address (`llm`) and its own virtual key. Node-RED uses its HTTP request node. No extra service is needed.
+- The gateway's OpenAI-compatible HTTP API is the default. A Docker app uses any OpenAI-compatible client with the gateway's address (`http://<host>:4000`) and its own virtual key. Node-RED uses its HTTP request node. No extra service is needed.
 - Clients call roles, never specific models.
 - Every client handles a failed call by skipping that step and logging it: a fixed timeout, at most one retry on a timeout or 5xx, and no retry on budget or limit errors.
 - Every new use case, whatever it is:

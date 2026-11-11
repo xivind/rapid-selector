@@ -105,7 +105,7 @@ gw_call() {
 }
 
 # host_limits_memory: whether this host's kernel enforces and reports container memory.
-# Raspberry Pi OS ships without it (cgroup_disable=memory), and Docker then ignores mem_limit.
+# Raspberry Pi OS ships without it (cgroup_disable=memory).
 host_limits_memory() {
   [ "$(docker info --format '{{.MemoryLimit}}')" = "true" ]
 }
