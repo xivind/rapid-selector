@@ -37,7 +37,7 @@ STUB
   run "$REPO/scripts/check-prices.sh"
   echo "$output"
   [ "$status" -eq 0 ]
-  [ "$(grep -c '^ok ' <<<"$output")" = "12" ]
+  [ "$(grep -c '^ok ' <<<"$output")" = "11" ]
 }
 
 @test "check-prices fails when a configured price differs" {
@@ -110,7 +110,7 @@ rules_fail() {
   echo "$output"
   [ "$status" -eq 0 ]
   [ "$(grep -c '^FAIL' <<<"$output")" = "0" ]
-  grep -q "^rules ok: 12 entries" <<<"$output"
+  grep -q "^rules ok: 11 entries" <<<"$output"
   [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
 }
 
@@ -181,7 +181,7 @@ rules_fail() {
   run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   echo "$output"
   [ "$status" -eq 1 ]
-  grep -q "^rules ok: 12 entries" <<<"$output"
+  grep -q "^rules ok: 11 entries" <<<"$output"
   grep -q "^FAIL classify (deepinfra/fp8): price is now" <<<"$output"
 }
 
@@ -206,7 +206,7 @@ reorder_summarise() {
   run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
   echo "$output"
   [ "$status" -eq 0 ]
-  grep -q "^rules ok: 12 entries" <<<"$output"
+  grep -q "^rules ok: 11 entries" <<<"$output"
 }
 
 @test "rules: a broken entry before a reordered one still fails" {

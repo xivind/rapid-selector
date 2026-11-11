@@ -196,23 +196,6 @@ model_list:
     model_info:
       rapidselector_kind: experiment
       reasoning: true
-  - model_name: gemma-4-31b@deepinfra
-    litellm_params:
-      model: openrouter/google/gemma-4-31b-it
-      api_key: os.environ/RAPIDSELECTOR_OPENROUTER_KEY
-      max_tokens: 4096
-      input_cost_per_token: 0.0000002
-      output_cost_per_token: 0.0000004
-      extra_body:
-        provider:
-          order: ["deepinfra/fp8"]
-          only: ["deepinfra/fp8"]
-          allow_fallbacks: false
-          zdr: true
-          data_collection: deny
-    model_info:
-      rapidselector_kind: experiment
-      reasoning: false
 
 litellm_settings:
   max_budget: 32
