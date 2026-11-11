@@ -1,6 +1,6 @@
 # A `config/` folder for each home's own settings
 
-Status: draft for the owner, 2026-11-11, after the builder check. Brainstormed with the owner the same day.
+Status: approved by the owner on 2026-11-11, from Claude's summary of it (after the builder check). Brainstormed with the owner the same day.
 
 ## Why
 
