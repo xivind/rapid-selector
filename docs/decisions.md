@@ -476,6 +476,7 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 ### 2026-11-11: Task 15, the tour's Part 2, OpenRouter's dashboard
 Walked through in the owner's browser by the owner, one step at a time. Nothing changed in the dashboard unless a step says so.
 - **O1, Credits:** the owner compared `status.sh` with `/settings/credits` and reports all as the tour says: the balance matches, auto top-up off, no saved payment method, and the page as described. The figures were not reported to Claude. No correction to the tour.
+- **O2, Keys:** the inference keys are under **Workspace** in the menu, not where the docs' `/settings/keys` suggests (tour corrected). `rapidselector-gateway`: limit $35, monthly reset, usage $5.19 as `status.sh` shows, enabled, and the owner found the controls; the disable control was left alone. The management key cannot call a model: the docs say it "cannot be used to make API calls to OpenRouter's completion endpoints" (`/docs/guides/overview/auth/management-api-keys`, read 2026-11-11).
 
 ## Open
 
