@@ -102,7 +102,7 @@ The owner's wish (2026-11-11): do it once together, with a real new model, so th
 
 ### R1. Pick it
 
-- **Check first:** the model is on OpenRouter with an endpoint at one of the four allowed providers that has zero data retention, not in the flex tier and without Safety Retention, and its price at that host. If none qualifies, pick another model; a fifth provider is a decision of its own.
+- **Check first:** the model and host are not already in `gateway/config.yaml` under another name (the first pick on 2026-11-11 turned out to be the `summarise` role), and the model is on OpenRouter with an endpoint at one of the four allowed providers that has zero data retention, not in the flex tier and without Safety Retention, and its price at that host. If none qualifies, pick another model; a fifth provider is a decision of its own.
 - **Cost, flagged before anything runs:** the smoke test's one call to it, a fraction of a cent for a small model, and whatever is then spent trying it in chat.
 
 ### R2. Add it
