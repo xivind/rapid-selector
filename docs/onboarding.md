@@ -64,7 +64,7 @@ At openrouter.ai, signed in.
 
 ### O2. Keys
 
-- **Where:** **Keys**.
+- **Where:** **Keys**, under **Workspace** in the menu (OpenRouter's docs still point to `/settings/keys`).
 - **Look for:** `rapidselector-gateway`, the gateway's only inference key: limit $35, monthly reset, and its usage.
 - **The one thing to do here:** **disable** it to stop all spending at once, the fast stop (README, "Stopping all spending"). Enable it again the same way; for a few seconds after that, the gateway may still answer 429 while it cools down.
 - **Don't change:** the limit (a recorded decision), and never delete the key: its value lives in secrets-service, and a new key means a new value there.
