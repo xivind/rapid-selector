@@ -473,6 +473,10 @@ From the same session. **The false alert:** Grafana's state history puts it at 2
 
 **Tour corrections and wishes, 2026-11-11** (`ops-scripts`, `8d70305`): `docs/onboarding.md` corrected from L1–L6 (the home page, the session key not listed, "All Proxy Models" on `scripts`, teams showing `30d`, models read-only by two causes, the switch's place and lock). The user guide's role rename no longer points at the admin UI's usage view, which merges names sharing a model id, but at Grafana's LLM dashboard or the Logs page (owner's yes). **The owner's wishes:** a Part 3 in the tour, rehearsing adding and removing a real new model; a Grafana panel "Calls per day, per name" for a later `production` session (status file); and the repository as code for several homes parked in `docs/roadmap.md`, with a note on backup. Part 2 of the tour (OpenRouter, O1–O6) is next.
 
+### 2026-11-11: Task 15, the tour's Part 2, OpenRouter's dashboard
+Walked through in the owner's browser by the owner, one step at a time. Nothing changed in the dashboard unless a step says so.
+- **O1, Credits:** the owner compared `status.sh` with `/settings/credits` and reports all as the tour says: the balance matches, auto top-up off, no saved payment method, and the page as described. The figures were not reported to Claude. No correction to the tour.
+
 ## Open
 
 ### Settle during design or phase 0
