@@ -1,0 +1,489 @@
+{
+  "results": [
+    {
+      "date": "2026-11-06",
+      "metrics": {
+        "spend": 4.7199999999999995e-05,
+        "flat_cost": 0,
+        "prompt_tokens": 300,
+        "completion_tokens": 150,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "compression_saved_tokens": 0,
+        "compression_savings_spend": 0,
+        "prompt_caching_savings_spend": 0,
+        "gateway_injected_caching_savings_spend": 0,
+        "autorouter_savings_spend": 0,
+        "total_tokens": 450,
+        "successful_requests": 3,
+        "failed_requests": 1,
+        "api_requests": 4,
+        "total_response_time_ms": 55,
+        "timed_requests": 3
+      },
+      "breakdown": {
+        "mcp_servers": {},
+        "models": {
+          "openrouter/meta-llama/llama-3.2-1b-instruct": {
+            "metrics": {
+              "spend": 1e-06,
+              "flat_cost": 0,
+              "prompt_tokens": 100,
+              "completion_tokens": 50,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 150,
+              "successful_requests": 1,
+              "failed_requests": 0,
+              "api_requests": 1,
+              "total_response_time_ms": 5,
+              "timed_requests": 1
+            },
+            "metadata": {},
+            "api_key_breakdown": {}
+          }
+        },
+        "model_groups": {
+          "classify": {
+            "metrics": {
+              "spend": 3.5e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 200,
+              "completion_tokens": 100,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 300,
+              "successful_requests": 2,
+              "failed_requests": 1,
+              "api_requests": 3,
+              "total_response_time_ms": 50,
+              "timed_requests": 2
+            },
+            "metadata": {},
+            "api_key_breakdown": {
+              "hash-node-red": {
+                "metrics": {
+                  "spend": 3.5e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 200,
+                  "completion_tokens": 100,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 300,
+                  "successful_requests": 2,
+                  "failed_requests": 1,
+                  "api_requests": 3,
+                  "total_response_time_ms": 50,
+                  "timed_requests": 2
+                },
+                "metadata": {
+                  "key_alias": "node-red",
+                  "team_id": "permanent",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              }
+            }
+          },
+          "gpt-oss-120b@deepinfra": {
+            "metrics": {
+              "spend": 1.22e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 100,
+              "completion_tokens": 50,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 150,
+              "successful_requests": 1,
+              "failed_requests": 0,
+              "api_requests": 1,
+              "total_response_time_ms": 5,
+              "timed_requests": 1
+            },
+            "metadata": {},
+            "api_key_breakdown": {
+              "hash-smoke-test": {
+                "metrics": {
+                  "spend": 1.22e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 100,
+                  "completion_tokens": 50,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 150,
+                  "successful_requests": 1,
+                  "failed_requests": 0,
+                  "api_requests": 1,
+                  "total_response_time_ms": 5,
+                  "timed_requests": 1
+                },
+                "metadata": {
+                  "key_alias": "smoke-test",
+                  "team_id": "experiments",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              }
+            }
+          }
+        },
+        "providers": {
+          "openrouter": {
+            "metrics": {
+              "spend": 4.7199999999999995e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 300,
+              "completion_tokens": 150,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 450,
+              "successful_requests": 3,
+              "failed_requests": 1,
+              "api_requests": 4,
+              "total_response_time_ms": 55,
+              "timed_requests": 3
+            },
+            "metadata": {},
+            "api_key_breakdown": {
+              "hash-node-red": {
+                "metrics": {
+                  "spend": 3.5e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 200,
+                  "completion_tokens": 100,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 300,
+                  "successful_requests": 2,
+                  "failed_requests": 1,
+                  "api_requests": 3,
+                  "total_response_time_ms": 50,
+                  "timed_requests": 2
+                },
+                "metadata": {
+                  "key_alias": "node-red",
+                  "team_id": "permanent",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              },
+              "hash-smoke-test": {
+                "metrics": {
+                  "spend": 1.22e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 100,
+                  "completion_tokens": 50,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 150,
+                  "successful_requests": 1,
+                  "failed_requests": 0,
+                  "api_requests": 1,
+                  "total_response_time_ms": 5,
+                  "timed_requests": 1
+                },
+                "metadata": {
+                  "key_alias": "smoke-test",
+                  "team_id": "experiments",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              }
+            }
+          }
+        },
+        "endpoints": {
+          "/chat/completions": {
+            "metrics": {
+              "spend": 4.7199999999999995e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 300,
+              "completion_tokens": 150,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 450,
+              "successful_requests": 3,
+              "failed_requests": 1,
+              "api_requests": 4,
+              "total_response_time_ms": 55,
+              "timed_requests": 3
+            },
+            "metadata": {},
+            "api_key_breakdown": {
+              "hash-node-red": {
+                "metrics": {
+                  "spend": 3.5e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 200,
+                  "completion_tokens": 100,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 300,
+                  "successful_requests": 2,
+                  "failed_requests": 1,
+                  "api_requests": 3,
+                  "total_response_time_ms": 50,
+                  "timed_requests": 2
+                },
+                "metadata": {
+                  "key_alias": "node-red",
+                  "team_id": "permanent",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              },
+              "hash-smoke-test": {
+                "metrics": {
+                  "spend": 1.22e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 100,
+                  "completion_tokens": 50,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 150,
+                  "successful_requests": 1,
+                  "failed_requests": 0,
+                  "api_requests": 1,
+                  "total_response_time_ms": 5,
+                  "timed_requests": 1
+                },
+                "metadata": {
+                  "key_alias": "smoke-test",
+                  "team_id": "experiments",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              }
+            }
+          }
+        },
+        "api_keys": {
+          "hash-node-red": {
+            "metrics": {
+              "spend": 3.5e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 200,
+              "completion_tokens": 100,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 300,
+              "successful_requests": 2,
+              "failed_requests": 1,
+              "api_requests": 3,
+              "total_response_time_ms": 50,
+              "timed_requests": 2
+            },
+            "metadata": {
+              "key_alias": "node-red",
+              "team_id": "permanent",
+              "user_id": null,
+              "user_email": null,
+              "key_exists": true
+            }
+          },
+          "hash-smoke-test": {
+            "metrics": {
+              "spend": 1.22e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 100,
+              "completion_tokens": 50,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 150,
+              "successful_requests": 1,
+              "failed_requests": 0,
+              "api_requests": 1,
+              "total_response_time_ms": 5,
+              "timed_requests": 1
+            },
+            "metadata": {
+              "key_alias": "smoke-test",
+              "team_id": "experiments",
+              "user_id": null,
+              "user_email": null,
+              "key_exists": true
+            }
+          }
+        },
+        "entities": {
+          "Unassigned": {
+            "metrics": {
+              "spend": 4.7199999999999995e-05,
+              "flat_cost": 0,
+              "prompt_tokens": 300,
+              "completion_tokens": 150,
+              "cache_read_input_tokens": 0,
+              "cache_creation_input_tokens": 0,
+              "compression_saved_tokens": 0,
+              "compression_savings_spend": 0,
+              "prompt_caching_savings_spend": 0,
+              "gateway_injected_caching_savings_spend": 0,
+              "autorouter_savings_spend": 0,
+              "total_tokens": 450,
+              "successful_requests": 3,
+              "failed_requests": 1,
+              "api_requests": 4,
+              "total_response_time_ms": 55,
+              "timed_requests": 3
+            },
+            "metadata": {},
+            "api_key_breakdown": {
+              "hash-node-red": {
+                "metrics": {
+                  "spend": 3.5e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 200,
+                  "completion_tokens": 100,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 300,
+                  "successful_requests": 2,
+                  "failed_requests": 1,
+                  "api_requests": 3,
+                  "total_response_time_ms": 50,
+                  "timed_requests": 2
+                },
+                "metadata": {
+                  "key_alias": "node-red",
+                  "team_id": "permanent",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              },
+              "hash-smoke-test": {
+                "metrics": {
+                  "spend": 1.22e-05,
+                  "flat_cost": 0,
+                  "prompt_tokens": 100,
+                  "completion_tokens": 50,
+                  "cache_read_input_tokens": 0,
+                  "cache_creation_input_tokens": 0,
+                  "compression_saved_tokens": 0,
+                  "compression_savings_spend": 0,
+                  "prompt_caching_savings_spend": 0,
+                  "gateway_injected_caching_savings_spend": 0,
+                  "autorouter_savings_spend": 0,
+                  "total_tokens": 150,
+                  "successful_requests": 1,
+                  "failed_requests": 0,
+                  "api_requests": 1,
+                  "total_response_time_ms": 5,
+                  "timed_requests": 1
+                },
+                "metadata": {
+                  "key_alias": "smoke-test",
+                  "team_id": "experiments",
+                  "user_id": null,
+                  "user_email": null,
+                  "key_exists": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "total_spend": 4.7199999999999995e-05,
+    "total_flat_cost": 0,
+    "total_prompt_tokens": 300,
+    "total_completion_tokens": 150,
+    "total_tokens": 450,
+    "total_api_requests": 4,
+    "total_successful_requests": 3,
+    "total_failed_requests": 1,
+    "total_cache_read_input_tokens": 0,
+    "total_cache_creation_input_tokens": 0,
+    "total_compression_saved_tokens": 0,
+    "total_compression_savings_spend": 0,
+    "total_prompt_caching_savings_spend": 0,
+    "total_gateway_injected_caching_savings_spend": 0,
+    "total_autorouter_savings_spend": 0,
+    "total_response_time_ms": 55,
+    "total_timed_requests": 3,
+    "page": 2,
+    "total_pages": 1,
+    "has_more": false,
+    "api_key_limit": null,
+    "total_api_keys": null,
+    "entity_total_api_keys": null
+  }
+}

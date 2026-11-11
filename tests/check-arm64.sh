@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Check that every pinned image exists for linux/arm64 (the Raspberry Pi 5), without pulling.
-# Usage: tests/check-arm64.sh [compose files...]  (default: docker-compose.yml and the test fakes)
+# For testing only. Check that every pinned image exists for linux/arm64 (the Raspberry Pi 5),
+# without pulling, so an image change cannot break the Pi. Run it before changing an image tag.
+# Run:     tests/check-arm64.sh [compose files...]  (default: docker-compose.yml and the test fakes)
+# Secrets: none.
+# Cost:    nothing (registry reads; Docker Hub's rate limit applies).
+# Exit:    0 every image has linux/arm64, 1 one does not or cannot be read.
 set -uo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 [ "$#" -gt 0 ] || set -- "$repo/docker-compose.yml" "$repo/tests/compose.fakes.yml"

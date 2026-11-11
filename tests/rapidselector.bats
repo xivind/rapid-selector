@@ -19,7 +19,8 @@ setup() {
 {
   echo "ARGS=$*"
   for n in POSTGRES_PASSWORD LITELLM_MASTER_KEY LITELLM_SALT_KEY LITELLM_UI_PASSWORD \
-           RAPIDSELECTOR_OPENROUTER_KEY WEBUI_SECRET_KEY KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST; do
+           RAPIDSELECTOR_OPENROUTER_KEY WEBUI_SECRET_KEY KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST \
+           OPENROUTER_MANAGEMENT_KEY KEY_SCRIPTS; do
     printf '%s=%s\n' "$n" "${!n}"
   done
 } >> "$DOCKER_CALL_LOG"
@@ -45,7 +46,8 @@ write_env() {
 all_secrets_lines() {
   local n
   for n in POSTGRES_PASSWORD LITELLM_MASTER_KEY LITELLM_SALT_KEY LITELLM_UI_PASSWORD \
-           RAPIDSELECTOR_OPENROUTER_KEY WEBUI_SECRET_KEY KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST; do
+           RAPIDSELECTOR_OPENROUTER_KEY WEBUI_SECRET_KEY KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST \
+           OPENROUTER_MANAGEMENT_KEY KEY_SCRIPTS; do
     echo "$n=v-$n"
   done
 }
@@ -110,7 +112,8 @@ blob_json() {
   run "$REPO/rapidselector.sh" up -d
   [ "$status" -eq 0 ]
   grep -qx "ARGS=compose up -d" "$DOCKER_CALL_LOG"
-  while read -r line; do grep -qxF "$line" "$DOCKER_CALL_LOG"; done < <(all_secrets_lines)
+  # Every required secret; the optional management key is fetched for run-script only.
+  while read -r line; do grep -qxF "$line" "$DOCKER_CALL_LOG"; done < <(all_secrets_lines | grep -v '^OPENROUTER_MANAGEMENT_KEY=')
 }
 
 @test "missing blob field exits 3 and names the field without calling docker" {
@@ -170,4 +173,106 @@ blob_json() {
   run "$REPO/rapidselector.sh" up -d
   [ "$status" -eq 0 ]
   [[ "$output" != *v-* ]]
+}
+
+# rules_env [sed expression]: an env file with every secret, and RAPIDSELECTOR_GATEWAY_CONFIG
+# pointing at gateway/config.yaml with the expression applied (none: the real config).
+rules_env() {
+  sed -e "${1:-}" "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  export RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/config.yaml"
+}
+
+@test "restart gateway runs the rules check and then docker" {
+  rules_env
+  run "$REPO/rapidselector.sh" restart gateway
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart gateway" ]
+}
+
+@test "restart gateway with a broken rule exits 5 without calling docker" {
+  rules_env '0,/allow_fallbacks: false/s//allow_fallbacks: true/'
+  run "$REPO/rapidselector.sh" restart gateway
+  echo "$output"
+  [ "$status" -eq 5 ]
+  grep -q "^FAIL classify: allow_fallbacks must be false" <<<"$output"
+  grep -q "gateway not restarted: gateway/config.yaml breaks a rule" <<<"$output"
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "restart with no service checks the rules too" {
+  rules_env '0,/allow_fallbacks: false/s//allow_fallbacks: true/'
+  run "$REPO/rapidselector.sh" restart
+  [ "$status" -eq 5 ]
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "restart chat is not checked" {
+  rules_env '0,/allow_fallbacks: false/s//allow_fallbacks: true/'
+  run "$REPO/rapidselector.sh" restart chat
+  [ "$status" -eq 0 ]
+  [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart chat" ]
+}
+
+@test "env source: no management key still runs docker" {
+  mapfile -t lines < <(all_secrets_lines | grep -v '^OPENROUTER_MANAGEMENT_KEY=')
+  write_env env "${lines[@]}" "OPENROUTER_MANAGEMENT_KEY="
+  run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -qx "ARGS=compose up -d" "$DOCKER_CALL_LOG"
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+}
+
+@test "secrets-service source: no management key field still runs docker" {
+  blob_json | jq 'del(.OPENROUTER_MANAGEMENT_KEY)' > "$ARTIFACTS/secrets.json"
+  secrets_service_env
+  run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+  grep -qx "KEY_SCRIPTS=v-KEY_SCRIPTS" "$DOCKER_CALL_LOG"
+}
+
+@test "secrets-service source: an empty management key field counts as not set" {
+  blob_json | jq '.OPENROUTER_MANAGEMENT_KEY = ""' > "$ARTIFACTS/secrets.json"
+  secrets_service_env
+  run "$REPO/rapidselector.sh" up
+  [ "$status" -eq 0 ]
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+}
+
+@test "secrets-service source: the management key is fetched for run-script only" {
+  blob_json > "$ARTIFACTS/secrets.json"
+  secrets_service_env
+  run "$REPO/rapidselector.sh" up
+  [ "$status" -eq 0 ]
+  grep -qx "OPENROUTER_MANAGEMENT_KEY=" "$DOCKER_CALL_LOG"
+  run "$REPO/rapidselector.sh" run-script bash -c 'echo "key=${OPENROUTER_MANAGEMENT_KEY:-unset}"'
+  [ "$status" -eq 0 ]
+  [ "$output" = "key=v-OPENROUTER_MANAGEMENT_KEY" ]
+}
+
+@test "secrets-service: a blob that is not an object exits 4 without calling docker" {
+  echo '["not", "an", "object"]' > "$ARTIFACTS/secrets.json"
+  secrets_service_env
+  run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 4 ]
+  [[ "$output" == *"no fields"* ]]
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "restart gateway with an unreadable config says so and exits 5" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/missing.yaml" run "$REPO/rapidselector.sh" restart gateway
+  echo "$output"
+  [ "$status" -eq 5 ]
+  [[ "$output" == *"cannot read"* ]]
+  [[ "$output" != *"breaks a rule"* ]]
+  [ ! -e "$DOCKER_CALL_LOG" ]
 }

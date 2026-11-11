@@ -48,9 +48,9 @@ Facts about providers and tools go in `docs/provider-facts.md` with a date and a
 - Anything that runs automatically (Node-RED flows, other apps, benchmark runs) gets its own keys with low caps, an upper limit on the number of calls per run, and an upper limit on input size. `max_tokens` only limits the output, so a large input can still be expensive.
 
 ### 2. Only the gateway holds provider keys
-All clients (chat, Node-RED, other apps, tower) talk to LiteLLM using their own virtual keys. No client gets a provider inference key, and no client calls a provider directly for inference.
+All clients (chat, Node-RED, other apps, the operator scripts) talk to LiteLLM using their own virtual keys. No client gets a provider inference key, and no client calls a provider directly for inference.
 
-One deliberate exception: `tower` holds OpenRouter's **management key**, used to read usage and balance and to disable the inference key (kill switch). The management key cannot be used for inference, but it can create, change and delete keys, so it is treated as the most sensitive secret in the system and exists only in `tower`.
+One deliberate exception: the operator scripts `scripts/status.sh` and `scripts/reconcile.sh` borrow OpenRouter's **management key** per run, from the secret store or `.env`, where one is set up (it is optional), to read the balance, the inference key's limit and usage, and activity. No service holds it. The management key cannot be used for inference, but it can create, change and delete keys, so it is treated as the most sensitive secret in the system.
 
 ### 3. LAN only
 Nothing is exposed to the internet. No port forwarding. Services bind to the LAN interface. No remote login.
@@ -66,11 +66,11 @@ We assemble existing components where they exist and build only what is unique t
 ## Architecture
 
 ```
- Open WebUI ──┐
- Node-RED   ──┤
- other apps ──┼──► LiteLLM (gateway) ──► OpenRouter ──► upstream hosts
- tower      ──┘        │
-                    Postgres
+ Open WebUI       ──┐
+ Node-RED         ──┤
+ other apps       ──┼──► LiteLLM (gateway) ──► OpenRouter ──► upstream hosts
+ operator scripts ──┘        │
+                          Postgres
 ```
 
 | Service | What | Built by us? |
@@ -78,14 +78,14 @@ We assemble existing components where they exist and build only what is unique t
 | `gateway` | LiteLLM proxy, OpenAI-compatible API, virtual keys, budgets, spend log | No, configured |
 | `db` | Postgres for LiteLLM (required for virtual keys and budgets) | No |
 | `chat` | Open WebUI, connected to the gateway with its own key | No, configured |
-| `tower` | Control tower: usage, balance, kill switch, arena, visualisation | **Yes** |
 
-- The core (`gateway`, `db`, `chat`, `tower`) works with only Docker and secrets. Integrations with existing infrastructure (metrics and alerting, secret stores, backup, log shipping) are optional, off by default and switched on in configuration. Changes that only make sense in one home go in that home's own repository.
+- The chosen stack (LiteLLM, Postgres, Open WebUI with its arena, and promptfoo for benchmarks) covers our needs, so we build no service of our own (principle 5, reuse before build). What we build are operator scripts in `scripts/`.
+- The core (`gateway`, `db`, `chat`) works with only Docker and secrets. Integrations with existing infrastructure (metrics and alerting, secret stores, backup, log shipping) are optional, off by default and switched on in configuration. Changes that only make sense in one home go in that home's own repository.
 - Clients call roles, stable names defined in the gateway, never specific models.
 - The gateway is the only place providers are configured. Adding a provider, such as local inference, changes the gateway and nothing else.
 - The gateway's OpenAI-compatible HTTP API is the default for all programmatic use.
-- `tower` reads LiteLLM data through LiteLLM's API, never directly from Postgres. The Prisma schema is LiteLLM's internal business.
-- `tower` is the only interface we build. Open WebUI and LiteLLM's admin UI are used with whatever settings they offer, and are never forked.
+- The operator scripts read LiteLLM data through LiteLLM's API, never directly from Postgres. The Prisma schema is LiteLLM's internal business.
+- Open WebUI and LiteLLM's admin UI are used with whatever settings they offer, and are never forked.
 
 ## Platform and operations
 
@@ -102,7 +102,7 @@ We assemble existing components where they exist and build only what is unique t
 - The Compose project, containers, volumes and the images we build are prefixed `rapidselector`.
 - LiteLLM's master key and salt key are generated at setup. The salt key must never be changed after provider keys have been stored, or they become unreadable. The README must state this clearly.
 - Use healthchecks so that services wait for the services they depend on.
-- Backup: Postgres data (keys, budgets, spend history), Open WebUI's data and `tower`'s SQLite file are backed up, through a backup integration or the fallback described in the README. A backup is useless without the salt key, so the secrets must be kept safe as well.
+- Backup: Postgres data (keys, budgets, spend history) and Open WebUI's data are backed up, through a backup integration or the fallback described in the README. A backup is useless without the salt key, so the secrets must be kept safe as well.
 
 ## Repo structure
 
@@ -113,10 +113,9 @@ rapid-selector/
 ├── docker-compose.yml
 ├── .env.example
 ├── rapidselector.sh  # loads secrets, then runs docker compose
-├── scripts/        # smoke test and other operator scripts
+├── scripts/        # operator scripts (status, reconcile, setup, smoke test, checks)
 ├── gateway/        # LiteLLM config
 ├── chat/           # Open WebUI config (if needed)
-├── tower/          # control tower (our code)
 └── docs/           # requirements, roadmap, decisions, facts, specs, plans
 ```
 

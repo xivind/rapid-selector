@@ -9,6 +9,8 @@ services:
     command: ["python", "upstream.py"]
     volumes:
       - ./tests/fakes:/app:ro
+      # The fake OpenRouter's zero data retention list is built from the gateway config at start.
+      - ./gateway/config.yaml:/config/config.yaml:ro
     ports:
       - "127.0.0.1:18000:8000"
     healthcheck:

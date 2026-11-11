@@ -1,6 +1,6 @@
 # rapid-selector: overall design
 
-Date: 2026-11-03. Status: approved by the owner on 2026-11-03.
+Date: 2026-11-03. Status: approved by the owner on 2026-11-03. Revised on 2026-11-11 (owner): the control service first planned here was replaced by operator scripts (`2026-11-08-scripts-instead-of-tower-design.md`, `docs/decisions.md`), and this design now describes them.
 
 ## 1. What this spec is
 
@@ -19,7 +19,7 @@ The rules in `CLAUDE.md` apply throughout. This spec does not repeat them.
 
 ## 3. Design principles
 
-1. **The core works on its own; integrations are optional.** `gateway`, `db`, `chat` and `tower` need only Docker and secrets. Prometheus and Grafana, secrets-service, backup-orchestrator and Loki are integrations: off by default, switched on in configuration, and documented. Changes that only make sense in the owner's home (scrape targets, alert rules, backup jobs) belong in the `production` repository; rapid-selector documents how to connect.
+1. **The core works on its own; integrations are optional.** `gateway`, `db` and `chat` need only Docker and secrets. Prometheus and Grafana, secrets-service, backup-orchestrator and Loki are integrations: off by default, switched on in configuration, and documented. Changes that only make sense in the owner's home (scrape targets, alert rules, backup jobs) belong in the `production` repository; rapid-selector documents how to connect.
 2. **Clients call roles, not models.** A role (e.g. `summarise`) is a stable name in the gateway. The model behind it can change without touching any client.
 3. **The gateway's configuration lives in git.** Models, hosts, prices and roles are defined in one file. Nothing is added through an admin UI.
 4. **Secrets are environment variables.** Their names are fixed and listed in `.env.example`. Where the values come from is pluggable.
@@ -32,12 +32,13 @@ The rules in `CLAUDE.md` apply throughout. This spec does not repeat them.
                          ┌──────────── host (sandbox → webserver) ─────────────┐
  Open WebUI (chat) ──────┤                                                      │
  Node-RED, apps ─────────┼──► gateway (LiteLLM) ──► OpenRouter ──► upstream hosts
- tower ──────────────────┤        │                                             │
+ operator scripts ───────┤        │                                             │
                          │       db (Postgres)                                  │
                          └──────────────────────────────────────────────────────┘
- optional:  Prometheus ◄── /metrics (gateway, tower)      Grafana ◄── Prometheus (dashboard, email alerts)
+ optional:  Prometheus ◄── /metrics (gateway), node_exporter's textfile (scripts, by cron)
+            Grafana ◄── Prometheus (dashboard, email alerts)
             secrets-service ──► rapidselector.sh ──► environment variables
-            backup-orchestrator ◄── Postgres, Open WebUI data, tower's SQLite
+            backup-orchestrator ◄── Postgres, Open WebUI data
             Loki ◄── container logs
 ```
 
@@ -45,10 +46,11 @@ The rules in `CLAUDE.md` apply throughout. This spec does not repeat them.
 |---|---|---|---|
 | `gateway` | `rapidselector-gateway` | LiteLLM: the only way to the models. Allowlist, roles, virtual keys, budgets, spend log, `/metrics` | Configured |
 | `db` | `rapidselector-db` | Postgres for LiteLLM. No published port | Configured |
-| `chat` | `rapidselector-chat` | Open WebUI, with its own virtual key, connected to the gateway and nothing else | Configured |
-| `tower` | `rapidselector-tower` | Cost summary, OpenRouter balance and key limit, reconciliation, kill switch, `/metrics`; later the arena and benchmarks | **Built** (image `rapidselector-tower`) |
+| `chat` | `rapidselector-chat` | Open WebUI, with its own virtual key, connected to the gateway and nothing else. Its arena compares models | Configured |
 
-Upstream images keep their own names and are pinned to a version. Volumes: `rapidselector_pgdata`, `rapidselector_chatdata`, `rapidselector_towerdata`, on the SSD.
+We build no service of our own (`CLAUDE.md`, principle 5). What we build are the operator scripts in `scripts/`, run by hand or by cron through `./rapidselector.sh run-script`: `status.sh` (balance, key limit, budgets), `reconcile.sh` (recorded spend against OpenRouter's), the rules and price check, the key setup and the smoke test (`scripts/README.md`).
+
+Upstream images keep their own names and are pinned to a version. Volumes: `rapidselector_pgdata`, `rapidselector_chatdata`, on the SSD.
 
 ## 5. Gateway: models, roles, keys and budgets
 
@@ -67,7 +69,7 @@ The first roles and models are chosen in phase 0.
 ### Fixed shares of the budget
 Implemented with LiteLLM teams (a group of keys with a shared budget):
 - **Team `permanent`:** one key per client (`node-red`, each app). Each key may use roles only, and has a low cap and a rate limit.
-- **Team `experiments`:** the key for `chat`, and tower's key for the arena and benchmarks.
+- **Team `experiments`:** the key for `chat` (and its arena), and later a key for benchmark runs (phase 2).
 - LiteLLM's global budget is at most the OpenRouter key's monthly limit. The team budgets add up to at most the global budget.
 
 LiteLLM resets a `30d` budget on the 1st of each month at 00:00 in its configured timezone (UTC by default), the same moment as OpenRouter's monthly reset. (Corrected 2026-11-03: this spec first said the two would not line up.) LiteLLM is still the soft layer; the OpenRouter key limit is the actual monthly cap.
@@ -85,34 +87,32 @@ Created once through LiteLLM's admin UI or API, following the README. They live 
 - `llm` is a name alias on the owner's router, pointing to the current host. Other users use their own host name.
 - `chat` reaches the gateway inside the Compose network (`http://gateway:4000`).
 
-### tower → gateway (LiteLLM's API)
-- Reads spend per key, team and model, and budget status.
-- Blocks and unblocks all virtual keys (kill switch level 1). Uses its own admin key rather than the master key, if LiteLLM allows it.
-- Uses a separate key in team `experiments` for the arena.
+### Operator scripts → gateway (LiteLLM's API)
+- `status.sh` and `reconcile.sh` read global and team spend, budgets and daily activity, with their own key `scripts` (role `proxy_admin_viewer`, read routes only), not the master key.
+- They change nothing. Blocking virtual keys (kill switch level 1) is done by hand in LiteLLM's admin UI.
 
-### tower → OpenRouter (management key)
-- Reads the account balance (`GET /api/v1/credits`).
-- Reads the inference key's limit, remaining limit and usage through the key-management API.
-- Disables and re-enables the inference key (`PATCH /api/v1/keys/{hash}`, kill switch level 2).
+### Operator scripts → OpenRouter (management key, optional)
+- Read the account balance (`GET /api/v1/credits`), the inference key's limit, remaining limit and usage (`GET /api/v1/keys/{hash}`), and the activity per day and model (`GET /api/v1/activity`).
+- The key is borrowed per run, from the secret store or `.env`; no service holds it. Disabling the inference key (kill switch level 2) is done by hand in OpenRouter's dashboard.
 
 ### Metrics (optional integration)
-- Prometheus scrapes LiteLLM's `/metrics` and tower's `/metrics`.
-- Tower's metrics share the prefix `rapidselector_`, e.g. `rapidselector_openrouter_balance_usd`, `rapidselector_key_limit_remaining_usd`, `rapidselector_reconciliation_diff_usd`, `rapidselector_kill_switch_engaged`.
+- Prometheus scrapes LiteLLM's `/metrics`.
+- `status.sh --prometheus` and `reconcile.sh --prometheus` print Prometheus text format, prefixed `rapidselector_`; a cron job writes it to `node_exporter`'s textfile collector (`scripts/write-metrics.sh`).
 - Metrics carry key aliases and amounts, never secrets, and have no login, like `node_exporter` on the owner's hosts.
 
 ### Ports and access
-- Published, bound to the host's LAN address from `.env`: the gateway (API and admin UI), `chat` and `tower`. Postgres publishes nothing.
-- Tower: one password from the environment. LiteLLM's admin UI and Open WebUI use their own logins.
+- Published, bound to the host's LAN address from `.env`: the gateway (API and admin UI) and `chat`. Postgres publishes nothing.
+- LiteLLM's admin UI and Open WebUI use their own logins.
 
 ### Logs
 Every service logs to stdout. Shipping container logs to Loki is an optional integration.
 
 ### Secrets
-The environment variables in `.env.example`, e.g. `RAPIDSELECTOR_OPENROUTER_KEY` (deliberately not `OPENROUTER_API_KEY`, which LiteLLM's `/openrouter` pass-through would pick up; see the phase 0 spec), `OPENROUTER_MANAGEMENT_KEY`, `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, Postgres credentials, Open WebUI's key and secret, and tower's password and keys. Two sources:
+The environment variables in `.env.example`, e.g. `RAPIDSELECTOR_OPENROUTER_KEY` (deliberately not `OPENROUTER_API_KEY`, which LiteLLM's `/openrouter` pass-through would pick up; see the phase 0 spec), `OPENROUTER_MANAGEMENT_KEY` (optional), `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY`, Postgres credentials, Open WebUI's key and secret, and the virtual keys, `KEY_SCRIPTS` among them. Two sources:
 - **`.env`** (the default).
 - **secrets-service:** `rapidselector.sh` fetches each secret before running Compose and passes it on as an environment variable, following the shell pattern in the `production` repository's `secrets-service/CLAUDE.md`. Only the secrets-service client token is stored on the host.
 
-The Compose file requires each secret (`${NAME:?missing}`), so Compose refuses to run without it. Tower reads environment variables only and has no dependency on secrets-service.
+The Compose file requires each secret (`${NAME:?missing}`), so Compose refuses to run without it. The operator scripts get their secrets through `./rapidselector.sh run-script`, from either source.
 
 Accepted trade-off: secret values are visible to anyone with Docker access on the host (`docker inspect`), as with the owner's existing `docker run -e` pattern.
 
@@ -128,17 +128,16 @@ Alert rules live in the `production` repository and are sent by the existing ema
 - a team's budget share, or the global budget, running low (e.g. 20% and 10% left);
 - OpenRouter balance or key limit below a threshold;
 - failure rate on the permanent roles;
-- gateway or tower unreachable (Prometheus target down);
+- gateway unreachable (Prometheus target down), or the scripts' figures stale;
 - reconciliation drift above a threshold, which also catches drift between configured and actual prices;
-- kill switch engaged.
+- the management key close to expiry.
 
-Without Grafana, the state is visible in tower's cost summary only.
+Without Grafana, `status.sh` and `reconcile.sh`, run by hand, show the same state.
 
 ### Kill switch
-- **Level 1:** block all virtual keys in LiteLLM. Quick to reverse.
-- **Level 2:** disable the OpenRouter inference key. This stops everything.
-- Tower shows the active level. Releasing it is a deliberate action, and every change is logged.
-- If tower is down, the README gives two manual ways: disable the key in OpenRouter's dashboard, or stop `rapidselector-gateway`.
+- **Level 1:** block the virtual keys in LiteLLM's admin UI. Quick to reverse.
+- **Level 2:** disable the OpenRouter inference key in OpenRouter's dashboard. This stops everything.
+- Both are done by hand; no script engages or releases them. The README ("Stopping all spending") describes both, and stopping `rapidselector-gateway`.
 
 ### Start-up safety
 - The gateway does not start without its secrets, and waits for `db` to be healthy. Without a database, LiteLLM's budgets do not block anything.
@@ -165,7 +164,7 @@ Without Grafana, the state is visible in tower's cost summary only.
 - Spend log retention is set in LiteLLM, or by another means if that setting is not available in the open-source version.
 
 ### Backups
-- **What:** Postgres (keys, budgets, spend), Open WebUI's data (admin account, settings, chats) and tower's SQLite.
+- **What:** Postgres (keys, budgets, spend) and Open WebUI's data (admin account, settings, chats).
 - **With backup-orchestrator:** jobs in the `production` repository, streamed over SSH with a forced command, following its Node-RED job.
 - **Without it:** the README shows `pg_dump` and a copy of the volumes.
 - **Secrets:** with secrets-service they are covered by its key escrow. With `.env`, the README warns that `.env` must be kept safe, since a backup cannot be used without the salt key.
@@ -198,8 +197,7 @@ Each step in a phase plan says which level verifies it.
   - the gateway refuses to start without secrets or a database;
   - what happens if the database disappears while running.
 - **arm64:** each pinned image's manifest is checked for `linux/arm64` without pulling it.
-- **tower:** test-driven development with pytest. Calls to LiteLLM and OpenRouter are faked from documented example responses.
-- **Scripts:** tested with bats and checked with shellcheck.
+- **Scripts:** test-driven development with bats, checked with shellcheck. Calls to LiteLLM and OpenRouter's management API go to the fake upstream, whose answers have the shapes seen live or documented.
 - **Not covered here:** the Pi's arm64 and memory, and OpenRouter's own behaviour (host pinning, zero data retention, 402, reported cost).
 
 Docker runs in the cloud sandbox once the daemon is started by hand (`dockerd`), confirmed on 2026-11-03.
@@ -233,16 +231,16 @@ Each phase gets its own spec, plan and build, and must work on its own before th
 - In the `production` repository: a Prometheus target, Grafana alerts on LiteLLM's metrics (budget shares, failure rate, target down), and backup jobs for Postgres and Open WebUI. Permanent use starts in this phase, so it needs warnings and backups from the start.
 - **Done when:** level 1 passes, and the owner has run levels 2 and 3 on `sandbox`.
 
-### Phase 1: Tower, part 1
-- **First, with the owner:** the level of visual ambition (section 11) and the stack. They decide each other.
-- Login, cost summary, OpenRouter balance and key limit, reconciliation, kill switch at both levels, `/metrics`.
-- In the `production` repository: a backup job for tower's SQLite, the Grafana dashboard, and the remaining alerts (balance, key limit, reconciliation, kill switch engaged).
+### Phase 1: Operator scripts
+- `status.sh` and `reconcile.sh`, with Prometheus output; the rules check that guards `restart gateway`; `scripts/README.md` and a user guide.
+- In the `production` repository: the cron job for the Prometheus output, the Grafana dashboard, and the remaining alerts (balance, stale figures, reconciliation, management key).
+- Last: an onboarding to LiteLLM's admin UI and OpenRouter's dashboard.
 
 ### Move to `webserver`
-A separate step following the move procedure, when things are stable. Suggested after phase 1, so tower moves with the rest; the owner decides when.
+A separate step following the move procedure, when things are stable; the owner decides when.
 
 ### Phase 2: Arena and benchmarks
-Evaluate Open WebUI's arena and promptfoo first. Build in tower only what they do not cover, likely comparing speed and cost per host, and the visualisation.
+Open WebUI's arena and promptfoo, set up and learnt. Nothing of our own is built.
 
 ### Phase 3: Programmatic use cases
 Real uses through the gateway's HTTP API (section 12), starting with log analysis.
@@ -250,20 +248,12 @@ Real uses through the gateway's HTTP API (section 12), starting with log analysi
 ### Phase 4: Local inference
 An extra provider in the gateway. Nothing else changes.
 
-## 11. Tower's visualisation
+## 11. Where things are seen
 
-- **Grafana: operations over time.** Spend per day and month, failure rate, budget levels, alerts.
-- **Tower: views for making decisions and comparing.**
-  - the cost summary and forecast next to the kill switch;
-  - reconciliation, shown as where LiteLLM and OpenRouter disagree;
-  - later, the arena and benchmarks: models against each other, the same model across hosts, price against speed against quality.
-- The cost summary is always in tower, with or without Grafana.
-- `docs/requirements.md` requires visual quality ("visually appealing and distinctive, with creative visualisation"), and that applies to tower.
-
-**Level of ambition: open, and the first item in phase 1.** Rough levels to discuss:
-- **A. Clean and functional:** the owner's production stack (FastAPI, Jinja2, Bootstrap, Chart.js) with a well-designed look of its own.
-- **B. Distinctive:** a custom visual identity and some custom visualisations on a simple stack.
-- **C. Experimental:** purpose-built visualisations, e.g. D3 or canvas, and interactive views of the model landscape.
+- **Grafana: operations over time.** Spend per day and month, failure rate, budget levels, balance, reconciliation, alerts (the dashboard `LLM`, in the `production` repository).
+- **The operator scripts: the state now, in plain text.** `status.sh` for the cost summary and forecast, `reconcile.sh` for where LiteLLM and OpenRouter disagree. They work with or without Grafana.
+- **LiteLLM's admin UI and OpenRouter's dashboard:** usage, keys, budgets and logs (`docs/onboarding.md`).
+- **Comparing models:** Open WebUI's arena and promptfoo (phase 2).
 
 ## 12. Programmatic use cases
 
@@ -278,7 +268,7 @@ Log analysis is the first example, not the only one. Nothing is built for future
 
 Made there, following that repository's own conventions:
 - Phase 0: a Prometheus scrape target for the gateway, Grafana alert rules, and backup jobs for Postgres and Open WebUI.
-- Phase 1: a scrape target for tower, a backup job for tower's SQLite, the Grafana dashboard and the remaining alerts.
+- Phase 1: the cron job writing the scripts' Prometheus output, the Grafana dashboard and the remaining alerts.
 - Move: targets and backup jobs pointed at `webserver`.
 - Not tied to a phase: Node-RED's name resolution. Node-RED uses `--add-host` for every name today. The hypothesis is that Docker falls back to public DNS because the host's resolver is a local address; pointing the container at the router (`--dns`) may fix it. Until then, Node-RED needs `--add-host` for `llm`, updated at the move.
 
@@ -286,8 +276,6 @@ Made there, following that repository's own conventions:
 
 | Item | Settled in |
 |---|---|
-| Tower's level of visual ambition | Phase 1, first |
-| Tower's stack | Phase 1, first |
 | Are LiteLLM teams available in the open-source version? | Phase 0 |
 | Does LiteLLM record OpenRouter's reported cost for chat calls? | Phase 0 |
 | Which error code does LiteLLM return for an exhausted budget? | Phase 0 |
@@ -297,9 +285,9 @@ Made there, following that repository's own conventions:
 | How Open WebUI's background calls are handled | Phase 0 |
 | How container logs reach Loki | Phase 0 |
 | How the empty-balance case is tested | Phase 0 |
-| Can tower use an admin key other than the master key? | Phase 1 |
+| Can the operator scripts use a read-only key instead of the master key? | Phase 1 |
 | Which OpenRouter endpoint gives the inference key's limit to the management key | Phase 1 |
-| Management key expiry and how tower gets a new key | Phase 1 |
+| Management key expiry and how the scripts get a new key | Phase 1 |
 | Node-RED name resolution | `production` repository, any time |
 
 The full list of open questions is kept in `docs/decisions.md`.

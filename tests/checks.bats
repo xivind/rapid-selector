@@ -34,7 +34,7 @@ STUB
 }
 
 @test "check-prices passes when every entry matches" {
-  run "$REPO/tests/check-prices.sh"
+  run "$REPO/scripts/check-prices.sh"
   echo "$output"
   [ "$status" -eq 0 ]
   [ "$(grep -c '^ok ' <<<"$output")" = "11" ]
@@ -42,28 +42,28 @@ STUB
 
 @test "check-prices fails when a configured price differs" {
   sed 's/output_cost_per_token: 0.0000002$/output_cost_per_token: 0.0000009/' "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
-  run "$REPO/tests/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   [ "$status" -eq 1 ]
   grep -q "^FAIL classify" <<<"$output"
 }
 
 @test "check-prices fails when a pinned endpoint does not exist" {
   sed 's/order: \["cloudflare"\]/order: ["nowhere\/fp8"]/' "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
-  run "$REPO/tests/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   [ "$status" -eq 1 ]
   grep -q "^FAIL llama-3.2-1b-instruct@cloudflare" <<<"$output"
 }
 
 @test "check-prices fails for an endpoint in the flex tier" {
   jq '.data[0].service_tier = "flex"' "$ZDR_ENDPOINTS_FILE" > "$BATS_TEST_TMPDIR/flex.json"
-  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/flex.json" run "$REPO/tests/check-prices.sh"
+  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/flex.json" run "$REPO/scripts/check-prices.sh"
   [ "$status" -eq 1 ]
   grep -q "flex tier" <<<"$output"
 }
 
 @test "check-prices fails for an endpoint with Safety Retention" {
   jq '.data[0].safety_retention = true' "$ZDR_ENDPOINTS_FILE" > "$BATS_TEST_TMPDIR/retention.json"
-  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/retention.json" run "$REPO/tests/check-prices.sh"
+  ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/retention.json" run "$REPO/scripts/check-prices.sh"
   [ "$status" -eq 1 ]
   grep -q "Safety Retention" <<<"$output"
 }
@@ -82,4 +82,152 @@ STUB
   run "$REPO/tests/check-arm64.sh" "$BATS_TEST_TMPDIR/compose.yml"
   [ "$status" -eq 1 ]
   grep -q "MISSING linux/arm64: example/amd64-only:1.0" <<<"$output"
+}
+
+# broken_config <sed expression>: $BATS_TEST_TMPDIR/config.yaml is gateway/config.yaml with the
+# expression applied to the first entry (classify) only.
+broken_config() {
+  local second
+  second="$(grep -n -- '- model_name:' "$REPO/gateway/config.yaml" | sed -n 2p | cut -d: -f1)"
+  sed -e "1,$((second - 1)){" -e "$1" -e "}" "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  ! cmp -s "$REPO/gateway/config.yaml" "$BATS_TEST_TMPDIR/config.yaml"
+}
+
+# rules_fail <text>: the rules check failed on classify with a FAIL line holding <text>.
+rules_fail() {
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^FAIL classify: .*$1" <<<"$output"
+}
+
+@test "rules: the real config passes" {
+  # No network: a curl that is called leaves a mark, and no saved endpoint list is given.
+  unset ZDR_ENDPOINTS_FILE
+  printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
+  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+  run "$REPO/scripts/check-prices.sh" --rules-only
+  echo "$output"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^FAIL' <<<"$output")" = "0" ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+  [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
+}
+
+@test "the config owns store_prompts_in_spend_logs, set to false" {
+  # Declared in the file, the setting is the file's: LiteLLM v1.106.6 ignores the admin UI's
+  # "Store Prompts in Spend Logs" switch (owned_by_config), so no click stores chat contents.
+  run sed -n '/^general_settings:/,/^[^ #]/p' "$REPO/gateway/config.yaml"
+  grep -qx '  store_prompts_in_spend_logs: false' <<<"$output"
+}
+
+@test "rules: fallbacks on" {
+  broken_config 's/allow_fallbacks: false/allow_fallbacks: true/'
+  rules_fail "allow_fallbacks must be false"
+}
+
+@test "rules: zero data retention off" {
+  broken_config 's/zdr: true/zdr: false/'
+  rules_fail "zdr must be true"
+}
+
+@test "rules: data collection allowed" {
+  broken_config 's/data_collection: deny/data_collection: allow/'
+  rules_fail "data_collection must be deny"
+}
+
+@test "rules: order and only differ" {
+  broken_config 's#only: \["deepinfra/fp8"\]#only: ["deepinfra/bf16"]#'
+  rules_fail "only must equal order"
+}
+
+@test "rules: more than one host in order" {
+  broken_config 's#order: \["deepinfra/fp8"\]#order: ["deepinfra/bf16", "coreweave/fp4"]#'
+  rules_fail "order must name exactly one endpoint"
+}
+
+@test "rules: host not allowed" {
+  broken_config 's#deepinfra/fp8#novita/fp8#g'
+  rules_fail "host novita is not an allowed provider"
+}
+
+@test "rules: price zero" {
+  broken_config 's/input_cost_per_token: .*/input_cost_per_token: 0/'
+  rules_fail "input_cost_per_token must be above zero"
+}
+
+@test "rules: no max_tokens" {
+  broken_config '/max_tokens:/d'
+  rules_fail "cannot read max_tokens"
+}
+
+@test "rules: a :free model" {
+  broken_config 's#model: openrouter/\(.*\)$#model: openrouter/\1:free#'
+  rules_fail ":free model"
+}
+
+@test "rules: a wildcard model" {
+  broken_config 's#model: openrouter/.*$#model: openrouter/*#'
+  rules_fail "wildcard"
+}
+
+@test "rules: a field that cannot be read fails closed" {
+  broken_config '/only:/d'
+  rules_fail "cannot read only"
+}
+
+@test "prices still checked after the rules" {
+  broken_config 's/output_cost_per_token: .*/output_cost_per_token: 0.0000009/'
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+  grep -q "^FAIL classify (deepinfra/fp8): price is now" <<<"$output"
+}
+
+@test "rules: max_tokens under model_info does not count" {
+  # LiteLLM applies a default max_tokens only from litellm_params.
+  broken_config '/max_tokens:/d; s/^\(      \)rapidselector_kind: role$/\1rapidselector_kind: role\n\1max_tokens: 1024/'
+  grep -A3 'model_info:' "$BATS_TEST_TMPDIR/config.yaml" | head -4
+  rules_fail "cannot read max_tokens"
+}
+
+# reorder_summarise <file>: summarise's entry written with litellm_params first, model_name
+# last (the same YAML).
+reorder_summarise() {
+  awk '/^  - model_name: summarise$/ { pending = 1; next }
+    pending && /^    litellm_params:$/ { print "  - litellm_params:"; next }
+    pending && /^    model_info:$/ { print "    model_name: summarise"; pending = 0 }
+    { print }' "$REPO/gateway/config.yaml" > "$1"
+}
+
+@test "rules: an entry with its keys in another order is read as its own entry" {
+  reorder_summarise "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 0 ]
+  grep -q "^rules ok: 11 entries" <<<"$output"
+}
+
+@test "rules: a broken entry before a reordered one still fails" {
+  reorder_summarise "$BATS_TEST_TMPDIR/reordered.yaml"
+  sed '0,/zdr: true/s//zdr: false/' "$BATS_TEST_TMPDIR/reordered.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  rules_fail "zdr must be true"
+}
+
+@test "rules: a field written twice in one entry fails closed" {
+  broken_config 's/^\(          \)zdr: true$/\1zdr: true\n\1zdr: false/'
+  rules_fail "cannot read zdr"
+}
+
+@test "rules: a comment after order is ignored" {
+  broken_config 's@^\( *\)order: \["deepinfra/fp8"\]$@\1order: ["deepinfra/fp8"]  # pinned@'
+  [ "$(grep -c '# pinned' "$BATS_TEST_TMPDIR/config.yaml")" = "1" ]
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 0 ]
+  # The price part matches the same tag.
+  run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 0 ]
 }

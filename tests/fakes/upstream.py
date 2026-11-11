@@ -2,12 +2,20 @@
 
 Standard library only. Records every request it receives and can be switched
 between success, OpenRouter's refusals and 5xx, with configurable token counts and cost.
+
+Also fakes OpenRouter's management API under /api/v1 (keys, credits, activity, the zero
+data retention endpoint list), with shapes from docs/provider-facts.md (2026-11-05).
+POST /_openrouter resets that state to its defaults plus the fields given.
 """
 
+import copy
 import json
+import os
+import re
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlsplit
 
 DEFAULT_MODE = {
     "status": 200,
@@ -42,8 +50,82 @@ REFUSALS = {
     }),
 }
 
+MANAGEMENT_KEY = os.environ.get("FAKE_MANAGEMENT_KEY", "test-management-key")
+INFERENCE_KEY_NAME = os.environ.get("FAKE_INFERENCE_KEY_NAME", "rapidselector-gateway")
+GATEWAY_CONFIG = os.environ.get("FAKE_GATEWAY_CONFIG", "/config/config.yaml")
+INFERENCE_KEY_HASH = "f01d52606dc8f0a8303a7b5cc3fa07109c2e346cec7c0a16b40de462992ce943"
+# OpenRouter's documented 401 for a disabled or invalid key (https://openrouter.ai/docs/api-reference/errors,
+# 2026-11-06); the exact message for a disabled key is not documented.
+DISABLED_KEY_ERROR = {"code": 401, "message": "Invalid credentials", "metadata": {"error_type": "authentication"}}
+
+
+def zdr_from_config(path):
+    """One endpoint per gateway/config.yaml entry, at the config's price, as tests/checks.bats builds it."""
+    try:
+        lines = open(path, encoding="utf-8").read().splitlines()
+    except OSError:
+        return []
+    out, entry = [], None
+    for line in lines + ["  - model_name: end"]:
+        if re.match(r"\s*- model_name:", line):
+            if entry and entry.get("model_id"):
+                out.append({"model_id": entry["model_id"], "tag": entry.get("tag"), "service_tier": None,
+                            "safety_retention": False,
+                            "pricing": {"prompt": entry.get("prompt"), "completion": entry.get("completion")}})
+            entry = {}
+            continue
+        field = re.match(r"\s*(model|input_cost_per_token|output_cost_per_token|order):\s*(.*)", line)
+        if entry is None or not field:
+            continue
+        name, value = field.groups()
+        if name == "model" and value.startswith("openrouter/"):
+            entry["model_id"] = value.removeprefix("openrouter/")
+        elif name == "input_cost_per_token":
+            entry["prompt"] = repr(float(value))
+        elif name == "output_cost_per_token":
+            entry["completion"] = repr(float(value))
+        elif name == "order":
+            entry["tag"] = json.loads(value)[0]
+    return out
+
+
+def default_openrouter():
+    return {
+        "keys": [{
+            "hash": INFERENCE_KEY_HASH, "name": INFERENCE_KEY_NAME, "label": "sk-or-v1-0e6...1c96",
+            "disabled": False, "limit": 20, "limit_remaining": 20, "limit_reset": "monthly",
+            "include_byok_in_limit": False, "usage": 0, "usage_daily": 0, "usage_weekly": 0, "usage_monthly": 0,
+            "byok_usage": 0, "byok_usage_daily": 0, "byok_usage_weekly": 0, "byok_usage_monthly": 0,
+            "created_at": "2026-11-01T00:00:00Z", "updated_at": None, "last_used_at": None, "expires_at": None,
+        }],
+        "credits": {"total_credits": 20, "total_usage": 0},
+        "activity": [],
+        "zdr": copy.deepcopy(ZDR),
+        "fail": None,  # "keys" | "key" | "credits" | "activity" | "zdr" | "patch": that route answers 500
+    }
+
+
+def next_month_start():
+    t = time.gmtime()
+    year, month = (t.tm_year + 1, 1) if t.tm_mon == 12 else (t.tm_year, t.tm_mon + 1)
+    return f"{year:04d}-{month:02d}-01T00:00:00Z"
+
+
+def default_gateway():
+    """The gateway's read routes the operator scripts use, for tests that need large or odd
+    answers without the real gateway (tests/ops-wiring.bats). Set with POST /_gateway."""
+    return {
+        "pages": [],  # GET /user/daily/activity?page=N answers pages[N-1], has_more while more follow
+        "global": {"spend": 0, "max_budget": 32},
+        "teams": {"permanent": 8, "experiments": 24},  # team id: max_budget
+        "team_keys": 0,  # how many key rows each /team/info answer carries in .keys, as the real one does
+    }
+
+
+ZDR = zdr_from_config(GATEWAY_CONFIG)
 lock = threading.Lock()
-state = {"mode": dict(DEFAULT_MODE), "calls_since_mode": 0, "requests": [], "next_id": 1}
+state = {"mode": dict(DEFAULT_MODE), "calls_since_mode": 0, "requests": [], "next_id": 1,
+         "openrouter": default_openrouter(), "or_requests": [], "gateway": default_gateway()}
 
 
 def refused(mode, call_number, body):
@@ -87,8 +169,92 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _management(self, method, body=None):
+        """OpenRouter's management API. Returns False when the path is not one of its routes."""
+        url = urlsplit(self.path)
+        query = parse_qs(url.query)
+        path = url.path.removeprefix("/api/v1")
+        routes = {"/keys": "keys", "/credits": "credits", "/activity": "activity", "/endpoints/zdr": "zdr"}
+        if not url.path.startswith("/api/v1/"):
+            return False
+        if method == "GET" and path in routes:
+            route = routes[path]
+        elif re.fullmatch(r"/keys/[^/]+", path):
+            route = "patch" if method == "PATCH" else "key"
+        else:
+            return False
+        authorised = self.headers.get("Authorization") == f"Bearer {MANAGEMENT_KEY}"
+        with lock:
+            state["or_requests"].append({"method": method, "path": url.path, "authorised": authorised,
+                                         "body": body, "at": time.time()})
+            orstate = state["openrouter"]
+            if route != "zdr" and not authorised:
+                self._send_json(401, {"error": {"code": 401, "message": "Invalid credentials"}})
+                return True
+            if orstate["fail"] == route:
+                self._send_json(500, {"error": {"code": 500, "message": "Fake OpenRouter error"}})
+                return True
+            if route == "keys":
+                keys = orstate["keys"]
+                if query.get("include_disabled", ["false"])[0] != "true":
+                    keys = [k for k in keys if not k.get("disabled")]
+                self._send_json(200, {"data": keys})
+            elif route in ("key", "patch"):
+                key = next((k for k in orstate["keys"] if k["hash"] == path.removeprefix("/keys/")), None)
+                if key is None:
+                    self._send_json(404, {"error": {"code": 404, "message": "Not found"}})
+                    return True
+                if route == "patch" and "disabled" in (body or {}):
+                    key["disabled"] = bool(body["disabled"])
+                    key["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                self._send_json(200, {"data": key})
+            elif route == "credits":
+                self._send_json(200, {"data": orstate["credits"]})
+            elif route == "activity":
+                self._send_json(200, {"data": orstate["activity"]})
+            else:
+                self._send_json(200, {"data": orstate["zdr"]})
+        return True
+
+    def do_PATCH(self):
+        if not self._management("PATCH", self._read_json()):
+            self._send_json(404, {"error": "not found"})
+
+    def _gateway_read(self):
+        """The gateway's read routes (default_gateway). Returns False for any other path."""
+        url = urlsplit(self.path)
+        query = parse_qs(url.query)
+        with lock:
+            gw = state["gateway"]
+            if url.path == "/user/daily/activity":
+                pages = gw["pages"]
+                n = int(query.get("page", ["1"])[0])
+                page = copy.deepcopy(pages[n - 1]) if 0 < n <= len(pages) else {"results": [], "metadata": {}}
+                page.setdefault("metadata", {}).update({"page": n, "has_more": n < len(pages)})
+                self._send_json(200, page)
+            elif url.path == "/global/spend":
+                self._send_json(200, gw["global"])
+            elif url.path == "/team/info":
+                team = query.get("team_id", [""])[0]
+                if team not in gw["teams"]:
+                    self._send_json(404, {"error": "team not found"})
+                else:
+                    keys = [{"token": f"{i:064x}", "key_alias": f"key-{i}", "team_id": team, "spend": 0,
+                             "models": [], "metadata": {"note": "x" * 200}} for i in range(gw["team_keys"])]
+                    self._send_json(200, {"team_id": team, "keys": keys, "team_info": {
+                        "team_id": team, "team_alias": team, "spend": 0, "max_budget": gw["teams"][team],
+                        "budget_duration": "30d", "budget_reset_at": next_month_start()}})
+            else:
+                return False
+        return True
+
     def do_GET(self):
-        if self.path == "/_requests":
+        if self._management("GET") or self._gateway_read():
+            return
+        if self.path == "/_openrouter/requests":
+            with lock:
+                self._send_json(200, state["or_requests"])
+        elif self.path == "/_requests":
             with lock:
                 self._send_json(200, state["requests"])
         elif self.path == "/health":
@@ -112,6 +278,19 @@ class Handler(BaseHTTPRequestHandler):
                 state["calls_since_mode"] = 0
             self._send_json(200, state["mode"])
             return
+        if self.path == "/_gateway":
+            with lock:
+                fresh = default_gateway()
+                state["gateway"] = {**fresh, **{k: v for k, v in body.items() if k in fresh}}
+            self._send_json(200, {"pages": len(state["gateway"]["pages"])})
+            return
+        if self.path == "/_openrouter":
+            with lock:
+                fresh = default_openrouter()
+                state["openrouter"] = {**fresh, **{k: v for k, v in body.items() if k in fresh}}
+                state["or_requests"].clear()
+            self._send_json(200, {"ok": True})
+            return
 
         with lock:
             state["requests"].append({"path": self.path, "headers": dict(self.headers), "body": body, "at": time.time()})
@@ -121,6 +300,11 @@ class Handler(BaseHTTPRequestHandler):
             gen_id = f"gen-fake-{state['next_id']}"
             state["next_id"] += 1
 
+        with lock:
+            disabled = any(k.get("disabled") for k in state["openrouter"]["keys"] if k.get("name") == INFERENCE_KEY_NAME)
+        if disabled:
+            self._send_json(401, {"error": DISABLED_KEY_ERROR})
+            return
         status = mode["status"]
         if refused(mode, call_number, body):
             code, error = REFUSALS[mode["refusal"]]

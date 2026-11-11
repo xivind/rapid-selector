@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Smoke test: one tiny call per role (per name with --all, or one name with --name) with
 # the smoke-test key. Each call must be answered and recorded with a cost above zero; a model
-# outside the allowlist and the /openrouter pass-through must be refused. Costs a little real
-# money against OpenRouter (well under $0.01 for the roles).
-# Run with the secrets loaded:
-#   ./rapidselector.sh run-script scripts/smoke-test.sh [--all | --name <name>]
+# outside the allowlist and the /openrouter pass-through must be refused. Run it after
+# setup-keys.sh, and after every model change.
+# Run:     ./rapidselector.sh run-script scripts/smoke-test.sh [--all | --name <name>]
+# Secrets: LITELLM_MASTER_KEY (to read the names), KEY_SMOKE_TEST (to call them).
+# Cost:    a little real money against OpenRouter: well under $0.01 for the roles; more with
+#          --all, which calls every name including the largest models.
+# Exit:    0 every check passed, 1 a check failed or wrong usage, 3 a missing value.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Tests A and B (phase 0, level 3): call the most expensive allowlisted model until OpenRouter
-# refuses, to see where the key limit or the balance stops spend, and whether calls sent at
-# the same time can get past it. Run it only while being walked through
-# docs/test-procedures/phase-0.md. It spends real money: up to --max-usd.
-#
-#   ./rapidselector.sh run-script scripts/drain-balance.sh --max-usd <amount>
-#       [--max-calls N] [--max-tokens N] [--parallel N]
+# For testing only. Tests A and B (phase 0, level 3, D1 and D6): call the most expensive
+# allowlisted model until OpenRouter refuses, to see where the key limit or the balance stops
+# spend, and whether calls sent at the same time can get past it. Run it only while being
+# walked through docs/test-procedures/phase-0.md.
+# Run:     ./rapidselector.sh run-script tests/drain-balance.sh --max-usd <amount>
+#              [--max-calls N] [--max-tokens N] [--parallel N]
+# Secrets: LITELLM_MASTER_KEY (it creates and deletes a temporary key "drain-test").
+# Cost:    real money: up to --max-usd, plus the overshoot the test is there to measure.
+# Exit:    0 the run ended and printed its result, 1 a setup step failed or not confirmed,
+#          2 wrong usage, 3 a missing value, 130 interrupted.
 #
 # Creates a temporary key "drain-test" (deleted on every exit), then sends rounds of --parallel
 # calls at once. A round that could pass --max-usd does not start. --max-calls counts every
@@ -17,7 +20,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=SCRIPTDIR/lib.sh
+# shellcheck source=SCRIPTDIR/../scripts/lib.sh
 . "$ROOT/scripts/lib.sh"
 
 MODEL="qwen3.8-2.4t-a95b@siliconflow"
