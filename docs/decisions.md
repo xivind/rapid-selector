@@ -487,6 +487,7 @@ Walked through in the owner's browser by the owner, one step at a time. Nothing 
 ### 2026-11-11: Task 15, the tour's Part 3, rehearsing adding and removing a model
 - **R1, picked by the owner: Gemma 4 31B at DeepInfra fp8**, as `gemma-4-31b@deepinfra`, to be removed again at R3. Checked in OpenRouter's public lists the same day: Google's newest are Gemma 4 31B and Gemma 4 26B A4B (April 2026). `deepinfra/fp8` has zero data retention, no Safety Retention, standard tier, $0.20 / $0.40 per million tokens. The owner first chose 26B A4B at CoreWeave bf16 on Claude's recommendation; Claude then found it is already the `summarise` role, same endpoint, which the recommendation had missed, so the owner took the 31B, a model not in the gateway yet. Thinking is configurable and off by default, so `reasoning: false`, `max_tokens: 4096`.
 - **R2, the change** (`ops-scripts`, `64729de`): the entry in `gateway/config.yaml`, and the tests' name counts from 11 to 12, changed first and seen failing (5 tests), then passing: `checks.bats` and `rapidselector.bats` 48/48, `ops-logic.bats` and `smoke-args.bats` 28/28; `gateway.bats` and `keys.bats` need Docker, not run here. Live `check-prices.sh`: `rules ok: 12 entries`, 12 `ok`.
+- **R2 on `sandbox`, about 16:15:** `git pull`, `./rapidselector.sh restart gateway` (`rules ok: 12 entries`, restarted), and `setup-keys.sh`: teams `permanent` 4 names and `experiments` 12; `node-red` 4, `chat` 12, `smoke-test` 12, `scripts` 0; budgets unchanged. Nothing spent.
 
 ## Open
 
