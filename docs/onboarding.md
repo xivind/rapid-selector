@@ -86,15 +86,15 @@ At openrouter.ai, signed in.
 - **Where:** **Settings, Privacy**, and **Observability** in the workspace settings.
 - **Look for:**
   - zero data retention on for every group, with "ZDR only" under "All other models" and "Google";
-  - "OpenRouter Use of Inputs/Outputs" (training, the 1% discount) **off**;
+  - under "Data Training", all four switches **off**: paid endpoints that train on request data, free endpoints that train on it, free endpoints that publish prompts, and "Allow 1% data discount in workspaces", the account's master switch for OpenRouter using inputs and outputs (each workspace would consent separately on top);
   - "Private Input & Output Logging" under Observability **off**;
   - allowed providers: Cloudflare, CoreWeave, DeepInfra and SiliconFlow.
 - **Don't change:** any of it without a decision in `docs/decisions.md`. A new provider also means new allowlist entries and `scripts/check-prices.sh`'s `ALLOWED_HOSTS`.
 
 ### O6. Account security
 
-- **Where:** **Settings, Manage Account, Security**, the likely place; the docs do not say.
-- **Look for:** two-factor authentication. If you sign in with Google or GitHub, the second factor belongs on that account too (roadmap, phase 1).
+- **Where:** **Account, User, Security**.
+- **Look for:** two-factor authentication **on** (turned on 2026-11-11). If you sign in with Google or GitHub, the second factor belongs on that account too.
 
 ## Part 3: rehearse adding and removing a model
 
