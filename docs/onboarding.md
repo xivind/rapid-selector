@@ -111,7 +111,9 @@ Follow the user guide, "Add a model or an experiment name", as an experiment nam
 
 ### R3. Remove it
 
-The reverse: delete the entry, `check-prices.sh`, commit, `git pull`, `restart gateway`, `setup-keys.sh` (which takes the name off the keys' lists). Then confirm it is gone from Open WebUI and the Models page, and that a call to it is refused. Its past spend stays in the usage and logs. Record both in `docs/decisions.md`.
+The reverse: delete the entry, `check-prices.sh`, commit, `git pull`, `restart gateway`, `setup-keys.sh` (which takes the name off the keys' lists). Then confirm it is gone from Open WebUI and the Models page, and that `smoke-test.sh --name <name>` stops with "the gateway has no name", without a call. Its past spend stays in the usage and logs. Record both in `docs/decisions.md`.
+
+Done on 2026-11-11 with Gemma 4 31B at DeepInfra (`gemma-4-31b@deepinfra`): added, one smoke-test call ($0.0000046), removed.
 
 ## Where each change is made
 

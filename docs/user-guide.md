@@ -52,7 +52,7 @@ Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today i
    ./rapidselector.sh restart gateway
    ./rapidselector.sh run-script scripts/setup-keys.sh
    ```
-   `setup-keys.sh` gives team `experiments` (and so `chat`) the new name.
+   `restart gateway` gives the prompt back before the gateway is ready: wait a few seconds, until `./rapidselector.sh ps` shows it `healthy`, or the next command fails with `Failed to connect`. `setup-keys.sh` gives team `experiments` (and so `chat`) the new name.
 4. One call to it, which costs a little real money (a fraction of a cent for a small model):
    ```bash
    ./rapidselector.sh run-script scripts/smoke-test.sh --name <name>
