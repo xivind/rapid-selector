@@ -4,7 +4,7 @@ The scripts that run rapid-selector day to day, for a person and an agent alike.
 
 **The rule: `scripts/` is what runs, the same for everyone; `config/` is what is yours.** Each home's models, roles, budgets, limits and allowed providers live in `config/gateway.yaml` and `config/home.env`, ignored by git ([`config/README.md`](../config/README.md)); the secrets stay in `.env`.
 
-Run every script from the repository on the host, except `copy-config.sh`, which runs where you edit `config/`. Scripts that need secrets run through `./rapidselector.sh run-script`, which loads them from `.env` or secrets-service first; the others run on their own.
+Run every script from the repository on the host, except `copy-config.sh`, which runs on the machine where you edit `config/`, when that is not the host. Scripts that need secrets run through `./rapidselector.sh run-script`, which loads them from `.env` or secrets-service first; the others run on their own.
 
 ## The scripts
 
@@ -14,7 +14,7 @@ Run every script from the repository on the host, except `copy-config.sh`, which
 | `reconcile.sh [--days N] [--prometheus]` | Per completed UTC day and model: LiteLLM's recorded spend against what OpenRouter charged; `!` marks a line off by more than $0.05 or 5% | Monthly, and a day after a model change | `OPENROUTER_MANAGEMENT_KEY` (optional, [below](#without-the-management-key)), `KEY_SCRIPTS` | nothing | 0, 1 a line flagged, 2 |
 | `check-prices.sh [--rules-only] [config]` | Every entry in `config/gateway.yaml` against `CLAUDE.md`'s rules, and `config/home.env`'s settings (team budgets no more than the global budget) (offline), then each entry's price and host against OpenRouter's zero data retention list (online) | Before every model or budget change, and monthly | none | nothing | 0, 1 an entry or setting fails, 2 a file or the list cannot be read |
 | `setup-keys.sh` | Creates or resets the teams and keys, with their budgets and limits from `config/home.env`, names and routes | First setup, after a name is added or removed, and after a budget changed | `LITELLM_MASTER_KEY` and the `KEY_*` | nothing | 0, 1 a rule in `config/` broken (it runs the rules check first) or the gateway refused, 2 no `config/home.env` |
-| `copy-config.sh to\|from [<user@host>]` | Copies `config/gateway.yaml` and `config/home.env` to the host over SSH (`to`, after the rules check), or from it (`from`, asking before it overwrites); never `.env` | After every change to `config/`; `from` to start on a second machine | none (`ssh` asks for the password) | nothing | 0, 1 a rule broken or answered no, 2 could not run |
+| `copy-config.sh to\|from [<user@host>]` | Copies `config/gateway.yaml` and `config/home.env` to the host over SSH (`to`, after the rules check), or from it (`from`, asking before it overwrites); never `.env` | After every change to `config/` made on another machine than the host; `from` to start on a second machine | none (`ssh` asks for the password) | nothing | 0, 1 a rule broken or answered no, 2 could not run |
 | `smoke-test.sh [--all \| --name <name>]` | One tiny call per role (or every name, or one), each recorded with a cost above zero; refusals checked too | First setup, after a model change or an upgrade | `LITELLM_MASTER_KEY`, `KEY_SMOKE_TEST` | **real money**: well under $0.01 for the roles, more with `--all` | 0, 1 a check failed or wrong usage |
 | `write-metrics.sh [directory]` | Runs `status.sh` and `reconcile.sh` with `--prometheus` into node_exporter's textfile directory | Hourly from cron, extended mode only | as `status.sh` | nothing | 0, 2 a file not updated |
 | `lib.sh` | Shared helpers, the only list of secret names and the only list of `config/home.env` names. Sourced, not run | | | | 2, 3, 4 (below) |
@@ -47,7 +47,7 @@ A cron job or an agent treats every code other than 0 and 1 as "could not run". 
 **A model change** (a new name, a role pointed at another model, a price):
 1. Edit `config/gateway.yaml` where you keep it.
 2. `scripts/check-prices.sh`: the rules and the prices. Fix every `FAIL` line before going on.
-3. `scripts/copy-config.sh to`: no commit, as `config/` is yours and ignored by git.
+3. Only if you edit on another machine: `scripts/copy-config.sh to`. No commit, as `config/` is yours and ignored by git.
 4. On the host: `./rapidselector.sh restart gateway`, which checks the rules again and refuses (exit 5) if one is broken.
 5. If a name was added or removed: `./rapidselector.sh run-script scripts/setup-keys.sh`.
 6. `./rapidselector.sh run-script scripts/smoke-test.sh --name <name>`: a little real money, one call.

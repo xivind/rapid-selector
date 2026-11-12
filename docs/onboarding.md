@@ -12,7 +12,7 @@ At `http://<host>:4000/ui` (the gateway's address, README "What runs").
 
 ### L1. Log in
 
-- **Where:** the login page; afterwards you land on a home page. User `admin`, password `LITELLM_UI_PASSWORD`, which you read in secrets-service's admin UI, secret `rapidselector` (or your password manager). Never paste it anywhere else.
+- **Where:** the login page; afterwards you land on a home page. User `admin`, password `LITELLM_UI_PASSWORD`, which you read where your secrets are kept (`.env`, or the secret store). Never paste it anywhere else.
 - **Look for:** a yellow warning about "Environment-credential login" (it can be closed). It means anyone with that one shared password is a full admin. Here that is you, on the LAN, with a long random password, so it is accepted for now (finding 41 in `docs/decisions.md`). The fix LiteLLM suggests, a personal admin account and `disable_env_credential_login: true`, locks the UI if done in the wrong order; it stays a separate decision.
 - **Good to know:** each login creates a hidden session key for the UI, valid for 24 hours with a $1 budget, which no key list shows (`provider-facts.md`). More than 10 wrong passwords in a minute lock you out for 5 minutes.
 - **Don't change:** anything under **Internal Users** or **Settings**.
@@ -67,7 +67,7 @@ At openrouter.ai, signed in.
 - **Where:** **Keys**, under **Workspace** in the menu (OpenRouter's docs still point to `/settings/keys`).
 - **Look for:** `rapidselector-gateway`, the gateway's only inference key: limit $35, monthly reset, and its usage.
 - **The one thing to do here:** **disable** it to stop all spending at once, the fast stop (README, "Stopping all spending"). Enable it again the same way; for a few seconds after that, the gateway may still answer 429 while it cools down.
-- **Don't change:** the limit (a recorded decision), and never delete the key: its value lives in secrets-service, and a new key means a new value there.
+- **Don't change:** the limit (a recorded decision), and never delete the key: its value lives with your secrets, and a new key means a new value there.
 
 ### O3. Management keys
 
@@ -107,7 +107,7 @@ The owner's wish (2026-11-11): do it once together, with a real new model, so th
 
 ### R2. Add it
 
-Follow the user guide, "Add a model or an experiment name", as an experiment name (`model@host`): the entry in `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to`, then on the host `./rapidselector.sh restart gateway` and `setup-keys.sh`, and one smoke-test call with `--name`. Then see it in Open WebUI, LiteLLM's Models page (one name more) and, after a call, Grafana's LLM dashboard.
+Follow the user guide, "Add a model or an experiment name", as an experiment name (`model@host`): the entry in `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to` if you edit on another machine, then on the host `./rapidselector.sh restart gateway` and `setup-keys.sh`, and one smoke-test call with `--name`. Then see it in Open WebUI, LiteLLM's Models page (one name more) and, after a call, Grafana's LLM dashboard.
 
 ### R3. Remove it
 
@@ -120,7 +120,7 @@ Done on 2026-11-11 with Gemma 4 31B at DeepInfra (`gemma-4-31b@deepinfra`): adde
 | To change | Where |
 |---|---|
 | A key's or team's budget, a key's names or rate limit | `scripts/setup-keys.sh`, then run it (user guide) |
-| A model, its price or host | `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to`, `./rapidselector.sh restart gateway` |
+| A model, its price or host | `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to` (when edited on another machine), `./rapidselector.sh restart gateway` |
 | The monthly cap | the inference key's limit in OpenRouter (O2), recorded in `docs/decisions.md` |
 | Stop one client | block its key (L3) |
 | Stop everything | disable the inference key (O2), or `docker stop rapidselector-gateway` |

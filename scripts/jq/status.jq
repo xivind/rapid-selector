@@ -6,7 +6,7 @@
 # warnings}; status.sh renders it and exits 1 when warnings is not empty.
 include "common" {search: "./"};
 
-# The thresholds (CLAUDE.md principle 1, docs/decisions.md 2026-11-08).
+# The thresholds (CLAUDE.md principle 1; docs/provider-facts.md, "Low balance and latency").
 def low_balance_usd: 10;
 def budget_warn_share: 0.8;
 def key_expiry_warn_days: 30;

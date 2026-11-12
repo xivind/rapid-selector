@@ -1,6 +1,6 @@
 # Requirements
 
-What each service must do. The principles in `CLAUDE.md` apply to all of them. How the services fit together is in `superpowers/specs/2026-11-03-rapid-selector-overall-design.md`. Open questions and decisions are in `decisions.md`.
+What each service must do. The principles in `CLAUDE.md` apply to all of them. How the services fit together is in `CLAUDE.md`, "Architecture". Open questions and decisions are in `decisions.md`.
 
 ## General
 
@@ -60,6 +60,11 @@ Bash with `jq`, in `scripts/`, documented in `scripts/README.md` for a person an
 
 ### Kill switch
 - No script. Level 1: block the virtual keys in LiteLLM's admin UI. Level 2, which actually stops everything: disable the inference key in OpenRouter's dashboard. The README describes both.
+
+## Testing
+
+- **Level 1, in the cloud sandbox, no Pi and no money:** the real `gateway`, `db` and `chat` images in Compose, against a fake OpenAI-compatible upstream with known token counts and cost, on the example config. It checks the names, refusals outside the allowlist and a key's permitted names, that key, team and global budgets block, that spend is recorded above zero, the start without secrets or a database, and a database lost while running; each pinned image's manifest for `linux/arm64`; and the scripts, test-first with bats. It does not cover the Pi's memory or OpenRouter's own behaviour.
+- **Levels 2 and 3, on the Pi:** little or no money, then real money within an agreed ceiling, run by the owner following `docs/test-procedures/initial-setup-walkthrough.md`. Anything that needs them is reported as not yet verified until the owner has run it.
 
 ## Arena and benchmarking
 

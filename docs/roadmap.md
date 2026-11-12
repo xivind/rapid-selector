@@ -1,24 +1,29 @@
 # Roadmap
 
-Each phase gets its own spec, plan and build, follows the overall design (`superpowers/specs/2026-11-03-rapid-selector-overall-design.md`), and must work on its own before the next starts.
+Where we are, the phases, and options parked for later. Each piece of work gets a spec and a plan, which are deleted once it is merged and verified.
+
+## Now
+
+- **On:** the docs cleanup, on the branch `docs-cleanup` (PR for the owner's review). Then, in order: the `CLAUDE.md` cleanup, the user guide's section on upgrading one or more containers, the README dry run (phase 1 below), and benchmarking (phase 2).
+- **For the `CLAUDE.md` cleanup**, item by item with the owner: the walkthrough rules below, whether they go into "Way of working"; "Where things live" (the roadmap's "Now", specs and plans deleted after their work, `docs/test-procedures/`); `docs/decisions.md`'s "Tested in practice" as where test results go.
+- **The owner's host, `sandbox`,** runs the real stack: never run level 1 there. Its own facts are in the owner's `production` repository. Still open there: the first real use from Node-RED.
+
+## How we walk through a procedure
+
+The owner's instructions, on top of `CLAUDE.md`, until the `CLAUDE.md` cleanup decides where they go:
+
+- One step at a time: what to run or click, what to see, what it costs. **Wait for the report before the next step.** Record what is of use (`docs/decisions.md`, "Tested in practice"), and commit and push it.
+- **Stop and ask before anything that spends money beyond the procedure's stated cost.**
+- **The owner never pastes a secret value to Claude.** Names and statuses only. Secrets go through `./rapidselector.sh run-script bash -c '…'`, with the header on stdin (`curl -H @-`), and output that could hold a key through `sed -E "s/sk-[A-Za-z0-9_-]+/sk-REDACTED/g"`.
+- Plain language and complete commands, saying what each output should look like; the owner is new to Compose.
+- The owner welcomes pushback and pushes back too: ask whether something is needed before proposing a change to a host.
+- **Pasting is fragile on the owner's terminal:** short command lines, never a heredoc or indented code to paste; anything longer goes in a committed script the owner pulls. A silent `read -rs` line runs on its own.
 
 ## Phases
 
-0. **Foundation (on `sandbox`):**
-   - `gateway`, `db` and `chat`; `gateway/config.yaml` (now `config/gateway.yaml`) with the first roles and `model@host` names.
-   - Teams `permanent` and `experiments`, with keys for Node-RED, `chat` and a test key.
-   - `rapidselector.sh` with both secret sources (`.env` and secrets-service).
-   - The smoke test, the level 1 test setup (real images against a fake upstream), the README, and the level 2 and 3 test procedure.
-   - LiteLLM's `/metrics` on.
-   - In the `production` repository: a Prometheus target, Grafana alerts on LiteLLM's metrics, and backup jobs for Postgres and Open WebUI. Permanent use starts here, so warnings and backups are needed from the start.
-   - Done when level 1 passes, and the owner has run levels 2 and 3 on `sandbox`.
-1. **Operator scripts** (`superpowers/specs/2026-11-08-scripts-instead-of-tower-design.md`, `decisions.md`):
-   - `status.sh` and `reconcile.sh`, with Prometheus output; the rules check that guards `restart gateway`; `scripts/README.md`, a user guide, and the cleanup of the service they replaced.
-   - In the `production` repository: the cron job for the Prometheus output, Grafana's new alerts (balance, stale figures, reconciliation, management key) and the LLM dashboard.
-   - Last: an onboarding to LiteLLM's admin UI and OpenRouter's dashboard, walked through together.
-   - **After the merge (owner, 2026-11-07): a fresh-eyes dry run of the README.** A new claude.ai/code session that knows nothing about the project follows only the README's "First setup", as a newcomer would, in an empty cloud sandbox: a simulation, not a real setup. The fake upstream stands in for OpenRouter, the steps in OpenRouter's dashboard are walked through on paper, and `.env` is the secret source. No real account, no real secret, no money. It reports every place where it had to guess, a step was missing or a command failed; the fixes go to the README. Finding 30 is one known gap, and another: an `.env` made before a release lacks the lines added since (seen on 2026-11-07, `decisions.md`).
-   - ~~**Owner, 2026-11-07: two-factor authentication on the OpenRouter account.**~~ Done 2026-11-11, by the owner during the tour (`decisions.md`, O6); the Google account the owner signs in with has it too. Whoever signs in can create or delete keys, spend the balance and change the zero data retention and provider settings, and the management key raises the stakes. To check first: how OpenRouter offers it now, and if the account signs in through Google or GitHub, the second factor belongs on that account as well.
-   - ~~**Move to `webserver`.**~~ Dropped 2026-11-06: rapid-selector stays on `sandbox` (`decisions.md`).
+0. **Foundation,** done 2026-11-06: `gateway`, `db` and `chat`; teams `permanent` and `experiments` with their keys; `rapidselector.sh` with both secret sources; the smoke test, the level 1 tests and the README; the initial setup walkthrough (`docs/test-procedures/initial-setup-walkthrough.md`); metrics, alerts and backups as optional integrations.
+1. **Operator scripts,** done 2026-11-11: `status.sh`, `reconcile.sh`, the rules check that guards `restart gateway`, Prometheus output, `scripts/README.md`, the user guide and the onboarding tour; then the `config/` folder (2026-11-12). Still to do:
+   - **A fresh-eyes dry run of the README** (owner, 2026-11-07). A new claude.ai/code session that knows nothing about the project follows only the README's "First setup", as a newcomer would, in an empty cloud sandbox: a simulation, not a real setup. The fake upstream stands in for OpenRouter, the steps in OpenRouter's dashboard are walked through on paper, and `.env` is the secret source. No real account, no real secret, no money. It reports every place where it had to guess, a step was missing or a command failed; the fixes go to the README. Known gaps: finding 30, and an `.env` made before a release lacks the lines added since.
 2. **Arena and benchmarks:** Open WebUI's built-in arena and promptfoo, set up and learnt; nothing of our own is built (`CLAUDE.md`, architecture).
    - **Owner's wish, 2026-11-05:** switch on Open WebUI's arena and try promptfoo, put on hold while phase 1 is built. To settle first, against current docs: how Open WebUI's arena picks models and what each rating costs (`ENABLE_EVALUATION_ARENA_MODELS` is off today). promptfoo is a separate tool, not part of Open WebUI, and counts as an automated client: its own key in team `experiments` with a low cap, a limit on calls per run and on input size, and every run's cost flagged first.
 3. **Programmatic use cases:** real uses through the gateway's HTTP API, starting with log analysis. Each use follows the rules in `requirements.md` (programmatic access) and decides for itself whether it needs an asynchronous layer.
@@ -53,7 +58,5 @@ Researched on 2026-11-02 and left out for now:
   - **What it touches:** the Claude Code hooks it installs, any git post-commit hook, and which generated files are committed or listed in `.gitignore`. In `production`, its hook leaves modified files in the checkout.
   - **Cost:** code is parsed locally, but documents go through Claude for extraction, and this repository is mostly documents. Claude usage only, not OpenRouter.
   - **Benefit:** whether a repository this small gains enough to be worth the hooks.
-- **The repository as code for several homes** (owner, 2026-11-11): became the `config/` folder, each home's own settings ignored by git, with examples and `scripts/copy-config.sh` (spec `docs/superpowers/specs/2026-11-11-config-folder-design.md`, plan `docs/superpowers/plans/2026-11-12-config-folder.md`, 2026-11-12).
-  - **Backup:** a home's configuration in its own repository is backed up by that repository. The data (Postgres, Open WebUI) is backed up today by `production`'s backup-orchestrator, which is this home's; another home uses the README's fallback or its own jobs. The secrets, the salt key above all, stay outside both and need their own safe copy, or a backup cannot be read.
-- **Restore rehearsal, phase 0's E2** (parked by the owner, 2026-11-11, `decisions.md`): restore the newest Postgres dump into a separate Compose project on `sandbox` and call it with `KEY_NODE_RED`, under $0.001. It was meant to follow a change that would have stored the models' settings in the database, encrypted with `LITELLM_SALT_KEY`; that change was dropped, the models stay in `gateway/config.yaml`, and the database holds keys, budgets and spend, nothing that depends on the salt key (`decisions.md`, 2026-11-06). So an untested restore is a smaller risk than it was. Take it up before the database holds anything that depends on the salt key (models or provider keys added through LiteLLM's admin UI or API), and in any case before a restore is relied on. The backup has no `cache/`, and the slim image needs none.
+- **Restore rehearsal** (parked by the owner, 2026-11-11): restore the newest Postgres dump into a separate Compose project on the host and call it with `KEY_NODE_RED`, under $0.001. The database holds keys, budgets and spend, nothing that depends on `LITELLM_SALT_KEY`, as the models stay in `config/gateway.yaml`, so an untested restore is a limited risk. Take it up before the database holds anything that depends on the salt key (models or provider keys added through LiteLLM's admin UI or API), and in any case before a restore is relied on. The backup has no `cache/`, and the slim image needs none.
 - **Automatic fallback to another model or host** for important flows: possible within the allowlist, but every fallback needs its own price and testing. Left out while models are an enhancement.

@@ -1,6 +1,6 @@
 # User guide
 
-The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`), except changes to this home's own settings in `config/` (models, roles, budgets): those are edited and checked in a clone on your own machine, then copied with `scripts/copy-config.sh to` ([`config/README.md`](../config/README.md)). Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
+The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`). This home's own settings (models, roles, budgets) are in `config/` ([`config/README.md`](../config/README.md)): edit them on the host, or in a clone on another machine and copy them over with `scripts/copy-config.sh to`. Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
 
 Exit codes, in short: `0` all well, `1` read the output, `2` a source could not be read, `3` a missing setting or secret, `4` secrets-service, `5` `restart gateway` refused.
 
@@ -41,12 +41,12 @@ Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today i
 
 **When:** to try a model, or the same model at another host. Experiment names have the form `model@host` and can be called by `chat` and the smoke test, not by Node-RED.
 
-1. Here, in `config/gateway.yaml`, copy an entry with `rapidselector_kind: experiment` and change its name, `model`, both prices, `max_tokens`, and the host tag in both `order` and `only` (e.g. `"deepinfra/fp8"`). The host must be one of the account's allowed providers (`ALLOWED_HOSTS` in `config/home.env`). Set `reasoning: true` for a reasoning model, and give it a larger `max_tokens`.
+1. In `config/gateway.yaml`, copy an entry with `rapidselector_kind: experiment` and change its name, `model`, both prices, `max_tokens`, and the host tag in both `order` and `only` (e.g. `"deepinfra/fp8"`). The host must be one of the account's allowed providers (`ALLOWED_HOSTS` in `config/home.env`). Set `reasoning: true` for a reasoning model, and give it a larger `max_tokens`.
 2. Check it, and fix every `FAIL` line:
    ```bash
    scripts/check-prices.sh
    ```
-3. Copy it to the host (it asks for `user@host` and the SSH password, and refuses a broken rule). No commit is needed: `config/` is this home's own and ignored by git.
+3. Only if you edit on another machine: copy it to the host (it asks for `user@host` and the SSH password, and refuses a broken rule). No commit is needed: `config/` is this home's own and ignored by git.
    ```bash
    scripts/copy-config.sh to
    ```
@@ -65,7 +65,7 @@ Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today i
 
 **Cost:** the smoke test call, and whatever you then spend in chat. A new model is something to flag before using it at length (`CLAUDE.md`).
 
-**If it fails:** `restart gateway` exits 5 with a `FAIL` line naming the entry and the rule: fix it here in `config/`, run `scripts/copy-config.sh to` again, then restart. A fix made on the host would be overwritten by the next copy. A smoke test with cost 0 means a price is missing. The level 1 tests use the example config (`config/gateway.example.yaml`), so a change to your own needs no test change.
+**If it fails:** `restart gateway` exits 5 with a `FAIL` line naming the entry and the rule: fix it in `config/` where you edit it (and copy it again if that is another machine), then restart. If you edit on another machine, a fix made on the host is overwritten by the next copy. A smoke test with cost 0 means a price is missing. The level 1 tests use the example config (`config/gateway.example.yaml`), so a change to your own needs no test change.
 
 ## Point a role at another model
 
@@ -100,12 +100,12 @@ This is a change to the repository, not a command: a new secret name (`KEY_<CLIE
 
 The limits must stay in this order (`CLAUDE.md`, principle 1), from the top down:
 
-1. OpenRouter's balance (the most you can lose), and the inference key's monthly limit (now $35, in OpenRouter's dashboard), the actual monthly cap.
-2. LiteLLM's global budget (`max_budget` under `litellm_settings` in `config/gateway.yaml`, now $32), below the key limit.
-3. The team budgets (`BUDGET_TEAM_PERMANENT` $8 and `BUDGET_TEAM_EXPERIMENTS` $24 in `config/home.env`), adding up to no more than the global budget. The rules check refuses a sum above it.
-4. The key budgets inside a team (`BUDGET_KEY_NODE_RED` $4, `BUDGET_KEY_SMOKE_TEST` $1, in `config/home.env`), no more than their team's.
+1. OpenRouter's balance (the most you can lose), and the inference key's monthly limit (in OpenRouter's dashboard), the actual monthly cap.
+2. LiteLLM's global budget (`max_budget` under `litellm_settings` in `config/gateway.yaml`), below the key limit.
+3. The team budgets (`BUDGET_TEAM_PERMANENT` and `BUDGET_TEAM_EXPERIMENTS` in `config/home.env`), adding up to no more than the global budget. The rules check refuses a sum above it.
+4. The key budgets inside a team (`BUDGET_KEY_NODE_RED` and `BUDGET_KEY_SMOKE_TEST` in `config/home.env`), no more than their team's.
 
-Change the value here in `config/`, run `scripts/check-prices.sh --rules-only` and `scripts/copy-config.sh to`, then on the host either `./rapidselector.sh run-script scripts/setup-keys.sh` (teams and keys) or `./rapidselector.sh restart gateway` (the global budget). Raising a limit means more can be spent: flag it and record it in `docs/decisions.md`, with the date and the reason.
+Change the value in `config/`, run `scripts/check-prices.sh --rules-only` (and `scripts/copy-config.sh to` if you edit on another machine), then on the host either `./rapidselector.sh run-script scripts/setup-keys.sh` (teams and keys) or `./rapidselector.sh restart gateway` (the global budget). Raising a limit means more can be spent: flag it and record it in `docs/decisions.md`, with the date and the reason.
 
 **You should see:** `setup-keys.sh`'s summary with the new figure; `status.sh` with the new budget.
 

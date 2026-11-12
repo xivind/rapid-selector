@@ -27,11 +27,11 @@ Then edit both. Every script refuses to run without its file, and never falls ba
 
 ## Edit here, apply there
 
-The files can be edited on another machine, in a clone of its own, and copied to the host over SSH:
+Edit the files on the host, or on another machine in a clone of its own and copy them to the host over SSH:
 
 ```bash
-scripts/copy-config.sh to   pi@sandbox   # this machine -> the host, after the rules check
-scripts/copy-config.sh from pi@sandbox   # the host -> this machine, asking before it overwrites
+scripts/copy-config.sh to   <user>@<host>   # this machine -> the host, after the rules check
+scripts/copy-config.sh from <user>@<host>   # the host -> this machine, asking before it overwrites
 ```
 
 It copies exactly these two files, asks for `user@host` if not given, and `ssh` asks for the password once. After `to`, run the steps it prints on the host: `./rapidselector.sh restart gateway`, and `setup-keys.sh` if a name or a budget changed. No commit is needed: there is no history of a home's settings in git.
