@@ -121,9 +121,9 @@ activity_for_today() {
 @test "reconcile.sh matches the gateway's real spend" {
   # Calls cannot be made yesterday, so they are made today, and the script is told that
   # tomorrow is today (RECONCILE_TODAY, for tests only), which makes today the last completed day.
-  gw_call "$(test_env KEY_SMOKE_TEST)" classify
+  gw_call "$(test_env KEY_SMOKE_TEST)" chat-tasks
   [ "$GW_STATUS" = "200" ]
-  gw_call "$(test_env KEY_SMOKE_TEST)" gpt-oss-120b@deepinfra
+  gw_call "$(test_env KEY_SMOKE_TEST)" gpt-oss-120b@coreweave
   [ "$GW_STATUS" = "200" ]
   models="$(todays_gateway_models)"
   echo "gateway: $models"
@@ -131,7 +131,7 @@ activity_for_today() {
   openrouter_state "$(activity_for_today "$models" 0)"
   RECONCILE_TODAY="$(date -u -d tomorrow +%F)" run_ops reconcile.sh
   [ "$status" -eq 0 ]
-  [[ "$output" == *"mistralai/mistral-small-3.2-24b-instruct"* ]]
+  [[ "$output" == *"meta-llama/llama-3.1-8b-instruct"* ]]
   [[ "$output" == *"openai/gpt-oss-120b"* ]]
   # It asked OpenRouter for the inference key's activity only, by its hash.
   [ "$(openrouter_requests | jq '[.[] | select(.path == "/api/v1/activity")] | length')" = "1" ]

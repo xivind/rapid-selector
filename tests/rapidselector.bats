@@ -176,9 +176,9 @@ blob_json() {
 }
 
 # rules_env [sed expression]: an env file with every secret, and RAPIDSELECTOR_GATEWAY_CONFIG
-# pointing at gateway/config.yaml with the expression applied (none: the real config).
+# pointing at the example config with the expression applied (none: the example itself).
 rules_env() {
-  sed -e "${1:-}" "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  sed -e "${1:-}" "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$BATS_TEST_TMPDIR/config.yaml"
   mapfile -t lines < <(all_secrets_lines)
   write_env env "${lines[@]}"
   export RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/config.yaml"
@@ -189,7 +189,7 @@ rules_env() {
   run "$REPO/rapidselector.sh" restart gateway
   echo "$output"
   [ "$status" -eq 0 ]
-  grep -q "^rules ok: 11 entries" <<<"$output"
+  grep -q "^rules ok: $(config_count) entries" <<<"$output"
   [ "$(grep '^ARGS=' "$DOCKER_CALL_LOG")" = "ARGS=compose restart gateway" ]
 }
 
@@ -198,8 +198,8 @@ rules_env() {
   run "$REPO/rapidselector.sh" restart gateway
   echo "$output"
   [ "$status" -eq 5 ]
-  grep -q "^FAIL classify: allow_fallbacks must be false" <<<"$output"
-  grep -q "gateway not restarted: gateway/config.yaml breaks a rule" <<<"$output"
+  grep -q "^FAIL chat-tasks: allow_fallbacks must be false" <<<"$output"
+  grep -q "gateway not restarted: config/gateway.yaml or config/home.env breaks a rule" <<<"$output"
   [ ! -e "$DOCKER_CALL_LOG" ]
 }
 
@@ -266,13 +266,88 @@ rules_env() {
   [ ! -e "$DOCKER_CALL_LOG" ]
 }
 
-@test "restart gateway with an unreadable config says so and exits 5" {
+@test "restart gateway without the config exits 2" {
   mapfile -t lines < <(all_secrets_lines)
   write_env env "${lines[@]}"
   RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/missing.yaml" run "$REPO/rapidselector.sh" restart gateway
   echo "$output"
-  [ "$status" -eq 5 ]
-  [[ "$output" == *"cannot read"* ]]
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"copy config/gateway.example.yaml"* ]]
   [[ "$output" != *"breaks a rule"* ]]
   [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "up without config/gateway.yaml exits 2 and names the example" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/none.yaml" run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"$BATS_TEST_TMPDIR/none.yaml not found: copy config/gateway.example.yaml to config/gateway.yaml"* ]]
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "up without config/home.env exits 2 and names the example" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/none.env" run "$REPO/rapidselector.sh" up
+  echo "$output"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"$BATS_TEST_TMPDIR/none.env not found: copy config/home.example.env to config/home.env"* ]]
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "a directory named gateway.yaml is refused" {
+  # Docker creates one for a missing bind mount source.
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  mkdir "$BATS_TEST_TMPDIR/gateway.yaml"
+  RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/gateway.yaml" run "$REPO/rapidselector.sh" up
+  [ "$status" -eq 2 ]
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "run-script runs without config files" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  RAPIDSELECTOR_GATEWAY_CONFIG="$BATS_TEST_TMPDIR/none.yaml" RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/none.env" \
+    run "$REPO/rapidselector.sh" run-script bash -c 'echo ran'
+  [ "$status" -eq 0 ]
+  [ "$output" = "ran" ]
+}
+
+@test "restart gateway with a broken home.env exits 5" {
+  rules_env
+  sed 's/^BUDGET_TEAM_EXPERIMENTS=.*/BUDGET_TEAM_EXPERIMENTS=99/' "$RAPIDSELECTOR_HOME_ENV" > "$BATS_TEST_TMPDIR/home.env"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/home.env" run "$REPO/rapidselector.sh" restart gateway
+  echo "$output"
+  [ "$status" -eq 5 ]
+  grep -q "^FAIL home.env: team budgets" <<<"$output"
+  grep -q "breaks a rule" <<<"$output"
+  [ ! -e "$DOCKER_CALL_LOG" ]
+}
+
+@test "setup-keys refuses without home.env, before any gateway call" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
+  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/none.env" run "$REPO/rapidselector.sh" run-script "$REPO/scripts/setup-keys.sh"
+  echo "$output"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"copy config/home.example.env"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
+}
+
+@test "setup-keys refuses a broken rule in home.env, before any gateway call" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
+  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+  sed 's/^BUDGET_TEAM_EXPERIMENTS=.*/BUDGET_TEAM_EXPERIMENTS=99/' "$RAPIDSELECTOR_HOME_ENV" > "$BATS_TEST_TMPDIR/home.env"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/home.env" run "$REPO/rapidselector.sh" run-script "$REPO/scripts/setup-keys.sh"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^FAIL home.env: team budgets" <<<"$output"
+  [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
 }

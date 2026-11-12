@@ -5,7 +5,7 @@
 #          their names; they come from .env (SECRETS_SOURCE=env) or from the secret
 #          "rapidselector" in secrets-service.
 # Cost:    nothing.
-# Exit:    through die: 2 no settings file or a wrong SECRETS_SOURCE, 3 a missing value,
+# Exit:    through die: 2 no settings file, no config/home.env or a wrong SECRETS_SOURCE, 3 a missing value,
 #          4 secrets-service unreachable or refusing.
 # shellcheck shell=bash
 
@@ -28,6 +28,18 @@ RAPIDSELECTOR_SECRETS=(
 # of the system works (docs: scripts/README.md, "Without the management key").
 RAPIDSELECTOR_OPTIONAL_SECRETS=(
   OPENROUTER_MANAGEMENT_KEY
+)
+
+# The settings every home's config/home.env must hold (config/home.example.env explains each).
+# The rules check (scripts/check-prices.sh) checks them; scripts/setup-keys.sh reads them.
+RAPIDSELECTOR_HOME_SETTINGS=(
+  BUDGET_TEAM_PERMANENT
+  BUDGET_TEAM_EXPERIMENTS
+  BUDGET_KEY_NODE_RED
+  BUDGET_KEY_SMOKE_TEST
+  NODE_RED_RPM
+  NODE_RED_TPM
+  ALLOWED_HOSTS
 )
 
 # die <exit_code> <message>
@@ -58,6 +70,76 @@ load_env_file() {
     [ -n "${!key+set}" ] && continue
     export "$key=$value"
   done < "$file"
+}
+
+# set_config_paths <repo root>: set GATEWAY_CONFIG and HOME_ENV, this home's config/gateway.yaml
+# and config/home.env. RAPIDSELECTOR_GATEWAY_CONFIG and RAPIDSELECTOR_HOME_ENV override them, for
+# the tests only (tests/helpers.bash points them at the example files).
+set_config_paths() {
+  GATEWAY_CONFIG="${RAPIDSELECTOR_GATEWAY_CONFIG:-$1/config/gateway.yaml}"
+  HOME_ENV="${RAPIDSELECTOR_HOME_ENV:-$1/config/home.env}"
+}
+
+# home_env_value <file> <NAME>: print NAME's value in the file (empty if absent), from the file
+# alone: a value already in the environment does not count.
+home_env_value() {
+  (
+    unset "$2"
+    load_env_file "$1"
+    printf '%s\n' "${!2:-}"
+  )
+}
+
+# load_home_env <file>: export this home's settings from config/home.env; exit 2 without the
+# file, 3 naming the first setting missing. A value already in the environment wins.
+load_home_env() {
+  [ -f "$1" ] || die 2 "$1 not found: copy config/home.example.env to config/home.env and edit it (see config/README.md)"
+  load_env_file "$1"
+  require_env "${RAPIDSELECTOR_HOME_SETTINGS[@]}"
+}
+
+# home_env_failures <home.env file> <global budget, or ->: print one reason per broken rule in
+# the file, nothing if all pass. Judges the file alone (home_env_value). The global budget is
+# litellm_settings.max_budget in the gateway config; "-" skips the team budgets' sum.
+home_env_failures() {
+  local file="$1" global="$2" name value word teams_ok=1
+  local -a words
+  for name in "${RAPIDSELECTOR_HOME_SETTINGS[@]}"; do
+    # load_env_file keeps the first of two lines, so a second one would silently do nothing.
+    if [ "$(grep -cE "^[[:space:]]*$name=" "$file")" -gt 1 ]; then
+      echo "$name is set more than once"
+    fi
+    value="$(home_env_value "$file" "$name")"
+    if [ -z "$value" ]; then
+      echo "missing $name"
+      if [[ "$name" == BUDGET_TEAM_* ]]; then teams_ok=0; fi
+      continue
+    fi
+    case "$name" in
+      BUDGET_*)
+        if ! [[ "$value" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v v="$value" 'BEGIN { exit !(v + 0 > 0) }'; then
+          echo "$name must be a number above zero"
+          if [[ "$name" == BUDGET_TEAM_* ]]; then teams_ok=0; fi
+        fi
+        ;;
+      NODE_RED_RPM | NODE_RED_TPM)
+        [[ "$value" =~ ^[1-9][0-9]*$ ]] || echo "$name must be a whole number above zero"
+        ;;
+      ALLOWED_HOSTS)
+        read -r -a words <<<"$value"
+        for word in "${words[@]}"; do
+          if ! [[ "$word" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+            echo "ALLOWED_HOSTS must be provider tags separated by spaces, such as: deepinfra siliconflow"
+            break
+          fi
+        done
+        ;;
+    esac
+  done
+  if [ "$global" != "-" ] && [ "$teams_ok" -eq 1 ]; then
+    awk -v p="$(home_env_value "$file" BUDGET_TEAM_PERMANENT)" -v e="$(home_env_value "$file" BUDGET_TEAM_EXPERIMENTS)" -v g="$global" \
+      'BEGIN { if (p + e > g + 0) printf "team budgets add up to %g, above the global budget %s (litellm_settings.max_budget)\n", p + e, g }'
+  fi
 }
 
 # load_secrets_from_service: fetch the secret "rapidselector" and export each required field.

@@ -62,19 +62,19 @@ activity() {
   smoke="$(token_hash "$(test_env KEY_SMOKE_TEST)")"
   # Let spend from earlier tests' calls reach the database first (written every 10 s).
   sleep 12
-  before_c="$(activity classify "$node_red")"
-  before_g="$(activity gpt-oss-120b@deepinfra "$smoke")"
-  gw_call "$(test_env KEY_NODE_RED)" classify
+  before_c="$(activity chat-tasks "$node_red")"
+  before_g="$(activity gpt-oss-120b@coreweave "$smoke")"
+  gw_call "$(test_env KEY_NODE_RED)" chat-tasks
   [ "$GW_STATUS" = "200" ]
   cost_c="$GW_COST"
-  gw_call "$(test_env KEY_SMOKE_TEST)" gpt-oss-120b@deepinfra
+  gw_call "$(test_env KEY_SMOKE_TEST)" gpt-oss-120b@coreweave
   [ "$GW_STATUS" = "200" ]
   cost_g="$GW_COST"
   # Daily figures are written in batches; wait for both calls to show.
   deadline=$((SECONDS + 60))
   while :; do
-    after_c="$(activity classify "$node_red")"
-    after_g="$(activity gpt-oss-120b@deepinfra "$smoke")"
+    after_c="$(activity chat-tasks "$node_red")"
+    after_g="$(activity gpt-oss-120b@coreweave "$smoke")"
     [ "$(jq -n --argjson b "$before_c" --argjson a "$after_c" '$a.requests > $b.requests')" = "true" ] \
       && [ "$(jq -n --argjson b "$before_g" --argjson a "$after_g" '$a.requests > $b.requests')" = "true" ] && break
     [ "$SECONDS" -lt "$deadline" ] || { echo "daily activity did not change: $after_c $after_g"; false; }
@@ -85,7 +85,7 @@ activity() {
   # One call each: 100 tokens in and 50 out (the fake's default), at the cost the gateway reported.
   check='($a.requests - $b.requests) == 1 and ($a.tokens_in - $b.tokens_in) == 100
     and ($a.tokens_out - $b.tokens_out) == 50 and ((($a.spend - $b.spend) - $c) | fabs) < 1e-12'
-  echo "classify: $before_c -> $after_c ($cost_c); gpt: $before_g -> $after_g ($cost_g)"
+  echo "chat-tasks: $before_c -> $after_c ($cost_c); gpt: $before_g -> $after_g ($cost_g)"
   [ "$(jq -n --argjson b "$before_c" --argjson a "$after_c" --argjson c "$cost_c" "$check")" = "true" ]
   [ "$(jq -n --argjson b "$before_g" --argjson a "$after_g" --argjson c "$cost_g" "$check")" = "true" ]
   [ "$(jq -r .alias <<<"$after_c")" = "node-red" ]
@@ -96,9 +96,9 @@ activity() {
   # Decides SCRIPTS_ROLE in setup-keys.sh: proxy_admin_viewer if this passes, else proxy_admin.
   smoke="$(token_hash "$(test_env KEY_SMOKE_TEST)")"
   chat="$(token_hash "$(test_env KEY_CHAT)")"
-  gw_call "$(test_env KEY_SMOKE_TEST)" classify
+  gw_call "$(test_env KEY_SMOKE_TEST)" chat-tasks
   [ "$GW_STATUS" = "200" ]
-  gw_call "$(test_env KEY_CHAT)" classify
+  gw_call "$(test_env KEY_CHAT)" chat-tasks
   [ "$GW_STATUS" = "200" ]
   # Daily figures are written in batches; wait for both keys to show.
   deadline=$((SECONDS + 60))
@@ -116,18 +116,19 @@ activity() {
   sk GET '/team/info?team_id=experiments'
   [ "$SK_STATUS" = "200" ]
   save team-info
-  [ "$(jq '.team_info | .max_budget == 24 and .budget_duration == "30d" and (.budget_reset_at | type) == "string"' <<<"$output")" = "true" ]
+  [ "$(jq --argjson b "$(home_value BUDGET_TEAM_EXPERIMENTS)" '.team_info | .max_budget == $b and .budget_duration == "30d" and (.budget_reset_at | type) == "string"' <<<"$output")" = "true" ]
 }
 
 @test "global budget readable" {
   sk GET /global/spend
   [ "$SK_STATUS" = "200" ]
-  [ "$(jq '.max_budget' <<<"$output")" = "32" ] || [ "$(jq '.max_budget' <<<"$output")" = "32.0" ]
+  global="$(awk '/^  max_budget:/ { print $2 }' "$RAPIDSELECTOR_GATEWAY_CONFIG")"
+  [ "$(jq --argjson g "$global" '.max_budget == $g' <<<"$output")" = "true" ]
 }
 
 @test "the scripts' key can change nothing and call no model" {
   failures=()
-  body='{"model":"classify","messages":[{"role":"user","content":"hi"}]}'
+  body='{"model":"chat-tasks","messages":[{"role":"user","content":"hi"}]}'
   for call in \
     "POST /openrouter/v1/chat/completions $body" \
     "POST /v1/chat/completions $body" \

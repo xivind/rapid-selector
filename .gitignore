@@ -2,3 +2,5 @@
 tests/.artifacts/
 .superpowers/
 .worktrees/
+config/gateway.yaml
+config/home.env

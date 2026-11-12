@@ -2,31 +2,37 @@
 # Check every entry in the gateway config in two parts, so a model change cannot break
 # CLAUDE.md's principles 1 and 4 or record the wrong spend:
 # 1. The rules, offline: provider.order and provider.only name the same single endpoint, at
-#    one of the account's allowed providers (ALLOWED_HOSTS below); allow_fallbacks false; zdr
+#    one of the account's allowed providers (ALLOWED_HOSTS in config/home.env); allow_fallbacks false; zdr
 #    true; data_collection deny; a max_tokens; both prices above zero; no :free model and no
-#    wildcard. A field the parser cannot read fails as "cannot read <field>".
+#    wildcard. A field the parser cannot read fails as "cannot read <field>". And config/home.env:
+#    every setting present, budgets and limits above zero, providers as plain tags, and the two
+#    team budgets adding up to no more than litellm_settings.max_budget (lib.sh, home_env_failures).
 # 2. The prices, online, against OpenRouter's public list of zero data retention endpoints:
 #    the pinned endpoint must exist, not be in the flex tier, not use Safety Retention (the
 #    list includes those), and have the configured input and output price.
 # Run it before every change to the allowlist; prices at a host change without notice.
 # `./rapidselector.sh restart gateway` runs part 1 on its own first.
-# Run:     scripts/check-prices.sh [--rules-only] [config file]  (default: gateway/config.yaml),
-#          on the host
+# Run:     scripts/check-prices.sh [--rules-only] [config file]  (default: config/gateway.yaml),
+#          on the host or here; config/home.env is read for the allowed providers
 # Secrets: none (OpenRouter's list is public).
 # Cost:    nothing.
-# Exit:    0 every entry passes, 1 an entry fails (one FAIL line each), 2 OpenRouter's list
-#          cannot be read (never with --rules-only).
-# The parser reads block-style YAML as in gateway/config.yaml (one field per line, indented by
+# Exit:    0 every entry passes, 1 an entry fails (one FAIL line each), 2 a config file or
+#          OpenRouter's list cannot be read (the list: never with --rules-only).
+# The parser reads block-style YAML as in config/gateway.example.yaml (one field per line, indented by
 # two spaces per level); anything it cannot place fails closed as "cannot read <field>".
 set -uo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
-# The account's allowed providers in OpenRouter's settings (the tag before the "/").
-ALLOWED_HOSTS="cloudflare coreweave deepinfra siliconflow"
+# shellcheck source=SCRIPTDIR/lib.sh
+. "$repo/scripts/lib.sh"
+set_config_paths "$repo"
 
 rules_only=0
 if [ "${1:-}" = "--rules-only" ]; then rules_only=1; shift; fi
-config="${1:-$repo/gateway/config.yaml}"
+config="${1:-$GATEWAY_CONFIG}"
 [ -r "$config" ] || { echo "cannot read $config"; exit 2; }
+[ -f "$HOME_ENV" ] && [ -r "$HOME_ENV" ] || { echo "cannot read $HOME_ENV"; exit 2; }
+# The account's allowed providers in OpenRouter's settings (the tag before the "/").
+ALLOWED_HOSTS="$(home_env_value "$HOME_ENV" ALLOWED_HOSTS)"
 
 # One line per entry under model_list: name model input output order only max_tokens
 # allow_fallbacks zdr data_collection. Blocks are followed by indentation, so a field counts only
@@ -118,6 +124,22 @@ for entry in "${entries[@]}"; do
     failed=1
   done < <(rule_failures "${fields[@]}")
 done
+# The global budget: one numeric max_budget directly under litellm_settings, else "-".
+global="$(awk '
+  /^litellm_settings:/ { s = 1; next }
+  s && /^[^ #]/ { s = 0 }
+  s && /^  max_budget:/ { v = $2; n++ }
+  END { print (n == 1 && v ~ /^[0-9]+([.][0-9]+)?$/) ? v : "-" }
+' "$config")"
+if [ "$global" = "-" ]; then
+  echo "FAIL litellm_settings: cannot read max_budget"
+  failed=1
+fi
+while IFS= read -r reason; do
+  [ -n "$reason" ] || continue
+  echo "FAIL home.env: $reason"
+  failed=1
+done < <(home_env_failures "$HOME_ENV" "$global")
 [ "$failed" -eq 1 ] || echo "rules ok: ${#entries[@]} entries"
 [ "$rules_only" -eq 0 ] || exit "$failed"
 

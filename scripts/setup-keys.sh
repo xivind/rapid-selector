@@ -1,30 +1,25 @@
 #!/usr/bin/env bash
 # Create or update the teams and virtual keys in the gateway, so that budgets, allowed names,
-# rate limits and routes are what this file says. Safe to run again: it creates what is
-# missing and resets the rest to the values here. Run it at first setup and after a name is
-# added to or removed from gateway/config.yaml.
+# rate limits and routes are what this file and config/home.env say. Safe to run again: it
+# creates what is missing and resets the rest. Run it at first setup, after a name is added to
+# or removed from config/gateway.yaml, and after a budget or limit in config/home.env changed.
 # Run:     ./rapidselector.sh run-script scripts/setup-keys.sh
 # Secrets: LITELLM_MASTER_KEY, KEY_CHAT, KEY_NODE_RED, KEY_SMOKE_TEST, KEY_SCRIPTS.
 # Cost:    nothing (no model call).
-# Exit:    0 done (prints the teams and keys), 1 the gateway refused or could not be read,
-#          3 a missing value.
+# Exit:    0 done (prints the teams and keys), 1 a rule in config/ is broken (nothing changed),
+#          or the gateway refused or could not be read, 2 config/home.env not found, 3 a missing
+#          value.
 #
-# Budgets (USD, reset on the 1st of the month, 00:00 UTC). The BUDGET_* overrides exist only
-# for tests (level 1, and step D8 of the phase 0 procedure); normal use never sets them.
+# The budgets (USD, reset on the 1st of the month, 00:00 UTC) and Node-RED's limits come from
+# config/home.env. A BUDGET_* already in the environment wins, for tests only (level 1, and
+# step D8 of the phase 0 procedure).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=SCRIPTDIR/lib.sh
 . "$ROOT/scripts/lib.sh"
 
-BUDGET_TEAM_PERMANENT="${BUDGET_TEAM_PERMANENT:-8}"
-BUDGET_TEAM_EXPERIMENTS="${BUDGET_TEAM_EXPERIMENTS:-24}"
-BUDGET_KEY_NODE_RED="${BUDGET_KEY_NODE_RED:-4}"
-BUDGET_KEY_SMOKE_TEST="${BUDGET_KEY_SMOKE_TEST:-1}"
 BUDGET_DURATION="30d"
-NODE_RED_RPM=30
-# Input and output tokens per minute for node-red: an upper limit on how much a flow can send.
-NODE_RED_TPM=100000
 # Virtual keys may only call chat completions and list models: no pass-through or admin routes.
 ALLOWED_ROUTES='["/v1/chat/completions","/chat/completions","/v1/models","/models"]'
 # The scripts' key (user scripts) may only read what scripts/status.sh and scripts/reconcile.sh need:
@@ -39,11 +34,17 @@ SCRIPTS_ROLE=proxy_admin_viewer
 SCRIPTS_ROUTES='["/global/spend","/team/info","/user/daily/activity"]'
 
 require_env LITELLM_MASTER_KEY RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST KEY_SCRIPTS
+set_config_paths "$ROOT"
+load_home_env "$HOME_ENV"
+# The rules restart gateway and copy-config.sh to check, here too, where the budgets are applied
+# (team budgets within the global budget, numbers that are numbers).
+"$ROOT/scripts/check-prices.sh" --rules-only "$GATEWAY_CONFIG" \
+  || die 1 "teams and keys not changed: config/gateway.yaml or config/home.env breaks a rule"
 
 model_info="$(api GET /model/info)" || die 1 "cannot read /model/info from the gateway"
 ALL_NAMES="$(jq -c '[.data[].model_name] | unique' <<<"$model_info")"
 ROLES="$(jq -c '[.data[] | select(.model_info.rapidselector_kind == "role") | .model_name] | unique' <<<"$model_info")"
-[ "$(jq length <<<"$ROLES")" -gt 0 ] || die 1 "no entry of kind role in gateway/config.yaml"
+[ "$(jq length <<<"$ROLES")" -gt 0 ] || die 1 "no entry of kind role in config/gateway.yaml"
 
 # key_hash <key value>: the hash LiteLLM stores for a key, so the value is never in a URL.
 key_hash() { printf '%s' "$1" | sha256sum | cut -d' ' -f1; }

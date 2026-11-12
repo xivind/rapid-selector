@@ -15,19 +15,19 @@ teardown_file() {
 }
 
 @test "a spent key stays refused while the database is down" {
-  fake_tokens 100 100000
+  fake_tokens 100 500000
   # Spend the smoke-test key's $0.03 (about $0.02 per call) and wait for the spend writer.
   for _ in 1 2 3 4 5; do
-    gw_call "$(test_env KEY_SMOKE_TEST)" classify
+    gw_call "$(test_env KEY_SMOKE_TEST)" chat-tasks
     [ "$GW_STATUS" = "200" ] || break
     sleep 12
   done
   [ "$GW_STATUS" != "200" ]
   docker stop rapidselector-db >/dev/null
-  gw_call "$(test_env KEY_SMOKE_TEST)" classify
+  gw_call "$(test_env KEY_SMOKE_TEST)" chat-tasks
   spent_status="$GW_STATUS"
   spent_body="${output:0:300}"
-  gw_call "$(test_env KEY_CHAT)" classify
+  gw_call "$(test_env KEY_CHAT)" chat-tasks
   echo "$(date -u +%FT%TZ) resilience.bats: db stopped: spent key -> HTTP $spent_status ($spent_body); chat key -> HTTP $GW_STATUS (${output:0:200})" >> "$FINDINGS"
   [ "$spent_status" != "200" ] || { echo "fail-open: a spent key was served with the database down"; false; }
 }
@@ -40,7 +40,7 @@ teardown_file() {
   done
   fake_tokens 100 50
   for _ in $(seq 1 20); do
-    gw_call "$(test_env KEY_CHAT)" classify
+    gw_call "$(test_env KEY_CHAT)" chat-tasks
     [ "$GW_STATUS" = "200" ] && break
     sleep 3
   done

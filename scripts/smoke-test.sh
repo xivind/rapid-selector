@@ -23,7 +23,7 @@ case "${1:-}" in
   --all) filter='.data[]' ;;
   --name)
     only="${2:-}"
-    [ -n "$only" ] || die 1 "--name needs a name, e.g. --name gpt-oss-20b@deepinfra"
+    [ -n "$only" ] || die 1 "--name needs a name, e.g. --name chat-tasks"
     filter='.data[] | select(.model_name == $only)'
     ;;
   *) die 1 "unknown option: $1 (use --all or --name <name>)" ;;
@@ -66,7 +66,7 @@ done
 probe='{"model":"openai/gpt-4o","messages":[{"role":"user","content":"hi"}]}'
 code="$(status_of /v1/chat/completions "$probe")"
 if [ "$code" -ge 400 ] && [ "$code" -lt 500 ]; then echo "refused: openai/gpt-4o ($code)"; else failures+=("openai/gpt-4o was not refused: HTTP $code"); fi
-probe='{"model":"classify","messages":[{"role":"user","content":"hi"}]}'
+probe='{"model":"chat-tasks","messages":[{"role":"user","content":"hi"}]}'
 code="$(status_of /openrouter/v1/chat/completions "$probe")"
 if [ "$code" = "401" ] || [ "$code" = "403" ]; then echo "refused: /openrouter/v1/chat/completions ($code)"; else failures+=("/openrouter/v1/chat/completions was not refused: HTTP $code"); fi
 

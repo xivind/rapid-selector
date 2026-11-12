@@ -32,7 +32,7 @@ In OpenRouter's dashboard:
 
 1. Turn **auto top-up off**.
 2. Turn off prompt logging and every opt-in to data collection, and require zero data retention for the account.
-3. Create an API key for the gateway with a **monthly credit limit**. $35 fits the budgets in this repository, and a lower limit needs lower budgets too (see [Teams, keys and budgets](#teams-keys-and-budgets)). Name it `rapidselector-gateway` (or set `OPENROUTER_INFERENCE_KEY_NAME` in `.env` to its name). The key is shown only once, so keep it at hand for step 3.
+3. Create an API key for the gateway with a **monthly credit limit**. Set it a little above the gateway's global budget (`max_budget` in `config/gateway.yaml`, $10 in the example), and lower the budgets if you set a lower limit (see [Teams, keys and budgets](#teams-keys-and-budgets)). Name it `rapidselector-gateway` (or set `OPENROUTER_INFERENCE_KEY_NAME` in `.env` to its name). The key is shown only once, so keep it at hand for step 3.
 4. **Optional:** under Management API Keys, create a **management key** named `rapidselector-scripts`, with an expiry of one year. `scripts/status.sh` and `scripts/reconcile.sh` borrow it to read the balance and activity. It cannot call models, but it can create and change keys: it is the most sensitive secret here. Without it, everything else works, but those two scripts do not run: no balance check and no check that recorded spend matches what OpenRouter charged ([`scripts/README.md`](scripts/README.md#without-the-management-key) lists what you lose; you can add it later). It is shown only once; note its expiry date for step 2.
 5. Buy credits. The whole balance is the most you can lose, so keep it small.
 
@@ -47,6 +47,16 @@ nano .env
 ```
 
 `hostname -I` prints the host's addresses. Set `RAPIDSELECTOR_LAN_ADDRESS` in `.env` to its LAN address, usually starting with `192.168.`, and, if you made a management key, `OPENROUTER_MANAGEMENT_KEY_EXPIRES_AT` to its expiry date (e.g. `2027-11-07`). Addresses starting with `172.` belong to Docker. Write values without quotes, then save and exit with `Ctrl+O`, `Enter`, `Ctrl+X`.
+
+Then this home's own settings, in `config/` ([`config/README.md`](config/README.md) explains each file). Start from the examples:
+
+```bash
+cp config/gateway.example.yaml config/gateway.yaml
+cp config/home.example.env config/home.env
+nano config/home.env
+```
+
+In `config/home.env`, set `ALLOWED_HOSTS` to the allowed providers in your OpenRouter account, and the budgets you want; the models are in `config/gateway.yaml`. Both files are yours and ignored by git, and `./rapidselector.sh` refuses to start without them. If you edit them on another machine, `scripts/copy-config.sh to` copies them here.
 
 ### 3. Create the secrets
 
@@ -185,7 +195,7 @@ It prints a summary of each team and key. It is safe to run again; it resets bud
 
 ### 6. Create the Open WebUI admin account
 
-Open `http://<host>:4010` and create the account. Only this first account can be created; sign-ups are closed after it. The model list should show 11 names. Sending a chat message costs money.
+Open `http://<host>:4010` and create the account. Only this first account can be created; sign-ups are closed after it. The model list should show the names in `config/gateway.yaml`. Sending a chat message costs money.
 
 ### 7. Run the smoke test
 
@@ -216,20 +226,20 @@ Which script to run when, and what its output and exit codes mean: [`scripts/REA
 
 ## Teams, keys and budgets
 
-All limits are in USD and reset on the 1st of the month at 00:00 UTC.
+All limits are in USD and reset on the 1st of the month at 00:00 UTC. The budgets are set in `config/home.env` (the example's values in brackets).
 
 | Team or key | Budget | May use |
 |---|---|---|
-| Team `permanent` | $8 | The roles only |
-| Key `node-red` (`KEY_NODE_RED`) | $4, about 30 calls and 100,000 tokens a minute | The roles only |
-| Team `experiments` | $24 | Every name |
+| Team `permanent` | `BUDGET_TEAM_PERMANENT` ($2) | The roles only |
+| Key `node-red` (`KEY_NODE_RED`) | `BUDGET_KEY_NODE_RED` ($1), and `NODE_RED_RPM` calls and `NODE_RED_TPM` tokens a minute (30 and 100,000) | The roles only |
+| Team `experiments` | `BUDGET_TEAM_EXPERIMENTS` ($8) | Every name |
 | Key `chat` (`KEY_CHAT`, used by Open WebUI) | the team's | Every name |
-| Key `smoke-test` (`KEY_SMOKE_TEST`) | $1 | Every name |
+| Key `smoke-test` (`KEY_SMOKE_TEST`) | `BUDGET_KEY_SMOKE_TEST` ($1) | Every name |
 | Key `scripts` (`KEY_SCRIPTS`, used by `status.sh` and `reconcile.sh`) | none | No model: it may only read spend and budgets |
 
-Above these, LiteLLM's global budget is $32, and the OpenRouter key's own monthly limit ($35, set in OpenRouter's dashboard) is the actual cap. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
+Above these comes LiteLLM's global budget (`max_budget` in `config/gateway.yaml`, $10 in the example), and above that the OpenRouter key's own monthly limit (set in OpenRouter's dashboard), the actual cap. The two team budgets must add up to no more than the global budget; the rules check refuses otherwise. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
-Budgets and allowed names live in `scripts/setup-keys.sh`; change them there and run it again. The models live in `gateway/config.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file. The restart first checks the config against the rules in `CLAUDE.md` (pinned host, no fallbacks, zero data retention, prices, `max_tokens`) and refuses if one is broken; the order of a model change is in `scripts/README.md`.
+Budgets and limits live in `config/home.env`; change them there and run `setup-keys.sh` again. The models live in `config/gateway.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file. The restart first checks the config against the rules in `CLAUDE.md` (pinned host, no fallbacks, zero data retention, prices, `max_tokens`) and refuses if one is broken; the order of a model change is in `scripts/README.md`.
 
 ## Calling a model from Node-RED or an app
 

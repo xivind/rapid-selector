@@ -40,7 +40,8 @@ services:
       # Use the price map shipped in the image; do not fetch it from GitHub at every start.
       LITELLM_LOCAL_MODEL_COST_MAP: "True"
     volumes:
-      - ./gateway/config.yaml:/app/config.yaml:ro
+      # This home's config/gateway.yaml. The variable is for the tests only (the example file).
+      - ${RAPIDSELECTOR_GATEWAY_CONFIG:-./config/gateway.yaml}:/app/config.yaml:ro
       - ./gateway/request_guard.py:/app/request_guard.py:ro
     ports:
       - "${RAPIDSELECTOR_LAN_ADDRESS:?set RAPIDSELECTOR_LAN_ADDRESS}:${GATEWAY_PORT:-4000}:4000"
@@ -71,9 +72,10 @@ services:
       ENABLE_PERSISTENT_CONFIG: "False"
       # Only the first account (the admin) can be created.
       ENABLE_SIGNUP: "False"
-      # Background calls: titles only, with the cheapest model; everything else off.
+      # Background calls: titles only, with the role chat-tasks; everything else off.
       ENABLE_TITLE_GENERATION: "True"
-      TASK_MODEL_EXTERNAL: llama-3.1-8b-instruct@deepinfra
+      # A role every home's config/gateway.yaml defines, pointed at its cheapest model.
+      TASK_MODEL_EXTERNAL: chat-tasks
       ENABLE_TAGS_GENERATION: "False"
       ENABLE_FOLLOW_UP_GENERATION: "False"
       ENABLE_AUTOCOMPLETE_GENERATION: "False"

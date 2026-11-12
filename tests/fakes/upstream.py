@@ -60,7 +60,7 @@ DISABLED_KEY_ERROR = {"code": 401, "message": "Invalid credentials", "metadata":
 
 
 def zdr_from_config(path):
-    """One endpoint per gateway/config.yaml entry, at the config's price, as tests/checks.bats builds it."""
+    """One endpoint per gateway config entry, at the config's price, as tests/checks.bats builds it."""
     try:
         lines = open(path, encoding="utf-8").read().splitlines()
     except OSError:

@@ -2,7 +2,7 @@
 
 A guided tour of the two web pages that sit beside rapid-selector's own tools: what each shows, what to look for, and what to leave alone. Do it in order, one step at a time. Checked against both sites' docs on 2026-11-10 (`docs/provider-facts.md`); Part 1 walked through with the owner on the real stack (LiteLLM v1.106.6) the same day, Parts 2 and 3 on 2026-11-11, and corrected where reality differs from the docs.
 
-**The one rule:** look here, change elsewhere. Budgets, keys and models are set by files and scripts in this repository (`scripts/setup-keys.sh`, `gateway/config.yaml`), and the next run of those puts back whatever was changed by hand. OpenRouter's settings are the exception: they live only in its dashboard, and every change there is recorded in `docs/decisions.md`.
+**The one rule:** look here, change elsewhere. Budgets, keys and models are set by this home's files in `config/` and the scripts that apply them (`config/home.env` with `scripts/setup-keys.sh`, `config/gateway.yaml`), and the next run of those puts back whatever was changed by hand. OpenRouter's settings are the exception: they live only in its dashboard, and every change there is recorded in `docs/decisions.md`.
 
 **What the pages add to the scripts:** `scripts/status.sh` and `scripts/reconcile.sh` give the money on one screen, and Grafana alerts on it. The pages show the detail: single calls, single keys, and OpenRouter's own view of each request.
 
@@ -30,7 +30,7 @@ At `http://<host>:4000/ui` (the gateway's address, README "What runs").
 - **Look for:** `chat`, `node-red`, `smoke-test` and `scripts`, each with its team, budget, spend and the names it may call: `node-red` the 4 roles, `chat` and `smoke-test` all 11. `chat` has no budget of its own; its team's is its cap. L1's session key does not show.
 - **"All Proxy Models" on `scripts`** is expected: an empty list means no model restriction, and what stops that key from calling models is its route list (three read routes only), tested at level 1.
 - **The one thing to do here:** **block** a key to stop one client and keep the others running (README, "Stopping all spending"). Unblock it the same way.
-- **Don't change:** budgets, models, limits or routes. `setup-keys.sh` is the source of truth: an edit here works until its next run, which silently puts it back. Change the numbers in that script and run it instead (user guide, "Change a budget").
+- **Don't change:** budgets, models, limits or routes. `setup-keys.sh` is the source of truth: an edit here works until its next run, which silently puts it back. Change the numbers in `config/home.env` and run it instead (user guide, "Change a budget").
 
 ### L4. Teams
 
@@ -41,7 +41,7 @@ At `http://<host>:4000/ui` (the gateway's address, README "What runs").
 ### L5. Models
 
 - **Where:** **Models + Endpoints**, All Models.
-- **Look for:** the 11 names, each with a **config** badge and "Defined in config" as creator, and their prices and host pins. No edit option: LiteLLM never edits models from the file, and our `store_model_in_db: false` turns off models in the database.
+- **Look for:** the names in `config/gateway.yaml`, each with a **config** badge and "Defined in config" as creator, and their prices and host pins. No edit option: LiteLLM never edits models from the file, and our `store_model_in_db: false` turns off models in the database.
 - **Don't change:** you can't: models from `config.yaml` are read-only here, and **Add model** fails, since `store_model_in_db` is off. A new model goes through `config.yaml`, `scripts/check-prices.sh` and `./rapidselector.sh restart gateway` (user guide, "Add a model or an experiment name").
 
 ### L6. Logs
@@ -89,7 +89,7 @@ At openrouter.ai, signed in.
   - under "Data Training", all four switches **off**: paid endpoints that train on request data, free endpoints that train on it, free endpoints that publish prompts, and "Allow 1% data discount in workspaces", the account's master switch for OpenRouter using inputs and outputs (each workspace would consent separately on top);
   - "Private Input & Output Logging" under Observability **off**;
   - allowed providers: Cloudflare, CoreWeave, DeepInfra and SiliconFlow.
-- **Don't change:** any of it without a decision in `docs/decisions.md`. A new provider also means new allowlist entries and `scripts/check-prices.sh`'s `ALLOWED_HOSTS`.
+- **Don't change:** any of it without a decision in `docs/decisions.md`. A new provider also means new allowlist entries and `ALLOWED_HOSTS` in `config/home.env`.
 
 ### O6. Account security
 
@@ -102,12 +102,12 @@ The owner's wish (2026-11-11): do it once together, with a real new model, so th
 
 ### R1. Pick it
 
-- **Check first:** the model and host are not already in `gateway/config.yaml` under another name (the first pick on 2026-11-11 turned out to be the `summarise` role), and the model is on OpenRouter with an endpoint at one of the four allowed providers that has zero data retention, not in the flex tier and without Safety Retention, and its price at that host. If none qualifies, pick another model; a fifth provider is a decision of its own.
+- **Check first:** the model and host are not already in `config/gateway.yaml` under another name (the first pick on 2026-11-11 turned out to be the `summarise` role), and the model is on OpenRouter with an endpoint at one of the four allowed providers that has zero data retention, not in the flex tier and without Safety Retention, and its price at that host. If none qualifies, pick another model; a fifth provider is a decision of its own.
 - **Cost, flagged before anything runs:** the smoke test's one call to it, a fraction of a cent for a small model, and whatever is then spent trying it in chat.
 
 ### R2. Add it
 
-Follow the user guide, "Add a model or an experiment name", as an experiment name (`model@host`): the entry in `gateway/config.yaml`, `scripts/check-prices.sh`, commit, then on the host `git pull`, `./rapidselector.sh restart gateway` and `setup-keys.sh`, and one smoke-test call with `--name`. Then see it in Open WebUI, LiteLLM's Models page (12 names) and, after a call, Grafana's LLM dashboard.
+Follow the user guide, "Add a model or an experiment name", as an experiment name (`model@host`): the entry in `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to`, then on the host `./rapidselector.sh restart gateway` and `setup-keys.sh`, and one smoke-test call with `--name`. Then see it in Open WebUI, LiteLLM's Models page (one name more) and, after a call, Grafana's LLM dashboard.
 
 ### R3. Remove it
 
@@ -120,7 +120,7 @@ Done on 2026-11-11 with Gemma 4 31B at DeepInfra (`gemma-4-31b@deepinfra`): adde
 | To change | Where |
 |---|---|
 | A key's or team's budget, a key's names or rate limit | `scripts/setup-keys.sh`, then run it (user guide) |
-| A model, its price or host | `gateway/config.yaml`, `scripts/check-prices.sh`, `./rapidselector.sh restart gateway` |
+| A model, its price or host | `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to`, `./rapidselector.sh restart gateway` |
 | The monthly cap | the inference key's limit in OpenRouter (O2), recorded in `docs/decisions.md` |
 | Stop one client | block its key (L3) |
 | Stop everything | disable the inference key (O2), or `docker stop rapidselector-gateway` |

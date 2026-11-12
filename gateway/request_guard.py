@@ -4,7 +4,7 @@ LiteLLM forwards these fields from the request body: "extra_body" replaces the e
 pinned provider object (host, fallbacks, zero data retention), and "models", "route" and
 "transforms" are passed on to OpenRouter, where "models" is a fallback list that can reach
 models outside the allowlist. "provider" and "fallbacks" are removed for the same reason.
-The pin in gateway/config.yaml is the only routing. Loaded by LiteLLM as a callback.
+The pin in config/gateway.yaml is the only routing. Loaded by LiteLLM as a callback.
 """
 
 from litellm.integrations.custom_logger import CustomLogger
