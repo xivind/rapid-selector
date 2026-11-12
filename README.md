@@ -205,7 +205,7 @@ This calls real models, and costs well under $0.01:
 ./rapidselector.sh run-script scripts/smoke-test.sh
 ```
 
-It calls each role once. Add `--all` to call every name, or `--name <name>` to call one, such as `--name gpt-oss-20b@deepinfra`.
+It calls each role once. Add `--all` to call every name, or `--name <name>` to call one, such as `--name gpt-oss-120b@coreweave`.
 
 ## Everyday commands
 
@@ -243,7 +243,7 @@ Budgets and limits live in `config/home.env`; change them there and run `setup-k
 
 ## Calling a model from Node-RED or an app
 
-Clients call a **role**, never a specific model: `classify`, `summarise`, `code` or `chat`. The model behind a role can change without touching the client.
+Clients call a **role**, never a specific model: a stable name defined in `config/gateway.yaml`, such as `classify` or `summarise`. The model behind a role can change without touching the client.
 
 ```bash
 curl http://<host>:4000/v1/chat/completions \
@@ -265,7 +265,7 @@ curl http://<host>:4000/v1/chat/completions \
 
 Open WebUI's settings are fixed by environment variables in `docker-compose.yml` (`ENABLE_PERSISTENT_CONFIG=False`). A switch flipped in its admin panel works until the next restart and is then gone. To change a setting, change `docker-compose.yml`, commit it, and run `./rapidselector.sh up`, which recreates only `chat`.
 
-Background calls are limited on purpose: chat titles are generated with the cheapest model (`llama-3.1-8b-instruct@deepinfra`); tags, follow-up suggestions, autocomplete, web search and image generation are off.
+Background calls are limited on purpose: chat titles are generated through the role `chat-tasks`, which you point at your cheapest model; tags, follow-up suggestions, autocomplete, web search and image generation are off.
 
 ## Backups
 
@@ -325,6 +325,7 @@ Code and tests are developed in a cloud sandbox without access to the Pi. The le
   tests/run.sh
   ```
   In the cloud sandbox, start Docker first: `dockerd > /tmp/dockerd.log 2>&1 &`.
+- **Without Docker,** the suites that need no containers still run: `npx --yes bats@1.11.0 tests/ops-logic.bats tests/smoke-args.bats`.
 - **Before changing an image version:** `tests/check-arm64.sh` checks that every pinned image exists for the Pi.
 - **Before changing the model list:** `scripts/check-prices.sh` compares each entry's price, host and tier with OpenRouter's public API. It costs nothing.
-- Anything that needs the Pi or real money is verified with the owner by following `docs/test-procedures/phase-0.md`.
+- Anything that needs the Pi or real money is verified with the owner by following `docs/test-procedures/initial-setup-walkthrough.md`.

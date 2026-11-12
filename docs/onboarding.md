@@ -12,7 +12,7 @@ At `http://<host>:4000/ui` (the gateway's address, README "What runs").
 
 ### L1. Log in
 
-- **Where:** the login page; afterwards you land on a home page. User `admin`, password `LITELLM_UI_PASSWORD`, which you read in secrets-service's admin UI, secret `rapidselector` (or your password manager). Never paste it anywhere else.
+- **Where:** the login page; afterwards you land on a home page. User `admin`, password `LITELLM_UI_PASSWORD`, which you read where your secrets are kept (`.env`, or the secret store). Never paste it anywhere else.
 - **Look for:** a yellow warning about "Environment-credential login" (it can be closed). It means anyone with that one shared password is a full admin. Here that is you, on the LAN, with a long random password, so it is accepted for now (finding 41 in `docs/decisions.md`). The fix LiteLLM suggests, a personal admin account and `disable_env_credential_login: true`, locks the UI if done in the wrong order; it stays a separate decision.
 - **Good to know:** each login creates a hidden session key for the UI, valid for 24 hours with a $1 budget, which no key list shows (`provider-facts.md`). More than 10 wrong passwords in a minute lock you out for 5 minutes.
 - **Don't change:** anything under **Internal Users** or **Settings**.
@@ -35,7 +35,7 @@ At `http://<host>:4000/ui` (the gateway's address, README "What runs").
 ### L4. Teams
 
 - **Where:** **Teams**.
-- **Look for:** `permanent` ($8) and `experiments` ($24) and their spend. They add up to the global budget, $32. The page shows the budget's length, `30d`, not the next reset; `status.sh` prints that (the 1st of next month).
+- **Look for:** `permanent` and `experiments` with the budgets in `config/home.env`, and their spend. They add up to no more than the global budget (`max_budget` in `config/gateway.yaml`). The page shows the budget's length, `30d`, not the next reset; `status.sh` prints that (the 1st of next month).
 - **Don't change:** the same as keys: `setup-keys.sh` owns them.
 
 ### L5. Models
@@ -60,14 +60,14 @@ At openrouter.ai, signed in.
 - **Where:** **Credits**.
 - **Look for:** the balance, which should match `status.sh`'s; auto top-up **off**, and no saved card.
 - **Good to know:** a purchase can be refunded within 24 hours; OpenRouter may expire credit unused for a year. Both are reasons to keep the balance small (`CLAUDE.md`, principle 1).
-- **Don't change:** never turn on auto top-up. A top-up is a decision recorded in `docs/decisions.md`.
+- **Don't change:** never turn on auto top-up. A top-up is a decision of your own: note it where you keep your home's notes.
 
 ### O2. Keys
 
 - **Where:** **Keys**, under **Workspace** in the menu (OpenRouter's docs still point to `/settings/keys`).
-- **Look for:** `rapidselector-gateway`, the gateway's only inference key: limit $35, monthly reset, and its usage.
+- **Look for:** `rapidselector-gateway`, the gateway's only inference key: its monthly limit and reset, and its usage.
 - **The one thing to do here:** **disable** it to stop all spending at once, the fast stop (README, "Stopping all spending"). Enable it again the same way; for a few seconds after that, the gateway may still answer 429 while it cools down.
-- **Don't change:** the limit (a recorded decision), and never delete the key: its value lives in secrets-service, and a new key means a new value there.
+- **Don't change:** the limit (a recorded decision), and never delete the key: its value lives with your secrets, and a new key means a new value there.
 
 ### O3. Management keys
 
@@ -89,7 +89,7 @@ At openrouter.ai, signed in.
   - under "Data Training", all four switches **off**: paid endpoints that train on request data, free endpoints that train on it, free endpoints that publish prompts, and "Allow 1% data discount in workspaces", the account's master switch for OpenRouter using inputs and outputs (each workspace would consent separately on top);
   - "Private Input & Output Logging" under Observability **off**;
   - allowed providers: Cloudflare, CoreWeave, DeepInfra and SiliconFlow.
-- **Don't change:** any of it without a decision in `docs/decisions.md`. A new provider also means new allowlist entries and `ALLOWED_HOSTS` in `config/home.env`.
+- **Don't change:** any of it without a decision of your own, noted with its reason in your home's notes (a host without zero data retention needs an explicit one, `CLAUDE.md` principle 4). A new provider also means new allowlist entries and `ALLOWED_HOSTS` in `config/home.env`.
 
 ### O6. Account security
 
@@ -98,7 +98,7 @@ At openrouter.ai, signed in.
 
 ## Part 3: rehearse adding and removing a model
 
-The owner's wish (2026-11-11): do it once together, with a real new model, so the steps are known before they are needed. A candidate: Google's newest Gemma, whatever OpenRouter lists when we get here (checked then, not from memory).
+Do it once, with a real new model, so the steps are known before they are needed. Pick a model new to your gateway, checked in OpenRouter's lists on the day, not from memory.
 
 ### R1. Pick it
 
@@ -107,21 +107,20 @@ The owner's wish (2026-11-11): do it once together, with a real new model, so th
 
 ### R2. Add it
 
-Follow the user guide, "Add a model or an experiment name", as an experiment name (`model@host`): the entry in `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to`, then on the host `./rapidselector.sh restart gateway` and `setup-keys.sh`, and one smoke-test call with `--name`. Then see it in Open WebUI, LiteLLM's Models page (one name more) and, after a call, Grafana's LLM dashboard.
+Follow the user guide, "Add a model or an experiment name", as an experiment name (`model@host`): the entry in `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to` if you edit on another machine, then on the host `./rapidselector.sh restart gateway` and `setup-keys.sh`, and one smoke-test call with `--name`. Then see it in Open WebUI, LiteLLM's Models page (one name more) and, after a call, Grafana's LLM dashboard.
 
 ### R3. Remove it
 
-The reverse: delete the entry, `check-prices.sh`, commit, `git pull`, `restart gateway`, `setup-keys.sh` (which takes the name off the keys' lists). Then confirm it is gone from Open WebUI and the Models page, and that `smoke-test.sh --name <name>` stops with "the gateway has no name", without a call. Its past spend stays in the usage and logs. Record both in `docs/decisions.md`.
+The reverse: delete the entry, `check-prices.sh`, `copy-config.sh to` if you edit on another machine, `restart gateway`, `setup-keys.sh` (which takes the name off the keys' lists). Then confirm it is gone from Open WebUI and the Models page, and that `smoke-test.sh --name <name>` stops with "the gateway has no name", without a call. Its past spend stays in the usage and logs.
 
-Done on 2026-11-11 with Gemma 4 31B at DeepInfra (`gemma-4-31b@deepinfra`): added, one smoke-test call ($0.0000046), removed.
 
 ## Where each change is made
 
 | To change | Where |
 |---|---|
 | A key's or team's budget, a key's names or rate limit | `scripts/setup-keys.sh`, then run it (user guide) |
-| A model, its price or host | `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to`, `./rapidselector.sh restart gateway` |
-| The monthly cap | the inference key's limit in OpenRouter (O2), recorded in `docs/decisions.md` |
+| A model, its price or host | `config/gateway.yaml`, `scripts/check-prices.sh`, `scripts/copy-config.sh to` (when edited on another machine), `./rapidselector.sh restart gateway` |
+| The monthly cap | the inference key's limit in OpenRouter (O2), noted in your home's notes |
 | Stop one client | block its key (L3) |
 | Stop everything | disable the inference key (O2), or `docker stop rapidselector-gateway` |
-| Privacy, providers, top-up | OpenRouter's settings (O1, O5), recorded in `docs/decisions.md` |
+| Privacy, providers, top-up | OpenRouter's settings (O1, O5), noted in your home's notes |

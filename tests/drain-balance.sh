@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# For testing only. Tests A and B (phase 0, level 3, D1 and D6): call the most expensive
+# For testing only. Steps D1 and D6 of the initial setup walkthrough: call the most expensive
 # allowlisted model until OpenRouter refuses, to see where the key limit or the balance stops
-# spend, and whether calls sent at the same time can get past it. Run it only while being
-# walked through docs/test-procedures/phase-0.md.
+# spend, and whether calls sent at the same time can get past it. Run it only when
+# following docs/test-procedures/initial-setup-walkthrough.md.
 # Run:     ./rapidselector.sh run-script tests/drain-balance.sh --max-usd <amount>
 #              [--max-calls N] [--max-tokens N] [--parallel N]
 # Secrets: LITELLM_MASTER_KEY (it creates and deletes a temporary key "drain-test").

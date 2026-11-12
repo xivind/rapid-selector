@@ -12,7 +12,7 @@
 #
 # The budgets (USD, reset on the 1st of the month, 00:00 UTC) and Node-RED's limits come from
 # config/home.env. A BUDGET_* already in the environment wins, for tests only (level 1, and
-# step D8 of the phase 0 procedure).
+# step D8 of docs/test-procedures/initial-setup-walkthrough.md).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
