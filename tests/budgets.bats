@@ -9,7 +9,9 @@ FINDINGS="$ARTIFACTS/findings.txt"
 
 setup_file() {
   stack_up
-  run_setup_keys BUDGET_KEY_SMOKE_TEST=0.03 BUDGET_TEAM_PERMANENT=0.03 >/dev/null
+  # NODE_RED_TPM lifted: a call here is 500100 tokens, so node-red's token limit (100000 a minute
+  # in the example) would refuse the second call before the team budget is reached.
+  run_setup_keys BUDGET_KEY_SMOKE_TEST=0.03 BUDGET_TEAM_PERMANENT=0.03 NODE_RED_TPM=100000000 >/dev/null
 }
 
 teardown_file() {
@@ -42,7 +44,9 @@ call_until_refused() {
   call_until_refused "$(test_env KEY_SMOKE_TEST)" chat-tasks 6
   spend="$(key_info "$(test_env KEY_SMOKE_TEST)" | jq -r '.info.spend')"
   echo "$(date -u +%FT%TZ) budgets.bats: key budget 0.03: $CALLS calls succeeded, then HTTP $REFUSED_STATUS; recorded spend $spend; body $REFUSED_BODY" >> "$FINDINGS"
-  [ -n "$REFUSED_STATUS" ]
+  # Refused by the budget itself (docs/provider-facts.md: 422 budget_exceeded), not by a rate limit.
+  [ "$REFUSED_STATUS" = "422" ]
+  [ "$(jq -r '.error.type' <<<"$REFUSED_BODY")" = "budget_exceeded" ]
   [ "$CALLS" -le 4 ]
 }
 
@@ -50,7 +54,9 @@ call_until_refused() {
   call_until_refused "$(test_env KEY_NODE_RED)" chat-tasks 6
   spend="$(team_info permanent | jq -r '.team_info.spend')"
   echo "$(date -u +%FT%TZ) budgets.bats: team budget 0.03: $CALLS calls succeeded, then HTTP $REFUSED_STATUS; team spend $spend; body $REFUSED_BODY" >> "$FINDINGS"
-  [ -n "$REFUSED_STATUS" ]
+  # Refused by the team budget itself, not by node-red's rate limits (lifted in setup_file).
+  [ "$REFUSED_STATUS" = "422" ]
+  [ "$(jq -r '.error.type' <<<"$REFUSED_BODY")" = "budget_exceeded" ]
   [ "$CALLS" -le 4 ]
 }
 
