@@ -6,8 +6,9 @@
 # Run:     ./rapidselector.sh run-script scripts/setup-keys.sh
 # Secrets: LITELLM_MASTER_KEY, KEY_CHAT, KEY_NODE_RED, KEY_SMOKE_TEST, KEY_SCRIPTS.
 # Cost:    nothing (no model call).
-# Exit:    0 done (prints the teams and keys), 1 the gateway refused or could not be read,
-#          2 config/home.env not found, 3 a missing value.
+# Exit:    0 done (prints the teams and keys), 1 a rule in config/ is broken (nothing changed),
+#          or the gateway refused or could not be read, 2 config/home.env not found, 3 a missing
+#          value.
 #
 # The budgets (USD, reset on the 1st of the month, 00:00 UTC) and Node-RED's limits come from
 # config/home.env. A BUDGET_* already in the environment wins, for tests only (level 1, and
@@ -35,6 +36,10 @@ SCRIPTS_ROUTES='["/global/spend","/team/info","/user/daily/activity"]'
 require_env LITELLM_MASTER_KEY RAPIDSELECTOR_LAN_ADDRESS GATEWAY_PORT KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST KEY_SCRIPTS
 set_config_paths "$ROOT"
 load_home_env "$HOME_ENV"
+# The rules restart gateway and copy-config.sh to check, here too, where the budgets are applied
+# (team budgets within the global budget, numbers that are numbers).
+"$ROOT/scripts/check-prices.sh" --rules-only "$GATEWAY_CONFIG" \
+  || die 1 "teams and keys not changed: config/gateway.yaml or config/home.env breaks a rule"
 
 model_info="$(api GET /model/info)" || die 1 "cannot read /model/info from the gateway"
 ALL_NAMES="$(jq -c '[.data[].model_name] | unique' <<<"$model_info")"

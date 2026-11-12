@@ -338,3 +338,16 @@ rules_env() {
   [[ "$output" == *"copy config/home.example.env"* ]]
   [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
 }
+
+@test "setup-keys refuses a broken rule in home.env, before any gateway call" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
+  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+  sed 's/^BUDGET_TEAM_EXPERIMENTS=.*/BUDGET_TEAM_EXPERIMENTS=99/' "$RAPIDSELECTOR_HOME_ENV" > "$BATS_TEST_TMPDIR/home.env"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/home.env" run "$REPO/rapidselector.sh" run-script "$REPO/scripts/setup-keys.sh"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^FAIL home.env: team budgets" <<<"$output"
+  [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
+}

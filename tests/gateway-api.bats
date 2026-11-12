@@ -116,13 +116,14 @@ activity() {
   sk GET '/team/info?team_id=experiments'
   [ "$SK_STATUS" = "200" ]
   save team-info
-  [ "$(jq '.team_info | .max_budget == 24 and .budget_duration == "30d" and (.budget_reset_at | type) == "string"' <<<"$output")" = "true" ]
+  [ "$(jq --argjson b "$(home_value BUDGET_TEAM_EXPERIMENTS)" '.team_info | .max_budget == $b and .budget_duration == "30d" and (.budget_reset_at | type) == "string"' <<<"$output")" = "true" ]
 }
 
 @test "global budget readable" {
   sk GET /global/spend
   [ "$SK_STATUS" = "200" ]
-  [ "$(jq '.max_budget' <<<"$output")" = "32" ] || [ "$(jq '.max_budget' <<<"$output")" = "32.0" ]
+  global="$(awk '/^  max_budget:/ { print $2 }' "$RAPIDSELECTOR_GATEWAY_CONFIG")"
+  [ "$(jq --argjson g "$global" '.max_budget == $g' <<<"$output")" = "true" ]
 }
 
 @test "the scripts' key can change nothing and call no model" {
