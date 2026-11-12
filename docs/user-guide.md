@@ -158,7 +158,7 @@ git pull
 
 The README's "Backups" section has the commands for a backup without the integration. Keep the secrets with the backups: without `LITELLM_SALT_KEY`, a restored database cannot read its stored provider keys.
 
-**Restore is not yet written or tested** (phase 0, step E2, `docs/test-procedures/phase-0-status.md`). Until it is, ask before restoring.
+**Restore is not yet written or tested** (`docs/roadmap.md`, parked options). Until it is, ask before restoring.
 
 ## A warning from `status.sh` or a Grafana alert
 
