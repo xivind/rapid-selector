@@ -325,6 +325,7 @@ Code and tests are developed in a cloud sandbox without access to the Pi. The le
   tests/run.sh
   ```
   In the cloud sandbox, start Docker first: `dockerd > /tmp/dockerd.log 2>&1 &`.
+- **Without Docker,** the suites that need no containers still run: `npx --yes bats@1.11.0 tests/ops-logic.bats tests/smoke-args.bats`.
 - **Before changing an image version:** `tests/check-arm64.sh` checks that every pinned image exists for the Pi.
 - **Before changing the model list:** `scripts/check-prices.sh` compares each entry's price, host and tier with OpenRouter's public API. It costs nothing.
 - Anything that needs the Pi or real money is verified with the owner by following `docs/test-procedures/initial-setup-walkthrough.md`.

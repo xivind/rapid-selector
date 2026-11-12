@@ -21,11 +21,11 @@ Commands run on the host, in the clone. Expected values come from your own `conf
 | # | Do | You should see | Cost |
 |---|---|---|---|
 | B1 | README, "2. Get the code and create the settings file" and "3. Create the secrets" | The README's checks pass | 0 |
-| B1a | **Before anything is started:** the level 1 tests use the same container names as the real stack, so they run only now. Install `jq`; without Node, `git clone --depth 1 --branch v1.11.0 https://github.com/bats-core/bats-core.git ~/bats-core`. Then `~/bats-core/bin/bats tests/*.bats 2>&1 \| tee ~/level1.log`, and `grep -c '^ok' ~/level1.log; grep '^not ok' ~/level1.log` | A count of passed tests and no `not ok` lines (about 25 minutes on a Pi 5, plus about 2 GB of images) | 0 |
+| B1a | **Before anything is started:** the level 1 tests use the same container names as the real stack, so they run only now. Install `jq`; without Node, `git clone --depth 1 --branch v1.11.0 https://github.com/bats-core/bats-core.git ~/bats-core`. Then `~/bats-core/bin/bats tests/*.bats 2>&1 \| tee ~/level1.log`, and `grep -c '^ok' ~/level1.log; grep '^not ok' ~/level1.log` | A count of passed tests and no `not ok` lines (it takes a while on a Pi, plus about 2 GB of images) | 0 |
 | B2 | `free -h`, then README "4. Start everything" | All three `healthy` | 0 |
 | B3 | README "5. Create the teams and keys in the gateway" | The teams' and keys' budgets from `config/home.env`, and as many names as `config/gateway.yaml` holds | 0 |
 | B4 | README "6. Create the Open WebUI admin account" | Every name in the model list | 0 |
-| B5 | `free -h` again, and `ps -eo rss,comm --sort=-rss \| head -15` (`docker stats` shows no memory where the kernel's memory control is off) | The stack uses about 1.3 GiB more than at B2, and fits | 0 |
+| B5 | `free -h` again, and `ps -eo rss,comm --sort=-rss \| head -15` (`docker stats` shows no memory where the kernel's memory control is off) | The stack fits, with room to spare (about 0.8 GiB more than at B2 was seen with the slim Open WebUI image) | 0 |
 | B6 | README "7. Run the smoke test" | Every role with `200` and a cost above zero, two `refused:` lines, `OK` | under $0.01 |
 
 ## C. The host on the network, and integrations
@@ -42,19 +42,19 @@ Commands run on the host, in the clone. Expected values come from your own `conf
 
 | # | Do | You should see | Cost |
 |---|---|---|---|
-| D1 | **The key limit**, still at $0.05: `./rapidselector.sh run-script tests/drain-balance.sh --max-usd 0.10 --max-tokens 1024 --parallel 5` and type `drain` | Rounds of 5 calls with 200, then refusals from OpenRouter (403 `openrouter_key_limit`). Spend may pass $0.05 before the refusals start | up to $0.10 |
+| D1 | **The key limit**, still at $0.05: `./rapidselector.sh run-script tests/drain-balance.sh --max-usd 0.10 --max-tokens 1024 --parallel 5` and type `drain` | Rounds of 5 calls with 200, then either refusals and `stopped: refused`, or `stopped: max-usd` with spend past $0.05 (as seen, since OpenRouter counts spend late). Then one smoke test: refused with 403 `openrouter_key_limit`. Read the key's usage in OpenRouter: how far past $0.05 it went | up to $0.10 |
 | D2 | Raise the key's limit to the one you want, a little above the global budget (README item 3) | The new limit | 0 |
 | D3 | **Spend per name:** `scripts/check-prices.sh` (on any `FAIL` line, stop), then `./rapidselector.sh run-script scripts/smoke-test.sh --all` | One `ok` per name; then every name with 200 and a cost above zero | under $0.05 |
 | D4 | **Hosts and cost:** on OpenRouter's Logs page, open each call from D3 | Each call served by its pin's provider, at the cost D3 printed | 0 |
 | D5 | **A host outside the account's list:** see below | 404 from OpenRouter, "No allowed providers…", nothing charged | 0 |
-| D6 | **The balance:** `scripts/check-prices.sh`, then `./rapidselector.sh run-script tests/drain-balance.sh --max-usd <balance + 1> --max-calls 2000` and type `drain`. It may take long; OpenRouter refuses more and more calls as the balance runs out | The balance a little below zero (−$0.19 seen), and the run stopped (`stopped: …`) | the top-up |
+| D6 | **The balance:** `scripts/check-prices.sh`, then `./rapidselector.sh run-script tests/drain-balance.sh --max-usd <balance + 1> --max-calls 2000` and type `drain`. It may take long; OpenRouter refuses more and more calls as the balance runs out. The drain calls `qwen3.8-2.4t-a95b@siliconflow`, which your config must hold, through a temporary key in team `experiments`: that team's budget, the global budget and the key limit must all be above the balance, or it ends on one of them (`stopped: gateway-budget`) | The balance a little below zero (−$0.19 seen). `stopped: error` or `stopped: in-flight` with money left (a new account's rate limit, for example) means it did not finish: run it again | the top-up |
 | D7 | Top up as you normally will | The balance, after the overshoot is covered | the top-up |
 | D8 | **Optional, the budget alerts:** read team `experiments`' spend in LiteLLM's admin UI. `BUDGET_TEAM_EXPERIMENTS=<spend × 1.05> ./rapidselector.sh run-script scripts/setup-keys.sh`, then a smoke test, so the gateway updates its figures. Afterwards run `setup-keys.sh` again without the setting | Your budget rules fire, and **their emails arrive** (test the email, not only the firing) | under $0.01 |
 
-**D5, step by step.** Add a temporary entry to `config/gateway.yaml`, named `zdr-negative-test`, in the form of the others, pinned to an endpoint at a provider **outside** your allowed list (OpenRouter's page for a model lists its providers), with `max_tokens: 16`. The rules check refuses such an entry, which is its job, so `./rapidselector.sh restart gateway` will not load it: restart with `docker restart rapidselector-gateway` this once. Call it with the master key:
+**D5, step by step.** Add a temporary entry to `config/gateway.yaml`, named `zdr-negative-test`, in the form of the others, pinned to an endpoint at a provider **outside** your allowed list (OpenRouter's page for a model lists its providers), with `max_tokens: 16`. The rules check refuses such an entry, which is its job, so `./rapidselector.sh restart gateway` will not load it: restart with `docker restart rapidselector-gateway` this once, wait until `./rapidselector.sh ps` shows it `healthy`, then call it with the master key (the last line printed is the HTTP status):
 
 ```bash
-./rapidselector.sh run-script bash -c 'printf "Authorization: Bearer %s\n" "$LITELLM_MASTER_KEY" | curl -s -H @- -H "Content-Type: application/json" -d "{\"model\": \"zdr-negative-test\", \"max_tokens\": 16, \"messages\": [{\"role\": \"user\", \"content\": \"hi\"}]}" "http://$RAPIDSELECTOR_LAN_ADDRESS:$GATEWAY_PORT/v1/chat/completions"' | sed -E "s/sk-[A-Za-z0-9_-]+/sk-REDACTED/g"
+./rapidselector.sh run-script bash -c 'printf "Authorization: Bearer %s\n" "$LITELLM_MASTER_KEY" | curl -s -H @- -H "Content-Type: application/json" -w "\n%{http_code}\n" -d "{\"model\": \"zdr-negative-test\", \"max_tokens\": 16, \"messages\": [{\"role\": \"user\", \"content\": \"hi\"}]}" "http://$RAPIDSELECTOR_LAN_ADDRESS:$GATEWAY_PORT/v1/chat/completions"' | sed -E "s/sk-[A-Za-z0-9_-]+/sk-REDACTED/g"
 ```
 
 Then delete the entry and run `./rapidselector.sh restart gateway`, which must print `rules ok`.

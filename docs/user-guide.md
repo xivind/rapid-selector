@@ -82,7 +82,7 @@ Edit that role's entry in `config/gateway.yaml` (model, prices, `max_tokens`, th
 - **Add:** a new entry with `rapidselector_kind: role`, then steps 2 to 4 above. `setup-keys.sh` adds the role to team `permanent`, so Node-RED's key may call it.
 - **Rename or remove:** every client that calls the old name gets an error from the moment the gateway restarts. First find who calls it: Grafana's LLM dashboard, which counts per name, or LiteLLM's Logs page, one row per call (not the admin UI's usage view, which merges names sharing a model id); in Node-RED, every flow that calls it. Change them all at the same time as the gateway, or add the new name first, move the clients, and remove the old name last. Then run `setup-keys.sh`, which takes the old name off the keys' lists.
 - `chat-tasks` cannot be removed or renamed: `docker-compose.yml` names it for Open WebUI's titles.
-- Record the change in `docs/decisions.md` (a role is part of the clients' contract).
+- Note the change in your home's notes (a role is part of the clients' contract).
 
 **Cost:** the smoke test call.
 
@@ -105,7 +105,7 @@ The limits must stay in this order (`CLAUDE.md`, principle 1), from the top down
 3. The team budgets (`BUDGET_TEAM_PERMANENT` and `BUDGET_TEAM_EXPERIMENTS` in `config/home.env`), adding up to no more than the global budget. The rules check refuses a sum above it.
 4. The key budgets inside a team (`BUDGET_KEY_NODE_RED` and `BUDGET_KEY_SMOKE_TEST` in `config/home.env`), no more than their team's.
 
-Change the value in `config/`, run `scripts/check-prices.sh --rules-only` (and `scripts/copy-config.sh to` if you edit on another machine), then on the host either `./rapidselector.sh run-script scripts/setup-keys.sh` (teams and keys) or `./rapidselector.sh restart gateway` (the global budget). Raising a limit means more can be spent: flag it and record it in `docs/decisions.md`, with the date and the reason.
+Change the value in `config/`, run `scripts/check-prices.sh --rules-only` (and `scripts/copy-config.sh to` if you edit on another machine), then on the host either `./rapidselector.sh run-script scripts/setup-keys.sh` (teams and keys) or `./rapidselector.sh restart gateway` (the global budget). Raising a limit means more can be spent: flag it, and note it with the date and the reason in your home's own notes.
 
 **You should see:** `setup-keys.sh`'s summary with the new figure; `status.sh` with the new budget.
 
@@ -115,7 +115,7 @@ Change the value in `config/`, run `scripts/check-prices.sh --rules-only` (and `
 
 **When:** `status.sh` warns that the balance is below $10, or before a month you expect to spend more.
 
-First `status.sh`, to see the balance and the month's forecast. Then in OpenRouter's dashboard, buy credits (auto top-up stays off). Keep the balance small: it is the most you can lose. Record the top-up in `docs/decisions.md`.
+First `status.sh`, to see the balance and the month's forecast. Then in OpenRouter's dashboard, buy credits (auto top-up stays off). Keep the balance small: it is the most you can lose. Note the top-up in your home's own notes.
 
 **You should see:** `status.sh` with the new balance, and the balance warning gone.
 
@@ -129,7 +129,7 @@ First `status.sh`, to see the balance and the month's forecast. Then in OpenRout
 - **Without the dashboard:** stop the gateway on the host: `docker stop rapidselector-gateway`. Start it again with `./rapidselector.sh up`.
 - **One client only:** block its key in LiteLLM's admin UI (`http://<host>:4000/ui`, Virtual Keys). The others go on working.
 
-Afterwards, `reconcile.sh` and `status.sh` show what was spent, and the cause is recorded in `docs/decisions.md`.
+Afterwards, `reconcile.sh` and `status.sh` show what was spent, and the cause goes in your home's own notes (or in `docs/decisions.md`, if it is a lesson for every home).
 
 **Cost:** nothing; it stops cost.
 
