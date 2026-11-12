@@ -1,6 +1,6 @@
 # The docs cleanup: what is left is of use to every home
 
-Status: draft for the owner, 2026-11-12, after the builder check. Brainstormed with the owner the same day. Project 2 of the four in the `config/` folder spec's "Next projects" (the `CLAUDE.md` cleanup and the user guide's section on upgrading single containers come after it).
+Status: approved by the owner on 2026-11-12, from the decisions taken in the conversation (the owner chose not to read the draft; Claude checked it against them). Brainstormed with the owner the same day, after a builder check. Project 2 of the four in the `config/` folder spec's "Next projects" (the `CLAUDE.md` cleanup and the user guide's section on upgrading single containers come after it).
 
 ## Why
 
@@ -31,7 +31,7 @@ The owner's rule (2026-11-12): **most of what we write down should be of interes
 - `CLAUDE.md` is not edited, so what it points at must still be there: "D1 and D6 in `docs/decisions.md`" (keep those labels findable), "Test results are recorded in `docs/decisions.md`", the decision on memory limits, and the folders in "Where things live" (`docs/superpowers/specs/` and `plans/` stay as folders for work in progress).
 - Script and test comments name docs: `scripts/jq/status.jq` ("`docs/decisions.md` 2026-11-08"), `tests/drain-balance.sh` (`phase-0.md`), and several `docs/provider-facts.md` mentions. No test reads a docs file (checked 2026-11-12).
 - Records go straight to `main` (owner, 2026-11-11), but this work goes through a branch and a PR (below). Nothing is pushed to `production` without the owner's yes.
-- `docs/test-procedures/phase-0-status.md` is the live handoff until the merge: keep it current on `main` while the branch is open.
+- `docs/test-procedures/phase-0-status.md` is the live handoff until the merge: keep it current on `main` while the branch is open. **Before the PR is marked ready, merge `main` into the branch:** anything recorded on `main` meanwhile (in `phase-0-status.md` or `decisions.md`) is carried into the new `roadmap.md` "Now" or the new `decisions.md` by the test above, and the deletions win.
 
 ## Approaches considered
 
