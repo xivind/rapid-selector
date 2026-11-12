@@ -47,8 +47,18 @@ compose_config() {
 }
 
 @test "the string OPENROUTER_API_KEY appears nowhere in compose, config or .env.example" {
-  run grep -l OPENROUTER_API_KEY "$REPO/docker-compose.yml" "$REPO/gateway/config.yaml" "$REPO/.env.example"
+  run grep -l OPENROUTER_API_KEY "$REPO/docker-compose.yml" "$RAPIDSELECTOR_GATEWAY_CONFIG" "$REPO/.env.example"
   [ "$status" -eq 1 ]
+}
+
+@test "compose mounts the file the rules check reads" {
+  source_of() {
+    docker compose --project-directory "$REPO" --env-file "$TEST_ENV_FILE" -f "$REPO/docker-compose.yml" config --format json \
+      | jq -r '.services.gateway.volumes[] | select(.target == "/app/config.yaml") | .source'
+  }
+  [ "$(RAPIDSELECTOR_GATEWAY_CONFIG=/x/y.yaml source_of)" = "/x/y.yaml" ]
+  # Empty counts as unset for ${VAR:-default}: the default path.
+  [ "$(RAPIDSELECTOR_GATEWAY_CONFIG= source_of)" = "$REPO/config/gateway.yaml" ]
 }
 
 @test "no image uses latest or no tag" {

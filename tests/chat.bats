@@ -78,9 +78,10 @@ upstream_models() {
   wait_for_key_spend_above "$(test_env KEY_CHAT)" "$spend_before"
 }
 
-@test "title generation uses llama-3.1-8b-instruct@deepinfra" {
+@test "title generation uses the role chat-tasks" {
+  # chat-tasks points at meta-llama/llama-3.1-8b-instruct in the example config.
   run chat_api POST /api/v1/tasks/title/completions \
-    '{"model":"gpt-oss-120b@deepinfra","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}]}'
+    '{"model":"gpt-oss-120b@coreweave","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}]}'
   echo "$(date -u +%FT%TZ) chat.bats: title task -> upstream models $(upstream_models); response ${output:0:200}" >> "$FINDINGS"
   [ "$(upstream_models)" = '["meta-llama/llama-3.1-8b-instruct"]' ]
 }
