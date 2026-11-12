@@ -12,7 +12,7 @@ What each service must do. The principles in `CLAUDE.md` apply to all of them. H
 
 ## `gateway` (LiteLLM)
 
-- The allowlist is `gateway/config.yaml`. Models cannot be added through the admin UI.
+- The allowlist is `config/gateway.yaml`, each home's own (examples in `config/`). Models cannot be added through the admin UI.
 - Every model is pinned to one upstream host, with fallbacks off and zero data retention on (`CLAUDE.md`, principles 1 and 4).
 - Every model has an explicit price, the pinned host's price, so recorded spend is correct and non-zero. A test confirms the recorded spend for each model.
 - Every model has a default `max_tokens` for calls that do not set one, large enough for reasoning models.
@@ -47,7 +47,7 @@ Bash with `jq`, in `scripts/`, documented in `scripts/README.md` for a person an
 - Decided by the owner on 2026-11-08. Without it everything starts and runs, but `status.sh` and `reconcile.sh` stop with exit 3 and say why, and the Prometheus cost figures are not written. What that loses, and how to add the key later, is written out in `scripts/README.md` ("Without the management key") and pointed to from the README's first setup.
 
 ### A guarded model change
-- `check-prices.sh` checks the rules of `CLAUDE.md` principles 1 and 4 on every entry in `gateway/config.yaml` (offline), then the prices and hosts against OpenRouter's zero data retention list (online).
+- `check-prices.sh` checks the rules of `CLAUDE.md` principles 1 and 4 on every entry in `config/gateway.yaml`, and the settings in `config/home.env` (offline), then the prices and hosts against OpenRouter's zero data retention list (online).
 - `./rapidselector.sh restart gateway`, and `restart` with no service, run the rules first and refuse to restart when one is broken. A reboot or `up` still starts whatever the config holds.
 
 ### Prometheus (optional)
@@ -77,7 +77,7 @@ Bash with `jq`, in `scripts/`, documented in `scripts/README.md` for a person an
 - Every client handles a failed call by skipping that step and logging it: a fixed timeout, at most one retry on a timeout or 5xx, and no retry on budget or limit errors.
 - Every new use case, whatever it is:
   - gets its own virtual key in team `permanent`, with its own cap, a call limit per run and a maximum input size;
-  - calls an existing role, or a new role added in `gateway/config.yaml`;
+  - calls an existing role, or a new role added in `config/gateway.yaml`;
   - has its input checked for personal data, according to what it sends (`CLAUDE.md`, principle 4);
   - is recorded in `decisions.md`: what it does, its key and its budget.
 - **MQTT is not decided.** An asynchronous layer is only added if a real use case needs it, for example a job that outlasts HTTP timeouts or a device that can only use MQTT. Try a Node-RED flow first (MQTT in, HTTP request to the gateway, MQTT out), since that needs no code of our own.

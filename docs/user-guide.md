@@ -1,6 +1,6 @@
 # User guide
 
-The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`). Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
+The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`), except changes to this home's own settings in `config/` (models, roles, budgets): those are edited and checked in a clone on your own machine, then copied with `scripts/copy-config.sh to` ([`config/README.md`](../config/README.md)). Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
 
 Exit codes, in short: `0` all well, `1` read the output, `2` a source could not be read, `3` a missing setting or secret, `4` secrets-service, `5` `restart gateway` refused.
 
@@ -31,24 +31,27 @@ Exit codes, in short: `0` all well, `1` read the output, `2` a source could not 
 
 Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today is never included: OpenRouter reports only completed days. Without the management key, `reconcile.sh` does not run (exit 3), and only `check-prices.sh` is left of this check; comparing LiteLLM's usage with OpenRouter's activity page by hand is then the only reconciliation.
 
-**You should see:** from `reconcile.sh`, a table of day, model, the gateway's recorded spend, OpenRouter's charge and the difference, a total per day, and `Nothing flagged.` (exit 0). Names that share a model (such as `chat` and `gpt-oss-120b@deepinfra`) are one line, because LiteLLM's daily table merges them. From `check-prices.sh`, `rules ok: 11 entries` and one `ok` line per entry (exit 0).
+**You should see:** from `reconcile.sh`, a table of day, model, the gateway's recorded spend, OpenRouter's charge and the difference, a total per day, and `Nothing flagged.` (exit 0). Names that share a model (such as `chat` and `gpt-oss-120b@deepinfra`) are one line, because LiteLLM's daily table merges them. From `check-prices.sh`, `rules ok: <n> entries` and one `ok` line per entry (exit 0).
 
 **Cost:** nothing.
 
-**If it fails:** a line marked `!` (exit 1) is off by more than $0.05 or 5% of OpenRouter's figure. Small, one-off differences can come from a call that was cut off; a model that is off every day records the wrong price: check it with `check-prices.sh` and fix its price ([below](#point-a-role-at-another-model)). A `FAIL` line from `check-prices.sh` (exit 1) names the entry and what changed, usually a host's new price: update the price in `gateway/config.yaml` the same way. Exit 2 from `check-prices.sh`: OpenRouter's list could not be read; try again later.
+**If it fails:** a line marked `!` (exit 1) is off by more than $0.05 or 5% of OpenRouter's figure. Small, one-off differences can come from a call that was cut off; a model that is off every day records the wrong price: check it with `check-prices.sh` and fix its price ([below](#point-a-role-at-another-model)). A `FAIL` line from `check-prices.sh` (exit 1) names the entry and what changed, usually a host's new price: update the price in `config/gateway.yaml` the same way. Exit 2 from `check-prices.sh`: OpenRouter's list could not be read; try again later.
 
 ## Add a model or an experiment name
 
 **When:** to try a model, or the same model at another host. Experiment names have the form `model@host` and can be called by `chat` and the smoke test, not by Node-RED.
 
-1. In `gateway/config.yaml`, copy an entry with `rapidselector_kind: experiment` and change its name, `model`, both prices, `max_tokens`, and the host tag in both `order` and `only` (e.g. `"deepinfra/fp8"`). The host must be one of the account's allowed providers (`ALLOWED_HOSTS` in `scripts/check-prices.sh`). Set `reasoning: true` for a reasoning model, and give it a larger `max_tokens`.
+1. Here, in `config/gateway.yaml`, copy an entry with `rapidselector_kind: experiment` and change its name, `model`, both prices, `max_tokens`, and the host tag in both `order` and `only` (e.g. `"deepinfra/fp8"`). The host must be one of the account's allowed providers (`ALLOWED_HOSTS` in `config/home.env`). Set `reasoning: true` for a reasoning model, and give it a larger `max_tokens`.
 2. Check it, and fix every `FAIL` line:
    ```bash
    scripts/check-prices.sh
    ```
-3. Commit and push. On the host:
+3. Copy it to the host (it asks for `user@host` and the SSH password, and refuses a broken rule). No commit is needed: `config/` is this home's own and ignored by git.
    ```bash
-   git pull
+   scripts/copy-config.sh to
+   ```
+   Then on the host:
+   ```bash
    ./rapidselector.sh restart gateway
    ./rapidselector.sh run-script scripts/setup-keys.sh
    ```
@@ -62,13 +65,13 @@ Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today i
 
 **Cost:** the smoke test call, and whatever you then spend in chat. A new model is something to flag before using it at length (`CLAUDE.md`).
 
-**If it fails:** `restart gateway` exits 5 with a `FAIL` line naming the entry and the rule: fix it and restart again. A smoke test with cost 0 means a price is missing. The level 1 tests count the names in `gateway/config.yaml` (`tests/checks.bats`, for one), so a developer updates them with the change.
+**If it fails:** `restart gateway` exits 5 with a `FAIL` line naming the entry and the rule: fix it and restart again. A smoke test with cost 0 means a price is missing. The level 1 tests use the example config (`config/gateway.example.yaml`), so a change to your own needs no test change.
 
 ## Point a role at another model
 
-**When:** a role (`classify`, `summarise`, `code`, `chat`) should use another model or host, or its host changed its price.
+**When:** a role (an entry with `rapidselector_kind: role`, such as `chat-tasks`) should use another model or host, or its host changed its price. Keep `chat-tasks` on your cheapest model: Open WebUI makes its background calls (titles) with it.
 
-Edit that role's entry in `gateway/config.yaml` (model, prices, `max_tokens`, the tag in `order` and `only`), then follow steps 2 to 4 above, with `--name <role>` for the smoke test. The role keeps its name, so Node-RED and every other client go on calling it unchanged; `setup-keys.sh` is only needed if a name was added or removed.
+Edit that role's entry in `config/gateway.yaml` (model, prices, `max_tokens`, the tag in `order` and `only`), then follow steps 2 to 4 above, with `--name <role>` for the smoke test. The role keeps its name, so Node-RED and every other client go on calling it unchanged; `setup-keys.sh` is only needed if a name was added or removed.
 
 **Cost and failures:** as above. A day later, `reconcile.sh --days 1` shows whether the new model's spend is recorded correctly.
 
@@ -78,6 +81,7 @@ Edit that role's entry in `gateway/config.yaml` (model, prices, `max_tokens`, th
 
 - **Add:** a new entry with `rapidselector_kind: role`, then steps 2 to 4 above. `setup-keys.sh` adds the role to team `permanent`, so Node-RED's key may call it.
 - **Rename or remove:** every client that calls the old name gets an error from the moment the gateway restarts. First find who calls it: Grafana's LLM dashboard, which counts per name, or LiteLLM's Logs page, one row per call (not the admin UI's usage view, which merges names sharing a model id); in Node-RED, every flow that calls it. Change them all at the same time as the gateway, or add the new name first, move the clients, and remove the old name last. Then run `setup-keys.sh`, which takes the old name off the keys' lists.
+- `chat-tasks` cannot be removed or renamed: `docker-compose.yml` names it for Open WebUI's titles.
 - Record the change in `docs/decisions.md` (a role is part of the clients' contract).
 
 **Cost:** the smoke test call.
@@ -86,7 +90,7 @@ Edit that role's entry in `gateway/config.yaml` (model, prices, `max_tokens`, th
 
 **When:** a new Node-RED flow family or app needs to call the gateway. Every automated client gets its own key, cap, call limit per run and maximum input size (`CLAUDE.md`, principle 1; `docs/requirements.md`, programmatic access).
 
-This is a change to the repository, not a command: a new secret name (`KEY_<CLIENT>`) in `scripts/lib.sh`'s list and in `.env.example`, a new `ensure_key` line in `scripts/setup-keys.sh` in team `permanent` with its budget, rate limit and the roles only, and the value in `.env` or secrets-service (`echo "sk-$(openssl rand -hex 24)"`). Its budget comes out of team `permanent`'s, so check the order of limits ([next section](#change-a-budget)). Record the client, its key and its budget in `docs/decisions.md`. Then, on the host, `git pull` and `./rapidselector.sh run-script scripts/setup-keys.sh`; the new row appears in its summary.
+This is a change to the repository, not a command: a new secret name (`KEY_<CLIENT>`) in `scripts/lib.sh`'s list and in `.env.example`, a new `ensure_key` line in `scripts/setup-keys.sh` in team `permanent` with its rate limit and the roles only, its budget as a new name in `RAPIDSELECTOR_HOME_SETTINGS` (`scripts/lib.sh`), `config/home.example.env` and your `config/home.env`, and the value in `.env` or secrets-service (`echo "sk-$(openssl rand -hex 24)"`). Its budget comes out of team `permanent`'s, so check the order of limits ([next section](#change-a-budget)). Record the client, its key and its budget in `docs/decisions.md`. Then, on the host, `git pull` and `./rapidselector.sh run-script scripts/setup-keys.sh`; the new row appears in its summary.
 
 **Cost:** nothing until the client calls.
 
@@ -97,11 +101,11 @@ This is a change to the repository, not a command: a new secret name (`KEY_<CLIE
 The limits must stay in this order (`CLAUDE.md`, principle 1), from the top down:
 
 1. OpenRouter's balance (the most you can lose), and the inference key's monthly limit (now $35, in OpenRouter's dashboard), the actual monthly cap.
-2. LiteLLM's global budget (`max_budget` under `litellm_settings` in `gateway/config.yaml`, now $32), below the key limit.
-3. The team budgets (`BUDGET_TEAM_PERMANENT` $8 and `BUDGET_TEAM_EXPERIMENTS` $24 at the top of `scripts/setup-keys.sh`), adding up to no more than the global budget.
-4. The key budgets inside a team (`BUDGET_KEY_NODE_RED` $4, `BUDGET_KEY_SMOKE_TEST` $1), no more than their team's.
+2. LiteLLM's global budget (`max_budget` under `litellm_settings` in `config/gateway.yaml`, now $32), below the key limit.
+3. The team budgets (`BUDGET_TEAM_PERMANENT` $8 and `BUDGET_TEAM_EXPERIMENTS` $24 in `config/home.env`), adding up to no more than the global budget. The rules check refuses a sum above it.
+4. The key budgets inside a team (`BUDGET_KEY_NODE_RED` $4, `BUDGET_KEY_SMOKE_TEST` $1, in `config/home.env`), no more than their team's.
 
-Change the value in the file, commit and push, then on the host `git pull` and either `./rapidselector.sh run-script scripts/setup-keys.sh` (teams and keys) or `./rapidselector.sh restart gateway` (the global budget). Raising a limit means more can be spent: flag it and record it in `docs/decisions.md`, with the date and the reason.
+Change the value here in `config/`, run `scripts/check-prices.sh --rules-only` and `scripts/copy-config.sh to`, then on the host either `./rapidselector.sh run-script scripts/setup-keys.sh` (teams and keys) or `./rapidselector.sh restart gateway` (the global budget). Raising a limit means more can be spent: flag it and record it in `docs/decisions.md`, with the date and the reason.
 
 **You should see:** `setup-keys.sh`'s summary with the new figure; `status.sh` with the new budget.
 

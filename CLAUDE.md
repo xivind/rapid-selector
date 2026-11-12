@@ -114,7 +114,8 @@ rapid-selector/
 ├── .env.example
 ├── rapidselector.sh  # loads secrets, then runs docker compose
 ├── scripts/        # operator scripts (status, reconcile, setup, smoke test, checks)
-├── gateway/        # LiteLLM config
+├── config/         # each home's own settings: gateway.yaml, home.env (examples in git)
+├── gateway/        # request guard
 ├── chat/           # Open WebUI config (if needed)
 └── docs/           # requirements, roadmap, decisions, facts, specs, plans
 ```
