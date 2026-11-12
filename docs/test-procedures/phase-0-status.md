@@ -12,7 +12,7 @@ A handoff between sessions, written 2026-11-04 and rewritten on 2026-11-09, when
 
 ## Next, in order (the owner picks)
 
-1. **The `config/` folder:** the design `docs/superpowers/specs/2026-11-11-config-folder-design.md` is approved (2026-11-11). **Next: the plan, with `superpowers:writing-plans`**, then the build on a branch from `main`, tests first, a cloud Docker run, a PR, and the owner's procedure on `sandbox` (the design's 5 steps); then the docs cleanup, the `CLAUDE.md` cleanup and the user guide's upgrade section, in that order (the spec's "Next projects"). The Grafana panel and finding 44 are done, and `production` is pushed (`605ae6d`; `docs/decisions.md`).
+1. **The `config/` folder:** the design `docs/superpowers/specs/2026-11-11-config-folder-design.md` is approved (2026-11-11). The plan is written: `docs/superpowers/plans/2026-11-12-config-folder.md` (2026-11-12). **Next: the owner reviews it and picks how to build it**, then the build on a branch from `main`, tests first, a cloud Docker run, a PR, and the owner's procedure on `sandbox` (the design's 5 steps); then the docs cleanup, the `CLAUDE.md` cleanup and the user guide's upgrade section, in that order (the spec's "Next projects"). The Grafana panel and finding 44 are done, and `production` is pushed (`605ae6d`; `docs/decisions.md`).
 2. **The README dry run** (`docs/roadmap.md`, phase 1).
 3. **Benchmarking:** Open WebUI's arena and promptfoo, a brainstorm of its own (`docs/roadmap.md`). Search and documents in chat for selected roles are parked there too (2026-11-08).
 
