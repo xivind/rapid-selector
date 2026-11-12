@@ -5,7 +5,7 @@
 #          their names; they come from .env (SECRETS_SOURCE=env) or from the secret
 #          "rapidselector" in secrets-service.
 # Cost:    nothing.
-# Exit:    through die: 2 no settings file or a wrong SECRETS_SOURCE, 3 a missing value,
+# Exit:    through die: 2 no settings file, no config/home.env or a wrong SECRETS_SOURCE, 3 a missing value,
 #          4 secrets-service unreachable or refusing.
 # shellcheck shell=bash
 
@@ -88,6 +88,14 @@ home_env_value() {
     load_env_file "$1"
     printf '%s\n' "${!2:-}"
   )
+}
+
+# load_home_env <file>: export this home's settings from config/home.env; exit 2 without the
+# file, 3 naming the first setting missing. A value already in the environment wins.
+load_home_env() {
+  [ -f "$1" ] || die 2 "$1 not found: copy config/home.example.env to config/home.env and edit it (see config/README.md)"
+  load_env_file "$1"
+  require_env "${RAPIDSELECTOR_HOME_SETTINGS[@]}"
 }
 
 # home_env_failures <home.env file> <global budget, or ->: print one reason per broken rule in

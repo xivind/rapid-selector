@@ -20,6 +20,11 @@ config_count() {
   grep -c '^  - model_name:' "$RAPIDSELECTOR_GATEWAY_CONFIG"
 }
 
+# home_value <NAME>: a value from the home.env the tests use.
+home_value() {
+  sed -n "s/^$1=//p" "$RAPIDSELECTOR_HOME_ENV"
+}
+
 # config_roles: the names of the entries of kind role, one per line.
 config_roles() {
   awk '/^  - model_name:/ { name = $3 } /^      rapidselector_kind: role$/ { print name }' "$RAPIDSELECTOR_GATEWAY_CONFIG"

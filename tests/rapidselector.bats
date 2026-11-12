@@ -326,3 +326,15 @@ rules_env() {
   grep -q "breaks a rule" <<<"$output"
   [ ! -e "$DOCKER_CALL_LOG" ]
 }
+
+@test "setup-keys refuses without home.env, before any gateway call" {
+  mapfile -t lines < <(all_secrets_lines)
+  write_env env "${lines[@]}"
+  printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
+  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/none.env" run "$REPO/rapidselector.sh" run-script "$REPO/scripts/setup-keys.sh"
+  echo "$output"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"copy config/home.example.env"* ]]
+  [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
+}

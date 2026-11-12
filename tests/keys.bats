@@ -31,17 +31,20 @@ all_state() {
 
 @test "setup-keys registers our own key values" {
   for k in KEY_CHAT KEY_NODE_RED KEY_SMOKE_TEST; do
-    gw_call "$(test_env "$k")" classify
+    gw_call "$(test_env "$k")" chat-tasks
     [ "$GW_STATUS" = "200" ] || { echo "$k -> $GW_STATUS $output"; false; }
   done
   [ "$(key_state "$(test_env KEY_NODE_RED)" | jq -r '.team_id')" = "permanent" ]
-  [ "$(key_state "$(test_env KEY_NODE_RED)" | jq '.rpm_limit == 30 and .tpm_limit == 100000 and .max_budget == 4')" = "true" ]
-  [ "$(key_state "$(test_env KEY_SMOKE_TEST)" | jq '.max_budget == 1 and .budget_duration == "30d"')" = "true" ]
+  # Budgets and limits come from home.env (the example's values).
+  [ "$(key_state "$(test_env KEY_NODE_RED)" | jq --argjson r "$(home_value NODE_RED_RPM)" --argjson t "$(home_value NODE_RED_TPM)" \
+    --argjson b "$(home_value BUDGET_KEY_NODE_RED)" '.rpm_limit == $r and .tpm_limit == $t and .max_budget == $b')" = "true" ]
+  [ "$(key_state "$(test_env KEY_SMOKE_TEST)" | jq --argjson b "$(home_value BUDGET_KEY_SMOKE_TEST)" '.max_budget == $b and .budget_duration == "30d"')" = "true" ]
   [ "$(key_state "$(test_env KEY_CHAT)" | jq '.max_budget == null')" = "true" ]
-  [ "$(team_state permanent | jq '.max_budget == 8 and .budget_duration == "30d"')" = "true" ]
-  [ "$(team_state experiments | jq '.max_budget == 24')" = "true" ]
+  [ "$(team_state permanent | jq --argjson b "$(home_value BUDGET_TEAM_PERMANENT)" '.max_budget == $b and .budget_duration == "30d"')" = "true" ]
+  [ "$(team_state experiments | jq --argjson b "$(home_value BUDGET_TEAM_EXPERIMENTS)" '.max_budget == $b')" = "true" ]
   [ "$(key_state "$(test_env KEY_CHAT)" | jq -c '.allowed_routes')" = '["/v1/chat/completions","/chat/completions","/v1/models","/models"]' ]
-  [ "$(team_state experiments | jq '.models | length')" = "11" ]
+  [ "$(team_state experiments | jq '.models | length')" = "$(config_count)" ]
+  [ "$(team_state permanent | jq -c '.models | sort')" = "$(config_roles | jq -Rsc 'split("\n") | map(select(. != "")) | sort')" ]
 }
 
 @test "setup-keys prints a summary without key values" {
@@ -64,19 +67,19 @@ all_state() {
 @test "setup-keys restores values edited outside the script" {
   master="$(test_env LITELLM_MASTER_KEY)"
   curl -sS -X POST "$GATEWAY_URL/key/update" -H "Authorization: Bearer $master" -H 'Content-Type: application/json' \
-    -d "$(jq -nc --arg k "$(test_env KEY_NODE_RED)" '{key:$k, max_budget:100, models:["classify"], rpm_limit:1000}')" >/dev/null
+    -d "$(jq -nc --arg k "$(test_env KEY_NODE_RED)" '{key:$k, max_budget:100, models:["gpt-oss-120b@coreweave"], rpm_limit:1000}')" >/dev/null
   [ "$(key_state "$(test_env KEY_NODE_RED)" | jq '.max_budget == 100')" = "true" ]
   run_setup_keys >/dev/null
   state="$(key_state "$(test_env KEY_NODE_RED)")"
-  [ "$(jq '.max_budget == 4 and .rpm_limit == 30' <<<"$state")" = "true" ]
-  [ "$(jq -c '.models | sort' <<<"$state")" = '["chat","classify","code","summarise"]' ]
+  [ "$(jq --argjson b "$(home_value BUDGET_KEY_NODE_RED)" --argjson r "$(home_value NODE_RED_RPM)" '.max_budget == $b and .rpm_limit == $r' <<<"$state")" = "true" ]
+  [ "$(jq -c '.models | sort' <<<"$state")" = "$(config_roles | jq -Rsc 'split("\n") | map(select(. != "")) | sort')" ]
 }
 
 @test "node-red key may use roles only" {
-  gw_call "$(test_env KEY_NODE_RED)" chat
+  gw_call "$(test_env KEY_NODE_RED)" chat-tasks
   [ "$GW_STATUS" = "200" ]
   upstream_reset
-  gw_call "$(test_env KEY_NODE_RED)" gpt-oss-20b@deepinfra
+  gw_call "$(test_env KEY_NODE_RED)" gpt-oss-120b@coreweave
   [ "$GW_STATUS" -ge 400 ] && [ "$GW_STATUS" -lt 500 ]
   [ "$(upstream_requests | jq length)" = "0" ]
 }
@@ -87,7 +90,7 @@ all_state() {
     for path in /openrouter/v1/chat/completions /anthropic/v1/messages /key/generate; do
       code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$GATEWAY_URL$path" \
         -H "Authorization: Bearer $(test_env "$k")" -H 'Content-Type: application/json' \
-        -d '{"model":"classify","messages":[{"role":"user","content":"hi"}]}')"
+        -d '{"model":"chat-tasks","messages":[{"role":"user","content":"hi"}]}')"
       [ "$code" = "401" ] || [ "$code" = "403" ] || { echo "$k $path -> $code"; false; }
     done
   done
@@ -103,7 +106,7 @@ all_state() {
     '{"models":["openai/gpt-4o","anthropic/claude-3.5-sonnet"]}' \
     '{"route":"fallback","transforms":["middle-out"]}'; do
     upstream_reset
-    gw_call "$(test_env KEY_CHAT)" classify "$override"
+    gw_call "$(test_env KEY_CHAT)" chat-tasks "$override"
     body="$(upstream_requests | jq -c '.[-1].body')"
     [ "$(jq -cS '.provider' <<<"$body")" = "$(jq -cS . <<<"$pin")" ] || failures+=("$override -> provider $(jq -c .provider <<<"$body")")
     [ "$(jq -c '[has("models"), has("route"), has("transforms"), has("extra_body")]' <<<"$body")" = "[false,false,false,false]" ] \
