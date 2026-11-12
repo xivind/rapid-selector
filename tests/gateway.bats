@@ -3,17 +3,10 @@
 
 load helpers
 
+# The example config's entries (config/gateway.example.yaml).
 # name|openrouter model|endpoint slug|input $/token|output $/token|default max_tokens|kind|reasoning
-ENTRIES='classify|mistralai/mistral-small-3.2-24b-instruct|deepinfra/fp8|0.000000075|0.0000002|1024|role|false
-summarise|google/gemma-4-26b-a4b-it|coreweave/bf16|0.0000001|0.0000003|2048|role|false
-code|qwen/qwen3-coder-30b-a3b-instruct|siliconflow/fp8|0.00000007|0.00000028|8192|role|false
-chat|openai/gpt-oss-120b|deepinfra/bf16|0.000000037|0.00000017|8192|role|true
-llama-3.2-1b-instruct@cloudflare|meta-llama/llama-3.2-1b-instruct|cloudflare|0.000000027|0.000000201|2048|experiment|false
-llama-3.1-8b-instruct@deepinfra|meta-llama/llama-3.1-8b-instruct|deepinfra/fp8|0.00000002|0.00000004|2048|experiment|false
-gpt-oss-20b@deepinfra|openai/gpt-oss-20b|deepinfra/bf16|0.00000003|0.00000014|8192|experiment|true
-gpt-oss-120b@deepinfra|openai/gpt-oss-120b|deepinfra/bf16|0.000000037|0.00000017|8192|experiment|true
+ENTRIES='chat-tasks|meta-llama/llama-3.1-8b-instruct|deepinfra/fp8|0.00000002|0.00000004|2048|role|false
 gpt-oss-120b@coreweave|openai/gpt-oss-120b|coreweave/fp4|0.00000003|0.00000017|8192|experiment|true
-deepseek-v4.1-flash@deepinfra|deepseek/deepseek-v4.1-flash|deepinfra/fp8|0.00000014|0.00000042|8192|experiment|true
 qwen3.8-2.4t-a95b@siliconflow|qwen/qwen3.8-2.4t-a95b|siliconflow/fp8|0.000002|0.000006|8192|experiment|true'
 
 FINDINGS="$ARTIFACTS/findings.txt"
@@ -75,9 +68,9 @@ finding() {
 }
 
 @test "client max_tokens behaviour is recorded" {
-  gw_call "$MASTER" classify '{"max_tokens":50000}'
+  gw_call "$MASTER" chat-tasks '{"max_tokens":50000}'
   [ "$GW_STATUS" = "200" ]
-  finding "client max_tokens 50000 on classify -> upstream received max_tokens=$(last_body | jq -r '.max_tokens')"
+  finding "client max_tokens 50000 on chat-tasks -> upstream received max_tokens=$(last_body | jq -r '.max_tokens')"
 }
 
 @test "a model outside the allowlist is refused" {
@@ -110,8 +103,8 @@ finding() {
 
 @test "model info lists every name with its kind and reasoning flag" {
   info="$(curl -sS -H "Authorization: Bearer $MASTER" "$GATEWAY_URL/model/info")"
-  [ "$(jq '[.data[].model_name] | unique | length' <<<"$info")" = "11" ]
-  [ "$(jq '[.data[] | select(.model_info.rapidselector_kind == "role")] | length' <<<"$info")" = "4" ]
+  [ "$(jq '[.data[].model_name] | unique | length' <<<"$info")" = "$(config_count)" ]
+  [ "$(jq '[.data[] | select(.model_info.rapidselector_kind == "role")] | length' <<<"$info")" = "$(config_roles | wc -l)" ]
   while IFS='|' read -r name _ _ _ _ _ kind reasoning; do
     entry="$(jq -c --arg n "$name" '.data[] | select(.model_name == $n) | .model_info' <<<"$info")"
     [ "$(jq -r '.rapidselector_kind' <<<"$entry")" = "$kind" ] || { echo "$name kind"; false; }
@@ -128,8 +121,8 @@ finding() {
 }
 
 @test "spend is above zero without upstream cost" {
-  gw_call "$MASTER" classify
-  expected="$(awk 'BEGIN { printf "%.10f", 100 * 0.000000075 + 50 * 0.0000002 }')"
+  gw_call "$MASTER" chat-tasks
+  expected="$(awk 'BEGIN { printf "%.10f", 100 * 0.00000002 + 50 * 0.00000004 }')"
   [ "$(awk -v a="$GW_COST" -v b="$expected" 'BEGIN { d = a - b; if (d < 0) d = -d; print (a > 0 && d < 1e-12) ? "yes" : "no" }')" = "yes" ] \
     || { echo "cost $GW_COST, expected $expected"; false; }
 }
@@ -145,8 +138,8 @@ finding() {
 
 @test "spend source with upstream cost is recorded" {
   upstream_mode 200 0.01
-  gw_call "$MASTER" classify
-  finding "upstream reported cost 0.01 for classify; LiteLLM x-litellm-response-cost=$GW_COST (configured price gives 0.0000175)"
+  gw_call "$MASTER" chat-tasks
+  finding "upstream reported cost 0.01 for chat-tasks; LiteLLM x-litellm-response-cost=$GW_COST (configured price gives 0.000004)"
   [ -n "$GW_COST" ]
 }
 
@@ -154,21 +147,21 @@ finding() {
   upstream_mode 200
   run curl -sS -N -X POST "$GATEWAY_URL/v1/chat/completions" -H "Authorization: Bearer $MASTER" \
     -H 'Content-Type: application/json' \
-    -d '{"model":"summarise","stream":true,"stream_options":{"include_usage":true},"messages":[{"role":"user","content":"hi"}]}'
+    -d '{"model":"gpt-oss-120b@coreweave","stream":true,"stream_options":{"include_usage":true},"messages":[{"role":"user","content":"hi"}]}'
   [[ "$output" == *"data: [DONE]"* ]]
   spend=0
   for _ in $(seq 1 20); do
     logs="$(curl -sS -H "Authorization: Bearer $MASTER" "$GATEWAY_URL/spend/logs?summarize=false" )"
-    spend="$(jq '[.[] | select(.model_group == "summarise") | .spend] | add // 0' <<<"$logs")"
+    spend="$(jq '[.[] | select(.model_group == "gpt-oss-120b@coreweave") | .spend] | add // 0' <<<"$logs")"
     [ "$(awk -v s="$spend" 'BEGIN { print (s > 0) ? "yes" : "no" }')" = "yes" ] && break
     sleep 2
   done
-  finding "streamed summarise call: spend log total for summarise = $spend"
+  finding "streamed gpt-oss-120b@coreweave call: spend log total for gpt-oss-120b@coreweave = $spend"
   [ "$(awk -v s="$spend" 'BEGIN { print (s > 0) ? "yes" : "no" }')" = "yes" ]
 }
 
 @test "metrics answer without a key and contain the alert metrics" {
-  gw_call "$MASTER" classify
+  gw_call "$MASTER" chat-tasks
   run curl -sS -o "$BATS_TEST_TMPDIR/metrics" -w '%{http_code}' "$GATEWAY_URL/metrics/"
   [ "$output" = "200" ]
   for m in litellm_spend_metric litellm_proxy_total_requests_metric litellm_proxy_failed_requests_metric litellm_deployment_failure_responses litellm_postgres_total_requests_total; do

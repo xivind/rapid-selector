@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Level 1: key and team budgets block, and recorded spend survives a gateway restart.
-# Every fake answer reports 100 prompt and 100000 completion tokens, so one classify call
-# costs 100 x $0.075/M + 100000 x $0.20/M, about $0.02, at the configured price.
+# Every fake answer reports 100 prompt and 500000 completion tokens, so one chat-tasks call
+# costs 100 x $0.02/M + 500000 x $0.04/M, about $0.02, at the example config's price.
 
 load helpers
 
@@ -17,7 +17,7 @@ teardown_file() {
 }
 
 setup() {
-  fake_tokens 100 100000
+  fake_tokens 100 500000
 }
 
 # call_until_refused <key> <model> <max_calls>: sets CALLS (successful calls before the refusal),
@@ -39,7 +39,7 @@ call_until_refused() {
 }
 
 @test "key budget blocks" {
-  call_until_refused "$(test_env KEY_SMOKE_TEST)" classify 6
+  call_until_refused "$(test_env KEY_SMOKE_TEST)" chat-tasks 6
   spend="$(key_info "$(test_env KEY_SMOKE_TEST)" | jq -r '.info.spend')"
   echo "$(date -u +%FT%TZ) budgets.bats: key budget 0.03: $CALLS calls succeeded, then HTTP $REFUSED_STATUS; recorded spend $spend; body $REFUSED_BODY" >> "$FINDINGS"
   [ -n "$REFUSED_STATUS" ]
@@ -47,7 +47,7 @@ call_until_refused() {
 }
 
 @test "team budget blocks" {
-  call_until_refused "$(test_env KEY_NODE_RED)" classify 6
+  call_until_refused "$(test_env KEY_NODE_RED)" chat-tasks 6
   spend="$(team_info permanent | jq -r '.team_info.spend')"
   echo "$(date -u +%FT%TZ) budgets.bats: team budget 0.03: $CALLS calls succeeded, then HTTP $REFUSED_STATUS; team spend $spend; body $REFUSED_BODY" >> "$FINDINGS"
   [ -n "$REFUSED_STATUS" ]
@@ -55,7 +55,7 @@ call_until_refused() {
 }
 
 @test "spend survives a gateway restart" {
-  gw_call "$(test_env KEY_SMOKE_TEST)" classify
+  gw_call "$(test_env KEY_SMOKE_TEST)" chat-tasks
   [ "$GW_STATUS" != "200" ]
   sleep 15
   (cd "$REPO" && RAPIDSELECTOR_ENV_FILE="$TEST_ENV_FILE" ./rapidselector.sh \
@@ -64,6 +64,6 @@ call_until_refused() {
     [ "$(docker inspect -f '{{.State.Health.Status}}' rapidselector-gateway)" = "healthy" ] && break
     sleep 3
   done
-  gw_call "$(test_env KEY_SMOKE_TEST)" classify
+  gw_call "$(test_env KEY_SMOKE_TEST)" chat-tasks
   [ "$GW_STATUS" != "200" ] || { echo "a spent key was accepted after restart"; false; }
 }

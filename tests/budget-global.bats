@@ -6,7 +6,7 @@ load helpers
 FINDINGS="$ARTIFACTS/findings.txt"
 
 setup_file() {
-  sed 's/^  max_budget: 32$/  max_budget: 0.05/' "$REPO/gateway/config.yaml" > "$ARTIFACTS/config.lowbudget.yaml"
+  sed 's/^  max_budget: 10$/  max_budget: 0.05/' "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$ARTIFACTS/config.lowbudget.yaml"
   grep -q '^  max_budget: 0.05$' "$ARTIFACTS/config.lowbudget.yaml"
   stack_up tests/compose.lowbudget.yml
   run_setup_keys >/dev/null
@@ -17,11 +17,11 @@ teardown_file() {
 }
 
 @test "global budget blocks" {
-  fake_tokens 100 100000
+  fake_tokens 100 500000
   calls=0
   status=""
   for _ in 1 2 3 4 5 6 7 8 9 10; do
-    gw_call "$(test_env KEY_CHAT)" classify
+    gw_call "$(test_env KEY_CHAT)" chat-tasks
     if [ "$GW_STATUS" != "200" ]; then status="$GW_STATUS"; break; fi
     calls=$((calls + 1))
     sleep 12

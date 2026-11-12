@@ -65,15 +65,15 @@ upstream_models() {
 
 @test "a chat completion goes through the gateway" {
   spend_before="$(key_spend "$(test_env KEY_CHAT)")"
-  body="$(chat_api POST /api/chat/completions '{"model":"classify","stream":false,"messages":[{"role":"user","content":"hi"}]}')"
+  body="$(chat_api POST /api/chat/completions '{"model":"chat-tasks","stream":false,"messages":[{"role":"user","content":"hi"}]}')"
   [ "$(jq -r '.choices[0].message.content' <<<"$body")" = "fake reply" ] || { echo "$body"; false; }
-  [ "$(upstream_models)" = '["mistralai/mistral-small-3.2-24b-instruct"]' ]
+  [ "$(upstream_models)" = '["meta-llama/llama-3.1-8b-instruct"]' ]
   wait_for_key_spend_above "$(test_env KEY_CHAT)" "$spend_before"
 }
 
 @test "streamed chat records spend on the chat key" {
   spend_before="$(key_spend "$(test_env KEY_CHAT)")"
-  run chat_api POST /api/chat/completions '{"model":"summarise","stream":true,"messages":[{"role":"user","content":"hi"}]}'
+  run chat_api POST /api/chat/completions '{"model":"gpt-oss-120b@coreweave","stream":true,"messages":[{"role":"user","content":"hi"}]}'
   [[ "$output" == *"fake reply"* ]]
   wait_for_key_spend_above "$(test_env KEY_CHAT)" "$spend_before"
 }
@@ -88,10 +88,10 @@ upstream_models() {
 
 @test "no tags, follow-up or autocomplete calls reach the upstream" {
   msgs='"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}]'
-  chat_api POST /api/v1/tasks/tags/completions "{\"model\":\"classify\",$msgs}" >/dev/null || true
-  chat_api POST /api/v1/tasks/follow_up/completions "{\"model\":\"classify\",$msgs}" >/dev/null || true
-  chat_api POST /api/v1/tasks/auto/completions '{"model":"classify","prompt":"hel","type":"general"}' >/dev/null || true
-  chat_api POST /api/v1/tasks/queries/completions "{\"model\":\"classify\",\"type\":\"web_search\",$msgs}" >/dev/null || true
+  chat_api POST /api/v1/tasks/tags/completions "{\"model\":\"chat-tasks\",$msgs}" >/dev/null || true
+  chat_api POST /api/v1/tasks/follow_up/completions "{\"model\":\"chat-tasks\",$msgs}" >/dev/null || true
+  chat_api POST /api/v1/tasks/auto/completions '{"model":"chat-tasks","prompt":"hel","type":"general"}' >/dev/null || true
+  chat_api POST /api/v1/tasks/queries/completions "{\"model\":\"chat-tasks\",\"type\":\"web_search\",$msgs}" >/dev/null || true
   [ "$(upstream_requests | jq length)" = "0" ] || { echo "$(upstream_models)"; false; }
 }
 

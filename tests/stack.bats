@@ -38,9 +38,9 @@ compose_config() {
   [ "$(docker inspect -f '{{.State.Health.Status}}' rapidselector-gateway)" = "healthy" ]
 }
 
-@test "classify answers through the fake upstream" {
+@test "chat-tasks answers through the fake upstream" {
   upstream_reset
-  gw_call "$(test_env LITELLM_MASTER_KEY)" classify
+  gw_call "$(test_env LITELLM_MASTER_KEY)" chat-tasks
   [ "$GW_STATUS" = "200" ]
   [ "$(jq -r '.choices[0].message.content' <<<"$output")" = "fake reply" ]
   [ "$(upstream_requests | jq 'length')" -ge 1 ]
