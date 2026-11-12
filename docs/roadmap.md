@@ -4,20 +4,8 @@ Where we are, the phases, and options parked for later. Each piece of work gets 
 
 ## Now
 
-- **Next:** the `CLAUDE.md` cleanup (the docs cleanup merged 2026-11-13, PR #6). Then, in order: the user guide's section on upgrading one or more containers, the README dry run (phase 1 below), and benchmarking (phase 2).
-- **For the `CLAUDE.md` cleanup**, item by item with the owner: the walkthrough rules below, whether they go into "Way of working"; "Where things live" (the roadmap's "Now", specs and plans deleted after their work, so `docs/superpowers/` is empty between pieces of work, `docs/test-procedures/`); `docs/decisions.md`'s "Tested in practice" as where test results go.
+- **Next:** the user guide's section on upgrading one or more containers (the docs cleanup merged 2026-11-13, PR #6; the `CLAUDE.md` cleanup the same day). Then, in order: the README dry run (phase 1 below), and benchmarking (phase 2).
 - **The owner's host, `sandbox`,** runs the real stack: never run level 1 there. Its own facts are in the owner's `production` repository (`CLAUDE.md`, "Infrastructure Services"). Still open there: the first real use from Node-RED.
-
-## How we walk through a procedure
-
-The owner's instructions, on top of `CLAUDE.md`, until the `CLAUDE.md` cleanup decides where they go:
-
-- One step at a time: what to run or click, what to see, what it costs. **Wait for the report before the next step.** Record what is of use (`docs/decisions.md`, "Tested in practice"), and commit and push it.
-- **Stop and ask before anything that spends money beyond the procedure's stated cost.**
-- **The owner never pastes a secret value to Claude.** Names and statuses only. Secrets go through `./rapidselector.sh run-script bash -c '…'`, with the header on stdin (`curl -H @-`), and output that could hold a key through `sed -E "s/sk-[A-Za-z0-9_-]+/sk-REDACTED/g"`.
-- Plain language and complete commands, saying what each output should look like; the owner is new to Compose.
-- The owner welcomes pushback and pushes back too: ask whether something is needed before proposing a change to a host.
-- **Pasting is fragile on the owner's terminal:** short command lines, never a heredoc or indented code to paste; anything longer goes in a committed script the owner pulls. A silent `read -rs` line runs on its own.
 
 ## Phases
 

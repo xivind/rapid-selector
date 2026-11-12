@@ -19,11 +19,14 @@ This file holds only what is always true: purpose, principles, architecture, ope
 | File | Contents |
 |---|---|
 | `docs/requirements.md` | What each service must do |
-| `docs/roadmap.md` | Phases and parked options |
-| `docs/decisions.md` | Open questions and decisions, with date and reason |
+| `docs/roadmap.md` | Now (where we are and what is next), phases and parked options |
+| `docs/decisions.md` | Open questions and decisions, with date and reason, and what was tested in practice |
 | `docs/provider-facts.md` | Dated observations about providers, models, prices and tool behaviour |
-| `docs/superpowers/specs/` | Design specs, one per piece of work |
-| `docs/superpowers/plans/` | Implementation plans, one per piece of work |
+| `docs/test-procedures/` | Procedures the owner runs on the host, starting with the initial setup walkthrough |
+| `docs/user-guide.md` | The tasks done most often |
+| `docs/onboarding.md` | A tour of LiteLLM's admin UI and OpenRouter's dashboard |
+| `docs/superpowers/specs/` | Design specs, one per piece of work, deleted once it is merged and verified |
+| `docs/superpowers/plans/` | Implementation plans, one per piece of work, deleted once it is merged and verified |
 
 Facts about providers and tools go in `docs/provider-facts.md` with a date and a source, never in this file. Check them against the current documentation before relying on them.
 
@@ -39,7 +42,7 @@ Facts about providers and tools go in `docs/provider-facts.md` with a date and a
 
   "Hard" means enforced by OpenRouter, not by our software. Neither stops at the exact cent: the key limit and the balance both overshoot a little (D1 and D6 in `docs/decisions.md`).
 - Software budgets are secondary. No code may assume that the LiteLLM budget alone protects against overspending.
-- A limit counts as working only once it has been tested in practice. Test results are recorded in `docs/decisions.md`.
+- A limit counts as working only once it has been tested in practice. Test results are recorded in `docs/decisions.md`, under "Tested in practice".
 - **Allowlisted models and hosts only.** No wildcard routing (`openrouter/*`). Every allowlist entry names both the model and its upstream host, with fallbacks turned off (`provider.order` and `allow_fallbacks: false`), so a request can never move to a more expensive host. `:free` variants are not used.
 - **Every model must record correct, non-zero spend.** A model without known pricing is recorded at cost 0 and will never trigger the budget. The price must be the pinned host's price, which can differ from OpenRouter's catalog price. A test must confirm the recorded spend for each model.
 - A default `max_tokens` is applied to every call that does not set one.
@@ -116,8 +119,8 @@ rapid-selector/
 ├── scripts/        # operator scripts (status, reconcile, setup, smoke test, checks)
 ├── config/         # each home's own settings: gateway.yaml, home.env (examples in git)
 ├── gateway/        # request guard
-├── chat/           # Open WebUI config (if needed)
-└── docs/           # requirements, roadmap, decisions, facts, specs, plans
+├── tests/          # level 1 tests, fakes and test-only scripts
+└── docs/           # requirements, roadmap, decisions, facts, guides, procedures; specs and plans while in progress
 ```
 
 ## Way of working
@@ -126,9 +129,13 @@ rapid-selector/
 - **The owner takes part in choosing the tech stack.** Before anything is built, present the realistic options with their trade-offs and a recommendation. The owner makes the final choice, and new dependencies with a real effect on the stack are raised the same way.
 - Everything in English: code, comments, commit messages, documentation and conversation.
 - When something depends on how LiteLLM, Open WebUI or OpenRouter work *now*: check the current documentation, not memory. These projects change quickly. Record what was found in `docs/provider-facts.md`.
-- Anything that can cost money (new models, benchmark runs, changed budgets) must be flagged explicitly to the owner.
-- Decisions are recorded in `docs/decisions.md`, with date and reason.
-- **Development** happens in a cloud sandbox (amd64) with no access to the Pi. Make no assumptions about the home network. Everything specific to the home network (IPs, Node-RED address) goes in `.env`. Anything that needs the Pi or real money is verified by the owner on the Pi, following a written test procedure.
+- Anything that can cost money (new models, benchmark runs, changed budgets) must be flagged explicitly to the owner, and nothing spends beyond a procedure's stated cost without asking first.
+- Decisions are recorded in `docs/decisions.md`, with date and reason: only what is of use to any home. A home's own facts go to that home's own repository.
+- **Development** happens away from the Pi: on a machine without Docker, and in a cloud sandbox (amd64) for the Docker runs. Make no assumptions about the home network. Everything specific to the home network (IPs, Node-RED address) goes in `.env`. Anything that needs the Pi or real money is verified by the owner on the Pi, following a written test procedure.
+- **Steps the owner runs** (on a host or in a dashboard):
+  - One step at a time: what to run or click (complete commands, in plain language), what they should see, what it costs. Wait for the report before the next step.
+  - The owner never pastes a secret value: names and statuses only. Secrets go through `./rapidselector.sh run-script bash -c '…'`, with the header on stdin (`curl -H @-`), and output that could hold a key goes through `sed -E "s/sk-[A-Za-z0-9_-]+/sk-REDACTED/g"`.
+  - Pasting is fragile on the owner's terminal: short command lines, never a heredoc or indented code. Anything longer goes in a committed script the owner pulls, and a silent `read -rs` runs on its own line.
 
 ## Coding principles
 
@@ -136,5 +143,5 @@ Adapted from Forrest Chang's four principles, based on Andrej Karpathy's observa
 
 - **Think before coding.** Do not assume. State assumptions explicitly. When a request can be read in more than one way, present the readings instead of picking one. Push back when a simpler approach exists. When confused, stop and ask.
 - **Simplicity first.** The minimum code that solves the problem. No features beyond what was asked, and no abstractions for single-use code. If code written in this piece of work takes 200 lines and could take 50, rewrite it.
-- **Surgical changes.** Touch only what the task needs, in code, config and docs alike. Do not improve adjacent code or refactor what is not broken. Match the existing style. Every changed line traces directly to the request.
+- **Surgical changes.** Touch only what the task needs, in code, config, docs and on hosts: ask whether a host change is needed before proposing it. Do not improve adjacent code or refactor what is not broken. Match the existing style. Every changed line traces directly to the request.
 - **Goal-driven execution.** Define success criteria before starting, and loop until they are verified: "fix the bug" becomes "write a test that reproduces it, then make it pass". A criterion that needs the Pi or real money cannot be verified in the sandbox: it becomes a step in the owner's test procedure, and the work is reported as not yet verified until the owner has run it.
