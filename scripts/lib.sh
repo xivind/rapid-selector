@@ -30,6 +30,18 @@ RAPIDSELECTOR_OPTIONAL_SECRETS=(
   OPENROUTER_MANAGEMENT_KEY
 )
 
+# The settings every home's config/home.env must hold (config/home.example.env explains each).
+# The rules check (scripts/check-prices.sh) checks them; scripts/setup-keys.sh reads them.
+RAPIDSELECTOR_HOME_SETTINGS=(
+  BUDGET_TEAM_PERMANENT
+  BUDGET_TEAM_EXPERIMENTS
+  BUDGET_KEY_NODE_RED
+  BUDGET_KEY_SMOKE_TEST
+  NODE_RED_RPM
+  NODE_RED_TPM
+  ALLOWED_HOSTS
+)
+
 # die <exit_code> <message>
 die() {
   echo "rapidselector: $2" >&2
@@ -58,6 +70,24 @@ load_env_file() {
     [ -n "${!key+set}" ] && continue
     export "$key=$value"
   done < "$file"
+}
+
+# set_config_paths <repo root>: set GATEWAY_CONFIG and HOME_ENV, this home's config/gateway.yaml
+# and config/home.env. RAPIDSELECTOR_GATEWAY_CONFIG and RAPIDSELECTOR_HOME_ENV override them, for
+# the tests only (tests/helpers.bash points them at the example files).
+set_config_paths() {
+  GATEWAY_CONFIG="${RAPIDSELECTOR_GATEWAY_CONFIG:-$1/config/gateway.yaml}"
+  HOME_ENV="${RAPIDSELECTOR_HOME_ENV:-$1/config/home.env}"
+}
+
+# home_env_value <file> <NAME>: print NAME's value in the file (empty if absent), from the file
+# alone: a value already in the environment does not count.
+home_env_value() {
+  (
+    unset "$2"
+    load_env_file "$1"
+    printf '%s\n' "${!2:-}"
+  )
 }
 
 # load_secrets_from_service: fetch the secret "rapidselector" and export each required field.

@@ -7,7 +7,7 @@
 load helpers
 
 setup() {
-  # An endpoint list that matches gateway/config.yaml exactly, built from the config itself.
+  # An endpoint list that matches the gateway config exactly, built from the config itself.
   awk '
     /^[[:space:]]*- model_name:/ { if (m != "") print m, i, o, s; m = i = o = s = "" }
     /^[[:space:]]*model: openrouter\// { m = substr($2, 12) }
@@ -15,7 +15,7 @@ setup() {
     /^[[:space:]]*output_cost_per_token:/ { o = $2 }
     /^[[:space:]]*order:/ { s = $2; gsub(/[\[\]"]/, "", s) }
     END { print m, i, o, s }
-  ' "$REPO/gateway/config.yaml" \
+  ' "$RAPIDSELECTOR_GATEWAY_CONFIG" \
     | jq -R 'split(" ") | {model_id: .[0], tag: .[3], service_tier: null, pricing: {prompt: (.[1] | tonumber | tostring), completion: (.[2] | tonumber | tostring)}}' \
     | jq -s '{data: .}' > "$BATS_TEST_TMPDIR/zdr.json"
   export ZDR_ENDPOINTS_FILE="$BATS_TEST_TMPDIR/zdr.json"
@@ -37,21 +37,21 @@ STUB
   run "$REPO/scripts/check-prices.sh"
   echo "$output"
   [ "$status" -eq 0 ]
-  [ "$(grep -c '^ok ' <<<"$output")" = "11" ]
+  [ "$(grep -c '^ok ' <<<"$output")" = "$(config_count)" ]
 }
 
 @test "check-prices fails when a configured price differs" {
-  sed 's/output_cost_per_token: 0.0000002$/output_cost_per_token: 0.0000009/' "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  sed 's/output_cost_per_token: 0.00000004$/output_cost_per_token: 0.0000009/' "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$BATS_TEST_TMPDIR/config.yaml"
   run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   [ "$status" -eq 1 ]
-  grep -q "^FAIL classify" <<<"$output"
+  grep -q "^FAIL chat-tasks" <<<"$output"
 }
 
 @test "check-prices fails when a pinned endpoint does not exist" {
-  sed 's/order: \["cloudflare"\]/order: ["nowhere\/fp8"]/' "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
+  sed 's#order: \["coreweave/fp4"\]#order: ["nowhere/fp8"]#' "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$BATS_TEST_TMPDIR/config.yaml"
   run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   [ "$status" -eq 1 ]
-  grep -q "^FAIL llama-3.2-1b-instruct@cloudflare" <<<"$output"
+  grep -q "^FAIL gpt-oss-120b@coreweave" <<<"$output"
 }
 
 @test "check-prices fails for an endpoint in the flex tier" {
@@ -84,24 +84,24 @@ STUB
   grep -q "MISSING linux/arm64: example/amd64-only:1.0" <<<"$output"
 }
 
-# broken_config <sed expression>: $BATS_TEST_TMPDIR/config.yaml is gateway/config.yaml with the
-# expression applied to the first entry (classify) only.
+# broken_config <sed expression>: $BATS_TEST_TMPDIR/config.yaml is the gateway config with the
+# expression applied to the first entry (chat-tasks) only.
 broken_config() {
   local second
-  second="$(grep -n -- '- model_name:' "$REPO/gateway/config.yaml" | sed -n 2p | cut -d: -f1)"
-  sed -e "1,$((second - 1)){" -e "$1" -e "}" "$REPO/gateway/config.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
-  ! cmp -s "$REPO/gateway/config.yaml" "$BATS_TEST_TMPDIR/config.yaml"
+  second="$(grep -n -- '- model_name:' "$RAPIDSELECTOR_GATEWAY_CONFIG" | sed -n 2p | cut -d: -f1)"
+  sed -e "1,$((second - 1)){" -e "$1" -e "}" "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$BATS_TEST_TMPDIR/config.yaml"
+  ! cmp -s "$RAPIDSELECTOR_GATEWAY_CONFIG" "$BATS_TEST_TMPDIR/config.yaml"
 }
 
-# rules_fail <text>: the rules check failed on classify with a FAIL line holding <text>.
+# rules_fail <text>: the rules check failed on chat-tasks with a FAIL line holding <text>.
 rules_fail() {
   run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
   echo "$output"
   [ "$status" -eq 1 ]
-  grep -q "^FAIL classify: .*$1" <<<"$output"
+  grep -q "^FAIL chat-tasks: .*$1" <<<"$output"
 }
 
-@test "rules: the real config passes" {
+@test "rules: the example passes" {
   # No network: a curl that is called leaves a mark, and no saved endpoint list is given.
   unset ZDR_ENDPOINTS_FILE
   printf '#!/usr/bin/env bash\ntouch "%s/curl-called"\nexit 1\n' "$BATS_TEST_TMPDIR" > "$BATS_TEST_TMPDIR/bin/curl"
@@ -110,14 +110,14 @@ rules_fail() {
   echo "$output"
   [ "$status" -eq 0 ]
   [ "$(grep -c '^FAIL' <<<"$output")" = "0" ]
-  grep -q "^rules ok: 11 entries" <<<"$output"
+  grep -q "^rules ok: $(config_count) entries" <<<"$output"
   [ ! -e "$BATS_TEST_TMPDIR/curl-called" ]
 }
 
 @test "the config owns store_prompts_in_spend_logs, set to false" {
   # Declared in the file, the setting is the file's: LiteLLM v1.106.6 ignores the admin UI's
   # "Store Prompts in Spend Logs" switch (owned_by_config), so no click stores chat contents.
-  run sed -n '/^general_settings:/,/^[^ #]/p' "$REPO/gateway/config.yaml"
+  run sed -n '/^general_settings:/,/^[^ #]/p' "$RAPIDSELECTOR_GATEWAY_CONFIG"
   grep -qx '  store_prompts_in_spend_logs: false' <<<"$output"
 }
 
@@ -161,6 +161,14 @@ rules_fail() {
   rules_fail "cannot read max_tokens"
 }
 
+@test "rules: the allowed providers come from home.env" {
+  sed 's/^ALLOWED_HOSTS=.*/ALLOWED_HOSTS=deepinfra siliconflow/' "$RAPIDSELECTOR_HOME_ENV" > "$BATS_TEST_TMPDIR/home.env"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/home.env" run "$REPO/scripts/check-prices.sh" --rules-only "$RAPIDSELECTOR_GATEWAY_CONFIG"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -q "^FAIL gpt-oss-120b@coreweave: host coreweave is not an allowed provider" <<<"$output"
+}
+
 @test "rules: a :free model" {
   broken_config 's#model: openrouter/\(.*\)$#model: openrouter/\1:free#'
   rules_fail ":free model"
@@ -181,8 +189,8 @@ rules_fail() {
   run "$REPO/scripts/check-prices.sh" "$BATS_TEST_TMPDIR/config.yaml"
   echo "$output"
   [ "$status" -eq 1 ]
-  grep -q "^rules ok: 11 entries" <<<"$output"
-  grep -q "^FAIL classify (deepinfra/fp8): price is now" <<<"$output"
+  grep -q "^rules ok: $(config_count) entries" <<<"$output"
+  grep -q "^FAIL chat-tasks (deepinfra/fp8): price is now" <<<"$output"
 }
 
 @test "rules: max_tokens under model_info does not count" {
@@ -192,25 +200,25 @@ rules_fail() {
   rules_fail "cannot read max_tokens"
 }
 
-# reorder_summarise <file>: summarise's entry written with litellm_params first, model_name
-# last (the same YAML).
-reorder_summarise() {
-  awk '/^  - model_name: summarise$/ { pending = 1; next }
+# reorder_second <file>: the second entry (gpt-oss-120b@coreweave) written with litellm_params
+# first, model_name last (the same YAML).
+reorder_second() {
+  awk '/^  - model_name: gpt-oss-120b@coreweave$/ { pending = 1; next }
     pending && /^    litellm_params:$/ { print "  - litellm_params:"; next }
-    pending && /^    model_info:$/ { print "    model_name: summarise"; pending = 0 }
-    { print }' "$REPO/gateway/config.yaml" > "$1"
+    pending && /^    model_info:$/ { print "    model_name: gpt-oss-120b@coreweave"; pending = 0 }
+    { print }' "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$1"
 }
 
 @test "rules: an entry with its keys in another order is read as its own entry" {
-  reorder_summarise "$BATS_TEST_TMPDIR/config.yaml"
+  reorder_second "$BATS_TEST_TMPDIR/config.yaml"
   run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
   echo "$output"
   [ "$status" -eq 0 ]
-  grep -q "^rules ok: 11 entries" <<<"$output"
+  grep -q "^rules ok: $(config_count) entries" <<<"$output"
 }
 
 @test "rules: a broken entry before a reordered one still fails" {
-  reorder_summarise "$BATS_TEST_TMPDIR/reordered.yaml"
+  reorder_second "$BATS_TEST_TMPDIR/reordered.yaml"
   sed '0,/zdr: true/s//zdr: false/' "$BATS_TEST_TMPDIR/reordered.yaml" > "$BATS_TEST_TMPDIR/config.yaml"
   rules_fail "zdr must be true"
 }

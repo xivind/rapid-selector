@@ -10,6 +10,21 @@ GATEWAY_PORT="${GATEWAY_PORT:-4000}"
 GATEWAY_URL="http://127.0.0.1:${GATEWAY_PORT}"
 export REPO ARTIFACTS TEST_ENV_FILE FAKE_UPSTREAM_URL FAKE_SECRETS_URL GATEWAY_PORT GATEWAY_URL
 
+# Every suite runs against the example config, so a fresh clone and the owner's machine test the
+# same thing. The scripts and Compose read these two variables (for tests only).
+export RAPIDSELECTOR_GATEWAY_CONFIG="$REPO/config/gateway.example.yaml"
+export RAPIDSELECTOR_HOME_ENV="$REPO/config/home.example.env"
+
+# config_count: the number of entries in the gateway config.
+config_count() {
+  grep -c '^  - model_name:' "$RAPIDSELECTOR_GATEWAY_CONFIG"
+}
+
+# config_roles: the names of the entries of kind role, one per line.
+config_roles() {
+  awk '/^  - model_name:/ { name = $3 } /^      rapidselector_kind: role$/ { print name }' "$RAPIDSELECTOR_GATEWAY_CONFIG"
+}
+
 mkdir -p "$ARTIFACTS"
 
 # RAPIDSELECTOR_SECRETS and RAPIDSELECTOR_OPTIONAL_SECRETS: the names the test env file gets random values for.

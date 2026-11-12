@@ -204,7 +204,7 @@ or_get() {
 }
 
 @test "fake openrouter zdr list matches the config" {
-  # The same list tests/checks.bats builds from gateway/config.yaml.
+  # The same list tests/checks.bats builds from the gateway config.
   expected="$(awk '
     /^[[:space:]]*- model_name:/ { if (m != "") print m, i, o, s; m = i = o = s = "" }
     /^[[:space:]]*model: openrouter\// { m = substr($2, 12) }
@@ -212,7 +212,7 @@ or_get() {
     /^[[:space:]]*output_cost_per_token:/ { o = $2 }
     /^[[:space:]]*order:/ { s = $2; gsub(/[\[\]"]/, "", s) }
     END { print m, i, o, s }
-  ' "$REPO/gateway/config.yaml" \
+  ' "$RAPIDSELECTOR_GATEWAY_CONFIG" \
     | jq -R 'split(" ") | [.[0], .[3], (.[1] | tonumber), (.[2] | tonumber)]' | jq -sc 'sort')"
   run curl -sS -w '\n%{http_code}' "$FAKE_UPSTREAM_URL/api/v1/endpoints/zdr"
   [ "${lines[-1]}" = "200" ]
