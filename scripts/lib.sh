@@ -90,6 +90,46 @@ home_env_value() {
   )
 }
 
+# home_env_failures <home.env file> <global budget, or ->: print one reason per broken rule in
+# the file, nothing if all pass. Judges the file alone (home_env_value). The global budget is
+# litellm_settings.max_budget in the gateway config; "-" skips the team budgets' sum.
+home_env_failures() {
+  local file="$1" global="$2" name value word teams_ok=1
+  local -a words
+  for name in "${RAPIDSELECTOR_HOME_SETTINGS[@]}"; do
+    value="$(home_env_value "$file" "$name")"
+    if [ -z "$value" ]; then
+      echo "missing $name"
+      if [[ "$name" == BUDGET_TEAM_* ]]; then teams_ok=0; fi
+      continue
+    fi
+    case "$name" in
+      BUDGET_*)
+        if ! [[ "$value" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v v="$value" 'BEGIN { exit !(v + 0 > 0) }'; then
+          echo "$name must be a number above zero"
+          if [[ "$name" == BUDGET_TEAM_* ]]; then teams_ok=0; fi
+        fi
+        ;;
+      NODE_RED_RPM | NODE_RED_TPM)
+        [[ "$value" =~ ^[1-9][0-9]*$ ]] || echo "$name must be a whole number above zero"
+        ;;
+      ALLOWED_HOSTS)
+        read -r -a words <<<"$value"
+        for word in "${words[@]}"; do
+          if ! [[ "$word" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+            echo "ALLOWED_HOSTS must be provider tags separated by spaces, such as: deepinfra siliconflow"
+            break
+          fi
+        done
+        ;;
+    esac
+  done
+  if [ "$global" != "-" ] && [ "$teams_ok" -eq 1 ]; then
+    awk -v p="$(home_env_value "$file" BUDGET_TEAM_PERMANENT)" -v e="$(home_env_value "$file" BUDGET_TEAM_EXPERIMENTS)" -v g="$global" \
+      'BEGIN { if (p + e > g + 0) printf "team budgets add up to %g, above the global budget %s (litellm_settings.max_budget)\n", p + e, g }'
+  fi
+}
+
 # load_secrets_from_service: fetch the secret "rapidselector" and export each required field.
 load_secrets_from_service() {
   require_env SECRETS_SERVICE_URL SECRETS_SERVICE_TOKEN_FILE

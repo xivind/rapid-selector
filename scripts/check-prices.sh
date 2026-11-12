@@ -4,7 +4,9 @@
 # 1. The rules, offline: provider.order and provider.only name the same single endpoint, at
 #    one of the account's allowed providers (ALLOWED_HOSTS in config/home.env); allow_fallbacks false; zdr
 #    true; data_collection deny; a max_tokens; both prices above zero; no :free model and no
-#    wildcard. A field the parser cannot read fails as "cannot read <field>".
+#    wildcard. A field the parser cannot read fails as "cannot read <field>". And config/home.env:
+#    every setting present, budgets and limits above zero, providers as plain tags, and the two
+#    team budgets adding up to no more than litellm_settings.max_budget (lib.sh, home_env_failures).
 # 2. The prices, online, against OpenRouter's public list of zero data retention endpoints:
 #    the pinned endpoint must exist, not be in the flex tier, not use Safety Retention (the
 #    list includes those), and have the configured input and output price.
@@ -122,6 +124,22 @@ for entry in "${entries[@]}"; do
     failed=1
   done < <(rule_failures "${fields[@]}")
 done
+# The global budget: one numeric max_budget directly under litellm_settings, else "-".
+global="$(awk '
+  /^litellm_settings:/ { s = 1; next }
+  s && /^[^ #]/ { s = 0 }
+  s && /^  max_budget:/ { v = $2; n++ }
+  END { print (n == 1 && v ~ /^[0-9]+([.][0-9]+)?$/) ? v : "-" }
+' "$config")"
+if [ "$global" = "-" ]; then
+  echo "FAIL litellm_settings: cannot read max_budget"
+  failed=1
+fi
+while IFS= read -r reason; do
+  [ -n "$reason" ] || continue
+  echo "FAIL home.env: $reason"
+  failed=1
+done < <(home_env_failures "$HOME_ENV" "$global")
 [ "$failed" -eq 1 ] || echo "rules ok: ${#entries[@]} entries"
 [ "$rules_only" -eq 0 ] || exit "$failed"
 

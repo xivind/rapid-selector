@@ -239,3 +239,71 @@ reorder_second() {
   echo "$output"
   [ "$status" -eq 0 ]
 }
+
+# broken_home <sed expression>: $BATS_TEST_TMPDIR/home.env is the example home.env with the
+# expression applied, and RAPIDSELECTOR_HOME_ENV points at it.
+broken_home() {
+  sed -e "$1" "$RAPIDSELECTOR_HOME_ENV" > "$BATS_TEST_TMPDIR/home.env"
+  ! cmp -s "$RAPIDSELECTOR_HOME_ENV" "$BATS_TEST_TMPDIR/home.env"
+  export RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/home.env"
+}
+
+# home_fails <text>: the rules check failed with the line "FAIL home.env: <text>".
+home_fails() {
+  run "$REPO/scripts/check-prices.sh" --rules-only "$RAPIDSELECTOR_GATEWAY_CONFIG"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -qF "FAIL home.env: $1" <<<"$output"
+  ! grep -q "^rules ok" <<<"$output"
+}
+
+@test "home.env: a missing name" {
+  broken_home '/^NODE_RED_TPM=/d'
+  home_fails "missing NODE_RED_TPM"
+}
+
+@test "home.env: the environment does not hide a missing name" {
+  broken_home '/^NODE_RED_TPM=/d'
+  export NODE_RED_TPM=5
+  home_fails "missing NODE_RED_TPM"
+}
+
+@test "home.env: a budget of zero" {
+  broken_home 's/^BUDGET_KEY_NODE_RED=.*/BUDGET_KEY_NODE_RED=0/'
+  home_fails "BUDGET_KEY_NODE_RED must be a number above zero"
+}
+
+@test "home.env: a quoted budget" {
+  broken_home 's/^BUDGET_TEAM_PERMANENT=.*/BUDGET_TEAM_PERMANENT="2"/'
+  home_fails "BUDGET_TEAM_PERMANENT must be a number above zero"
+}
+
+@test "home.env: a limit with a comment after it" {
+  broken_home 's/^NODE_RED_RPM=.*/NODE_RED_RPM=30 # per minute/'
+  home_fails "NODE_RED_RPM must be a whole number above zero"
+}
+
+@test "home.env: a provider with an endpoint" {
+  broken_home 's#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=deepinfra/fp8 coreweave#'
+  home_fails "ALLOWED_HOSTS must be provider tags"
+}
+
+@test "home.env: team budgets above the global budget" {
+  broken_home 's/^BUDGET_TEAM_EXPERIMENTS=.*/BUDGET_TEAM_EXPERIMENTS=8.5/'
+  home_fails "team budgets add up to 10.5, above the global budget 10"
+}
+
+@test "home.env: no max_budget in gateway.yaml" {
+  sed '/^  max_budget:/d' "$RAPIDSELECTOR_GATEWAY_CONFIG" > "$BATS_TEST_TMPDIR/config.yaml"
+  run "$REPO/scripts/check-prices.sh" --rules-only "$BATS_TEST_TMPDIR/config.yaml"
+  echo "$output"
+  [ "$status" -eq 1 ]
+  grep -qx "FAIL litellm_settings: cannot read max_budget" <<<"$output"
+}
+
+@test "home.env: not found" {
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/none.env" run "$REPO/scripts/check-prices.sh" --rules-only
+  echo "$output"
+  [ "$status" -eq 2 ]
+  grep -q "cannot read" <<<"$output"
+}
