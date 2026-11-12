@@ -4,8 +4,8 @@ Where we are, the phases, and options parked for later. Each piece of work gets 
 
 ## Now
 
-- **On:** the docs cleanup, on the branch `docs-cleanup` (PR for the owner's review). Then, in order: the `CLAUDE.md` cleanup, the user guide's section on upgrading one or more containers, the README dry run (phase 1 below), and benchmarking (phase 2).
-- **For the `CLAUDE.md` cleanup**, item by item with the owner: the walkthrough rules below, whether they go into "Way of working"; "Where things live" (the roadmap's "Now", specs and plans deleted after their work, `docs/test-procedures/`); `docs/decisions.md`'s "Tested in practice" as where test results go.
+- **Next:** the `CLAUDE.md` cleanup (the docs cleanup merged 2026-11-13, PR #6). Then, in order: the user guide's section on upgrading one or more containers, the README dry run (phase 1 below), and benchmarking (phase 2).
+- **For the `CLAUDE.md` cleanup**, item by item with the owner: the walkthrough rules below, whether they go into "Way of working"; "Where things live" (the roadmap's "Now", specs and plans deleted after their work, so `docs/superpowers/` is empty between pieces of work, `docs/test-procedures/`); `docs/decisions.md`'s "Tested in practice" as where test results go.
 - **The owner's host, `sandbox`,** runs the real stack: never run level 1 there. Its own facts are in the owner's `production` repository (`CLAUDE.md`, "Infrastructure Services"). Still open there: the first real use from Node-RED.
 
 ## How we walk through a procedure
