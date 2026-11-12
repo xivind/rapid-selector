@@ -3,7 +3,7 @@
 # The only list of models: every entry is pinned to one OpenRouter endpoint, with fallbacks
 # off and zero data retention required. scripts/check-prices.sh checks every rule.
 # Prices are the pinned endpoint's (USD per token), checked with scripts/check-prices.sh on
-# DATE. Prices at a host change without notice: check them again before you use them.
+# 2026-11-12. Prices at a host change without notice: check them again before you use them.
 # LiteLLM records the cost OpenRouter reports when a response carries one; these prices
 # are the fallback that keeps spend above zero if it does not.
 # The role chat-tasks must exist in every home: Open WebUI makes its background calls
