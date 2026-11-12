@@ -65,7 +65,7 @@ Without `--days`, `reconcile.sh` looks at the last 7 completed UTC days. Today i
 
 **Cost:** the smoke test call, and whatever you then spend in chat. A new model is something to flag before using it at length (`CLAUDE.md`).
 
-**If it fails:** `restart gateway` exits 5 with a `FAIL` line naming the entry and the rule: fix it and restart again. A smoke test with cost 0 means a price is missing. The level 1 tests use the example config (`config/gateway.example.yaml`), so a change to your own needs no test change.
+**If it fails:** `restart gateway` exits 5 with a `FAIL` line naming the entry and the rule: fix it here in `config/`, run `scripts/copy-config.sh to` again, then restart. A fix made on the host would be overwritten by the next copy. A smoke test with cost 0 means a price is missing. The level 1 tests use the example config (`config/gateway.example.yaml`), so a change to your own needs no test change.
 
 ## Point a role at another model
 

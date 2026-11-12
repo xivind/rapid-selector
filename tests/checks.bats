@@ -307,3 +307,16 @@ home_fails() {
   [ "$status" -eq 2 ]
   grep -q "cannot read" <<<"$output"
 }
+
+@test "home.env: a setting written twice" {
+  broken_home '$a BUDGET_TEAM_EXPERIMENTS=50'
+  home_fails "BUDGET_TEAM_EXPERIMENTS is set more than once"
+}
+
+@test "home.env: a directory is not a file" {
+  mkdir "$BATS_TEST_TMPDIR/home.env"
+  RAPIDSELECTOR_HOME_ENV="$BATS_TEST_TMPDIR/home.env" run "$REPO/scripts/check-prices.sh" --rules-only
+  echo "$output"
+  [ "$status" -eq 2 ]
+  [ "$output" = "cannot read $BATS_TEST_TMPDIR/home.env" ]
+}

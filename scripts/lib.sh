@@ -105,6 +105,10 @@ home_env_failures() {
   local file="$1" global="$2" name value word teams_ok=1
   local -a words
   for name in "${RAPIDSELECTOR_HOME_SETTINGS[@]}"; do
+    # load_env_file keeps the first of two lines, so a second one would silently do nothing.
+    if [ "$(grep -cE "^[[:space:]]*$name=" "$file")" -gt 1 ]; then
+      echo "$name is set more than once"
+    fi
     value="$(home_env_value "$file" "$name")"
     if [ -z "$value" ]; then
       echo "missing $name"

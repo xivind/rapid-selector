@@ -36,6 +36,10 @@ if [ -z "$remote" ] && [ -f "$HOME_ENV" ]; then
   remote="$(home_env_value "$HOME_ENV" RAPIDSELECTOR_REMOTE_DIR)"
 fi
 remote="${remote#\~/}"
+case "$remote" in
+  "~") remote="." ;;
+  "~"*) die 2 "RAPIDSELECTOR_REMOTE_DIR: use a path relative to the home directory, or an absolute one (not ~user)" ;;
+esac
 if [ -z "$remote" ]; then
   case "$ROOT/" in
     "$HOME"/*) remote="${ROOT#"$HOME"/}" ;;

@@ -161,3 +161,19 @@ remote_files() {
   [ "$status" -eq 2 ]
   [ ! -e "$SSH_LOG" ]
 }
+
+@test "a remote folder of ~ alone is the home directory" {
+  # The stand-in ssh runs commands in $FAKE_REMOTE, the fake host's home directory.
+  RAPIDSELECTOR_REMOTE_DIR='~' run "$REPO/scripts/copy-config.sh" to pi@sandbox
+  echo "$output"
+  [ "$status" -eq 0 ]
+  cmp "$RAPIDSELECTOR_HOME_ENV" "$FAKE_REMOTE/config/home.env"
+}
+
+@test "a remote folder under another user's ~ is refused before ssh" {
+  RAPIDSELECTOR_REMOTE_DIR='~pi/code/rapid-selector' run "$REPO/scripts/copy-config.sh" to pi@sandbox
+  echo "$output"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"RAPIDSELECTOR_REMOTE_DIR"* ]]
+  [ ! -e "$SSH_LOG" ]
+}

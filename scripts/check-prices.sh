@@ -30,7 +30,7 @@ rules_only=0
 if [ "${1:-}" = "--rules-only" ]; then rules_only=1; shift; fi
 config="${1:-$GATEWAY_CONFIG}"
 [ -r "$config" ] || { echo "cannot read $config"; exit 2; }
-[ -r "$HOME_ENV" ] || { echo "cannot read $HOME_ENV"; exit 2; }
+[ -f "$HOME_ENV" ] && [ -r "$HOME_ENV" ] || { echo "cannot read $HOME_ENV"; exit 2; }
 # The account's allowed providers in OpenRouter's settings (the tag before the "/").
 ALLOWED_HOSTS="$(home_env_value "$HOME_ENV" ALLOWED_HOSTS)"
 
