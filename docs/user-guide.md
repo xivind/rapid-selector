@@ -157,9 +157,11 @@ Postgres prints `"name":"17.12-alpine"`; write `postgres:17.12-alpine`:
 curl -s "https://hub.docker.com/v2/repositories/library/postgres/tags?name=17.&page_size=100" | grep -oE '"name":"17\.[0-9]+-alpine"' | sort -uV | tail -1
 ```
 
-The Postgres command looks only within version 17, on purpose (see "If it fails"). If `tests/check-arm64.sh` finds no LiteLLM image for the newest release, take the release before it.
+The Postgres command looks only within version 17, on purpose (see "If it fails").
 
-Read the release notes ([Open WebUI](https://github.com/open-webui/open-webui/releases), [LiteLLM](https://github.com/BerriAI/litellm/releases), Postgres at `https://www.postgresql.org/docs/release/<version>/`, e.g. `17.12`), and take a backup ([next section](#back-up-and-restore)). Change only the version lines you want in `docker-compose.yml` (never `latest`), check that they exist for the Pi with `tests/check-arm64.sh`, and check that the `chat` line still ends in `-slim` (the arm64 check does not catch a missing `-slim`, since the full image exists too). Run the level 1 tests in the cloud sandbox, commit and push. On the host:
+Read the release notes ([Open WebUI](https://github.com/open-webui/open-webui/releases), [LiteLLM](https://github.com/BerriAI/litellm/releases), Postgres at `https://www.postgresql.org/docs/release/<version>/`, e.g. `17.12`), and take a backup ([next section](#back-up-and-restore)). Change only the version lines you want in `docker-compose.yml` (never `latest`). The same image names are also in `tests/checks.bats` (the test "check-arm64 passes for the pinned images") and, for Postgres, in the README's backup command ("Backups"): change them there too. Check that the `chat` line still ends in `-slim` (the arm64 check does not catch a missing `-slim`, since the full image exists too).
+
+In the cloud sandbox, where Docker runs, check that the images exist for the Pi with `tests/check-arm64.sh`. If it finds no LiteLLM image for the newest release, take the next one down on [LiteLLM's releases page](https://github.com/BerriAI/litellm/releases). Then run the level 1 tests there, commit and push. On the host:
 
 ```bash
 git pull
