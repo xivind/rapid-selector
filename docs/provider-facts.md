@@ -255,6 +255,12 @@ Pi 5, 8 GB, Docker with cgroup v2.
 - `docker compose pull` also tries to pull the image of a service with a `build:` section. When that fails (an image of our own that is in no registry), Compose warns that the image must be built, and still returns the failure as an error unless `--ignore-pull-failures` is given. `--ignore-buildable` skips such services before any pull. A `pull_policy` of `build` or `never` also skips them. Sources: https://docs.docker.com/reference/cli/docker/compose/pull/ and `pkg/compose/pull.go` on Compose's `main` branch (read in summary).
 - `docker compose up` builds a service's image only when it is missing, unless `--build` is given: with a fixed `image:` tag, `up` after a `git pull` keeps running the image built before.
 
+### Finding versions and upgrading one service, checked 2026-11-13
+- GitHub's `releases/latest` API gives a repository's newest release that is not a prerelease. Open WebUI's answer comes as minified JSON on one line, so a plain `grep tag_name` prints the whole release; `grep -o` prints only the tag. Seen: Open WebUI `v0.13.3`, LiteLLM `v1.109.1`, and `ghcr.io/berriai/litellm-database:v1.109.1` exists (its manifest answered 200 on `ghcr.io`).
+- Docker Hub's tags API (`hub.docker.com/v2/repositories/library/postgres/tags?name=17.`) lists Postgres 17's tags; the newest Alpine tag seen was `17.12-alpine`.
+- `docker compose up` recreates a container only when "the service's configuration or image was changed after the container's creation" (docs.docker.com, `docker compose up` reference). A dependent service is restarted after its dependency is updated when its `depends_on` sets `restart: true` (docs.docker.com, Compose file reference, `depends_on`); the page states no other rule, so without it a dependent keeps running. `docker-compose.yml` does not set it.
+- Postgres: "Minor releases never change the internal storage format", while for major releases "the internal data storage format is subject to change". A major upgrade goes through `pg_dumpall` and a restore, `pg_upgrade`, or logical replication (postgresql.org, "Upgrading a PostgreSQL Cluster", version 18 docs).
+
 ## Docker in the cloud sandbox
 
 ### 2026-11-03

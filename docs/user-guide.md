@@ -133,11 +133,33 @@ Afterwards, `reconcile.sh` and `status.sh` show what was spent, and the cause go
 
 **Cost:** nothing; it stops cost.
 
-## Update the stack's images
+## Update one image, or several
 
-**When:** a new release of LiteLLM, Open WebUI or Postgres is wanted.
+**When:** a new release of LiteLLM, Open WebUI or Postgres is wanted, for example after Open WebUI's notice of a new version.
 
-Read the release notes first, and take a backup ([next section](#back-up-and-restore)). Change the version in `docker-compose.yml` (never `latest`), check that it exists for the Pi with `tests/check-arm64.sh`, run the level 1 tests in the cloud sandbox, commit and push. On the host:
+Find the newest version. Each command runs on any machine, needs no secret and costs nothing; the versions shown were the newest on 2026-11-13.
+
+Open WebUI prints `"tag_name":"v0.13.3"`; write `ghcr.io/open-webui/open-webui:v0.13.3-slim` (keep `-slim`):
+
+```bash
+curl -s https://api.github.com/repos/open-webui/open-webui/releases/latest | grep -o '"tag_name": *"[^"]*"'
+```
+
+LiteLLM prints `"tag_name":"v1.109.1"`; write `ghcr.io/berriai/litellm-database:v1.109.1`:
+
+```bash
+curl -s https://api.github.com/repos/BerriAI/litellm/releases/latest | grep -o '"tag_name": *"[^"]*"'
+```
+
+Postgres prints `"name":"17.12-alpine"`; write `postgres:17.12-alpine`:
+
+```bash
+curl -s "https://hub.docker.com/v2/repositories/library/postgres/tags?name=17.&page_size=100" | grep -oE '"name":"17\.[0-9]+-alpine"' | sort -uV | tail -1
+```
+
+The Postgres command looks only within version 17, on purpose (see "If it fails"). If `tests/check-arm64.sh` finds no LiteLLM image for the newest release, take the release before it.
+
+Read the release notes ([Open WebUI](https://github.com/open-webui/open-webui/releases), [LiteLLM](https://github.com/BerriAI/litellm/releases), Postgres at `https://www.postgresql.org/docs/release/<version>/`, e.g. `17.12`), and take a backup ([next section](#back-up-and-restore)). Change only the version lines you want in `docker-compose.yml` (never `latest`), check that they exist for the Pi with `tests/check-arm64.sh`, run the level 1 tests in the cloud sandbox, commit and push. On the host:
 
 ```bash
 git pull
@@ -146,11 +168,17 @@ git pull
 ./rapidselector.sh run-script scripts/smoke-test.sh
 ```
 
+`update` pulls every image, but only the changed versions are new, and Compose recreates only the services whose version changed. The others keep running.
+
 **You should see:** the three services `healthy`, and the smoke test ending with `OK`.
 
 **Cost:** the smoke test, under $0.01.
 
-**If it fails:** `./rapidselector.sh logs <service>`; to go back, restore the old version in `docker-compose.yml` and run `update` again.
+**If it fails:** `./rapidselector.sh logs <service>`. Going back depends on the service:
+
+- **Postgres, a minor step** (17.11 to 17.12): put the old version line back and run `update` again.
+- **Postgres, a major step** (17 to 18): not a version change alone. Each major version has its own data file format, and the new version refuses to start on the old files, so it needs an export and an import. Ask before trying one.
+- **LiteLLM and Open WebUI:** each changes its own database when it starts. Putting the old version line back usually works after a small step, but may not once the database has changed. The way back is then the backup, and restore is not yet tested ([next section](#back-up-and-restore)).
 
 ## Back up and restore
 
