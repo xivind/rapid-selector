@@ -58,7 +58,7 @@ services:
 
   chat:
     # Slim: no bundled embedding or Whisper model, and no local model loaded or downloaded.
-    image: ghcr.io/open-webui/open-webui:v0.13.0-slim
+    image: ghcr.io/open-webui/open-webui:v0.13.3-slim
     container_name: rapidselector-chat
     restart: unless-stopped
     environment:
