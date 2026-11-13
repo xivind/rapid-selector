@@ -72,9 +72,14 @@ STUB
   run "$REPO/tests/check-arm64.sh"
   echo "$output"
   [ "$status" -eq 0 ]
-  for image in postgres:17.11-alpine ghcr.io/berriai/litellm-database:v1.106.6 ghcr.io/open-webui/open-webui:v0.13.0-slim python:3.15.2-alpine3.24; do
+  # The pinned images, read from the compose files, so an upgrade changes only docker-compose.yml.
+  mapfile -t images < <(sed -nE 's/^[[:space:]]+image:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/p' \
+    "$REPO/docker-compose.yml" "$REPO/tests/compose.fakes.yml" | sort -u)
+  [ "${#images[@]}" -ge 4 ]
+  for image in "${images[@]}"; do
     grep -qx "ok $image" <<<"$output" || { echo "no line for $image"; false; }
   done
+  [ "$(grep -c '^ok ' <<<"$output")" = "${#images[@]}" ]
 }
 
 @test "check-arm64 fails for an image without arm64" {
