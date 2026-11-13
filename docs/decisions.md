@@ -101,6 +101,7 @@ What `CLAUDE.md` requires to be tested before a limit counts as working, and wha
 - **Memory (B5), 2026-11-05 and 06:** the stack takes about 1.3 GiB idle with Open WebUI's standard image; the slim image brought Open WebUI from about 857 to 344 MiB; LiteLLM uses 570–810 MiB.
 - **Backups (E1), 2026-11-06:** the first nightly dumps of Postgres and Open WebUI's data ran; the restore is not yet tested (roadmap, parked).
 - **Status and reconciliation, 2026-11-09:** `status.sh`'s figures matched OpenRouter's dashboard exactly, and `reconcile.sh` differed by at most $0.000004 per line. Cron, `write-metrics.sh`, `node_exporter`, Prometheus and Grafana worked end to end, every hour.
+- **Upgrading one service, 2026-11-13:** the owner upgraded Open WebUI from v0.13.0 to v0.13.3 (`-slim`) by the user guide's "Update one image, or several", and it works. The arm64 test needed no change.
 - **Level 1 on the Pi, 2026-11-04:** the suite passes on arm64, so the images run there.
 - **Still to see:** the key limit's and the budgets' monthly reset (1 December).
 

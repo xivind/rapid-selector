@@ -4,7 +4,7 @@ Where we are, the phases, and options parked for later. Each piece of work gets 
 
 ## Now
 
-- **Next:** the owner reads the user guide's new section "Update one image, or several" (written 2026-11-13) and upgrades Open WebUI with it; then its spec and plan are deleted. Then, in order: the README dry run (phase 1 below), and benchmarking (phase 2).
+- **Next:** the README dry run (phase 1 below), then benchmarking (phase 2). The user guide's "Update one image, or several" was written and used for Open WebUI v0.13.3 on 2026-11-13.
 - **The owner's host, `sandbox`,** runs the real stack: never run level 1 there. Its own facts are in the owner's `production` repository (`CLAUDE.md`, "Infrastructure Services"). Still open there: the first real use from Node-RED.
 
 ## Phases
