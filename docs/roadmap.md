@@ -4,7 +4,7 @@ Where we are, the phases, and options parked for later. Each piece of work gets 
 
 ## Now
 
-- **Next:** the user guide's section on upgrading one or more containers (the docs cleanup merged 2026-11-13, PR #6; the `CLAUDE.md` cleanup the same day). Then, in order: the README dry run (phase 1 below), and benchmarking (phase 2).
+- **Next:** the owner reads the user guide's new section "Update one image, or several" (written 2026-11-13) and upgrades Open WebUI with it; then its spec and plan are deleted. Then, in order: the README dry run (phase 1 below), and benchmarking (phase 2).
 - **The owner's host, `sandbox`,** runs the real stack: never run level 1 there. Its own facts are in the owner's `production` repository (`CLAUDE.md`, "Infrastructure Services"). Still open there: the first real use from Node-RED.
 
 ## Phases
@@ -46,5 +46,5 @@ Researched on 2026-11-02 and left out for now:
   - **What it touches:** the Claude Code hooks it installs, any git post-commit hook, and which generated files are committed or listed in `.gitignore`. In `production`, its hook leaves modified files in the checkout.
   - **Cost:** code is parsed locally, but documents go through Claude for extraction, and this repository is mostly documents. Claude usage only, not OpenRouter.
   - **Benefit:** whether a repository this small gains enough to be worth the hooks.
-- **Restore rehearsal** (parked by the owner, 2026-11-11): restore the newest Postgres dump into a separate Compose project on the host and call it with `KEY_NODE_RED`, under $0.001. The database holds keys, budgets and spend, nothing that depends on `LITELLM_SALT_KEY`, as the models stay in `config/gateway.yaml`, so an untested restore is a limited risk. Take it up before the database holds anything that depends on the salt key (models or provider keys added through LiteLLM's admin UI or API), and in any case before a restore is relied on. The backup has no `cache/`, and the slim image needs none.
+- **Restore rehearsal** (parked by the owner, 2026-11-11): restore the newest Postgres dump into a separate Compose project on the host and call it with `KEY_NODE_RED`, under $0.001. The database holds keys, budgets and spend, nothing that depends on `LITELLM_SALT_KEY`, as the models stay in `config/gateway.yaml`, so an untested restore is a limited risk. Take it up before the database holds anything that depends on the salt key (models or provider keys added through LiteLLM's admin UI or API), and in any case before a restore is relied on. It also covers Open WebUI's data backup, the way back after an Open WebUI upgrade that changed its database (owner, 2026-11-13). The backup has no `cache/`, and the slim image needs none.
 - **Automatic fallback to another model or host** for important flows: possible within the allowlist, but every fallback needs its own price and testing. Left out while models are an enhancement.
