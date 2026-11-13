@@ -159,7 +159,7 @@ curl -s "https://hub.docker.com/v2/repositories/library/postgres/tags?name=17.&p
 
 The Postgres command looks only within version 17, on purpose (see "If it fails"). If `tests/check-arm64.sh` finds no LiteLLM image for the newest release, take the release before it.
 
-Read the release notes ([Open WebUI](https://github.com/open-webui/open-webui/releases), [LiteLLM](https://github.com/BerriAI/litellm/releases), Postgres at `https://www.postgresql.org/docs/release/<version>/`, e.g. `17.12`), and take a backup ([next section](#back-up-and-restore)). Change only the version lines you want in `docker-compose.yml` (never `latest`), check that they exist for the Pi with `tests/check-arm64.sh`, run the level 1 tests in the cloud sandbox, commit and push. On the host:
+Read the release notes ([Open WebUI](https://github.com/open-webui/open-webui/releases), [LiteLLM](https://github.com/BerriAI/litellm/releases), Postgres at `https://www.postgresql.org/docs/release/<version>/`, e.g. `17.12`), and take a backup ([next section](#back-up-and-restore)). Change only the version lines you want in `docker-compose.yml` (never `latest`), check that they exist for the Pi with `tests/check-arm64.sh`, and check that the `chat` line still ends in `-slim` (the arm64 check does not catch a missing `-slim`, since the full image exists too). Run the level 1 tests in the cloud sandbox, commit and push. On the host:
 
 ```bash
 git pull
@@ -168,7 +168,7 @@ git pull
 ./rapidselector.sh run-script scripts/smoke-test.sh
 ```
 
-`update` pulls every image, but only the changed versions are new, and Compose recreates only the services whose version changed. The others keep running.
+`update` pulls every image, but only the changed versions are new, and Compose recreates only the services whose version or settings changed. The others keep running; after a Postgres change, the gateway briefly loses its database.
 
 **You should see:** the three services `healthy`, and the smoke test ending with `OK`.
 
@@ -178,7 +178,7 @@ git pull
 
 - **Postgres, a minor step** (17.11 to 17.12): put the old version line back and run `update` again.
 - **Postgres, a major step** (17 to 18): not a version change alone. Each major version has its own data file format, and the new version refuses to start on the old files, so it needs an export and an import. Ask before trying one.
-- **LiteLLM and Open WebUI:** each changes its own database when it starts. Putting the old version line back usually works after a small step, but may not once the database has changed. The way back is then the backup, and restore is not yet tested ([next section](#back-up-and-restore)).
+- **LiteLLM and Open WebUI:** each changes its own database when it starts. Putting the old version line back may work after a small step, but may not once the database has changed. The way back is then the backup, and restore is not yet written or tested, so ask before restoring ([next section](#back-up-and-restore)).
 
 ## Back up and restore
 

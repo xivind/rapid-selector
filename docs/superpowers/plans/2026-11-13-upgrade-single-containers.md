@@ -21,7 +21,7 @@
 
 ## Review Focus
 
-1. **A tag that does not exist** (typo, or `v0.13.3` without `-slim`): the guide must send the owner to `tests/check-arm64.sh` before commit, which fails on it.
+1. **A tag that does not exist** (typo): the guide must send the owner to `tests/check-arm64.sh` before commit, which fails on it. A missing `-slim` is not caught by it (the full image exists too), so the guide says to check the `chat` line by eye (final review, 2026-11-13).
 2. **The lookup commands' output format:** GitHub's API returns minified JSON for some repositories, so a plain `grep tag_name` prints the whole release. The commands must use `grep -o` (checked 2026-11-13: Open WebUI's answer is one line).
 3. **LiteLLM's newest GitHub release may lack a `litellm-database` image:** the arm64 check catches it; the guide says to pick the previous release then.
 4. **A Postgres major version reached by accident:** the Postgres command filters on `17.` so it never suggests 18; the guide says why.
