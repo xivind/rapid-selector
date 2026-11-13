@@ -14,10 +14,13 @@ Claude/Anthropic is and remains the primary tool. This project is not a replacem
 
 ## Where things live
 
-This file holds only what is always true: purpose, principles, architecture, operating rules and way of working. It changes rarely, and only by the owner's decision. Everything else lives in `docs/`:
+This file holds only what is always true: purpose, principles, architecture, operating rules and way of working. It changes rarely, and only by the owner's decision. Everything else lives in the READMEs and in `docs/`:
 
 | File | Contents |
 |---|---|
+| `README.md` | What it is, where to read what, first setup, everyday commands, the kill switch, and notes for developers |
+| `scripts/README.md` | Each operator script: what it does, when, and its exit codes |
+| `config/README.md` | Each home's own settings, and how to edit and apply them |
 | `docs/requirements.md` | What each service must do |
 | `docs/roadmap.md` | Now (where we are and what is next), phases and parked options |
 | `docs/decisions.md` | Open questions and decisions, with date and reason, and what was tested in practice |

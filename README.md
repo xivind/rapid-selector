@@ -4,6 +4,21 @@ A small, self-hosted gateway and lab for open-weight language models through Ope
 
 Everything goes through one gateway ([LiteLLM](https://docs.litellm.ai/)): only allowlisted models, each pinned to one OpenRouter host with zero data retention, budgets per team and key, and a spend log. Chat runs in [Open WebUI](https://docs.openwebui.com/). The rules behind the design are in `CLAUDE.md`; requirements, decisions and dated facts are in `docs/`.
 
+## Where to read what
+
+| When you want to | Read |
+|---|---|
+| Set it up on a new host | This README, "First setup" |
+| Prove that the limits, alerts and backups work, once on a new host | [`docs/test-procedures/initial-setup-walkthrough.md`](docs/test-procedures/initial-setup-walkthrough.md), alongside "First setup" |
+| Do an everyday task: check cost, change a model or a budget, update an image | [`docs/user-guide.md`](docs/user-guide.md) |
+| Stop all spending now | This README, ["Stopping all spending"](#stopping-all-spending-manual-kill-switch) |
+| Know which script to run when, and what its output and exit codes mean | [`scripts/README.md`](scripts/README.md) |
+| Change this home's own settings: models, roles, budgets | [`config/README.md`](config/README.md) |
+| Find your way in LiteLLM's admin UI and OpenRouter's dashboard | [`docs/onboarding.md`](docs/onboarding.md) |
+| Understand why things are the way they are | `CLAUDE.md` (the rules), [`docs/requirements.md`](docs/requirements.md), [`docs/decisions.md`](docs/decisions.md), [`docs/provider-facts.md`](docs/provider-facts.md) |
+| See where the work stands and what is next | [`docs/roadmap.md`](docs/roadmap.md) |
+| Change the code or run the tests | This README, ["For developers"](#for-developers) |
+
 ## What runs
 
 | Service | Container | Address | What |
@@ -220,9 +235,7 @@ Always go through `./rapidselector.sh`: it loads the settings and secrets, then 
 | `./rapidselector.sh update` | Pull the image versions in `docker-compose.yml` and recreate what changed |
 | `./rapidselector.sh run-script <script>` | Run one of the scripts in `scripts/` with the secrets loaded |
 
-Which script to run when, and what its output and exit codes mean: [`scripts/README.md`](scripts/README.md). The tasks done most often, step by step, such as checking cost, changing a model or a budget: [`docs/user-guide.md`](docs/user-guide.md). A guided tour of LiteLLM's admin UI and OpenRouter's dashboard, what to look at and what to leave alone: [`docs/onboarding.md`](docs/onboarding.md).
-
-**Updating** means changing an image version in `docker-compose.yml` (in a commit), then on the host `git pull` and `./rapidselector.sh update`. Before upgrading LiteLLM or Open WebUI: read the release notes, take a backup, and run the smoke test afterwards.
+**Updating** one image or several, step by step, with how to find the newest version and how to go back: [`docs/user-guide.md`](docs/user-guide.md#update-one-image-or-several), "Update one image, or several".
 
 ## Teams, keys and budgets
 
@@ -239,7 +252,7 @@ All limits are in USD and reset on the 1st of the month at 00:00 UTC. The budget
 
 Above these comes LiteLLM's global budget (`max_budget` in `config/gateway.yaml`, $10 in the example), and above that the OpenRouter key's own monthly limit (set in OpenRouter's dashboard), the actual cap. The two team budgets must add up to no more than the global budget; the rules check refuses otherwise. Virtual keys can call only chat completions and the model list, and a request cannot change the routing: the gateway removes `extra_body`, `provider`, `models`, `route`, `transforms` and `fallbacks` from every request (`gateway/request_guard.py`).
 
-Budgets and limits live in `config/home.env`; change them there and run `setup-keys.sh` again. The models live in `config/gateway.yaml`; after changing it, run `./rapidselector.sh restart gateway`, since `up` does not see a change inside a mounted file. The restart first checks the config against the rules in `CLAUDE.md` (pinned host, no fallbacks, zero data retention, prices, `max_tokens`) and refuses if one is broken; the order of a model change is in `scripts/README.md`.
+Budgets and limits live in `config/home.env`, the models in `config/gateway.yaml`. How to change them: [`docs/user-guide.md`](docs/user-guide.md), "Change a budget" and "Add a model or an experiment name".
 
 ## Calling a model from Node-RED or an app
 
@@ -286,14 +299,16 @@ Keep the secrets (at least `LITELLM_MASTER_KEY`, `LITELLM_SALT_KEY` and the virt
 ## Stopping all spending (manual kill switch)
 
 Two ways that do not depend on anything else running (not even secrets-service):
-1. In OpenRouter's dashboard, disable the gateway's inference key. This stops everything at once.
+1. In OpenRouter's dashboard, disable the gateway's inference key (`rapidselector-gateway`). This stops everything at once: no call can reach any host. Enable it again in the same place.
 2. On the host, stop the gateway with plain Docker:
    ```bash
    docker stop rapidselector-gateway
    ```
    Start it again with `./rapidselector.sh up`.
 
-To stop one client but keep the rest, block its key in LiteLLM's admin UI (Virtual Keys). `scripts/status.sh` warns while the inference key is disabled.
+To stop one client but keep the rest, block its key in LiteLLM's admin UI (`http://<host>:4000/ui`, Virtual Keys). `scripts/status.sh` warns while the inference key is disabled.
+
+Afterwards, `reconcile.sh` and `status.sh` show what was spent, and the cause goes in your home's own notes (or in `docs/decisions.md`, if it is a lesson for every home). It costs nothing; it stops cost.
 
 ## Optional: cost figures in Prometheus
 

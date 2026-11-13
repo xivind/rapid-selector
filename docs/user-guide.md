@@ -1,6 +1,6 @@
 # User guide
 
-The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`). This home's own settings (models, roles, budgets) are in `config/` ([`config/README.md`](../config/README.md)): edit them on the host, or in a clone on another machine and copy them over with `scripts/copy-config.sh to`. Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
+The tasks done most often, one at a time, for the owner and an agent alike. Run every command from the repository on the host (`cd ~/code/rapid-selector`), unless a section says otherwise. This home's own settings (models, roles, budgets) are in `config/` ([`config/README.md`](../config/README.md)): edit them on the host, or in a clone on another machine and copy them over with `scripts/copy-config.sh to`. Each script and its exit codes are described in [`scripts/README.md`](../scripts/README.md); first setup is in the [README](../README.md). This guide does not tour LiteLLM's admin UI or OpenRouter's dashboard beyond the step needed: [`docs/onboarding.md`](onboarding.md) does.
 
 Exit codes, in short: `0` all well, `1` read the output, `2` a source could not be read, `3` a missing setting or secret, `4` secrets-service, `5` `restart gateway` refused.
 
@@ -125,13 +125,7 @@ First `status.sh`, to see the balance and the month's forecast. Then in OpenRout
 
 **When:** something is spending that should not be, and you want it stopped now.
 
-- **Everything, at once:** in OpenRouter's dashboard, disable the inference key (`rapidselector-gateway`). No call can reach any host after that. `status.sh` then warns that the key is disabled. Enable it again in the same place.
-- **Without the dashboard:** stop the gateway on the host: `docker stop rapidselector-gateway`. Start it again with `./rapidselector.sh up`.
-- **One client only:** block its key in LiteLLM's admin UI (`http://<host>:4000/ui`, Virtual Keys). The others go on working.
-
-Afterwards, `reconcile.sh` and `status.sh` show what was spent, and the cause goes in your home's own notes (or in `docs/decisions.md`, if it is a lesson for every home).
-
-**Cost:** nothing; it stops cost.
+The steps are kept in one place, on the README's front page, so they are quick to find: [README, "Stopping all spending"](../README.md#stopping-all-spending-manual-kill-switch). Everything at once, without the dashboard, or one client only.
 
 ## Update one image, or several
 
